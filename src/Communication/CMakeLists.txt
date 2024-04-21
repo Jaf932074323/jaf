@@ -1,0 +1,25 @@
+PROJECT(Communication)
+
+file(GLOB_RECURSE PROJECT_ROOT_FILES ${PROJECT_SOURCE_DIR}/*.h ${PROJECT_SOURCE_DIR}/*.c ${PROJECT_SOURCE_DIR}/*.cpp)
+
+set(
+    ALL_FILES 
+    ${PROJECT_ROOT_FILES}
+)
+
+source_group(TREE ${CMAKE_SOURCE_DIR}/${PROJECT_NAME} FILES ${ALL_FILES})
+
+add_library(
+    ${PROJECT_NAME} STATIC
+    ${ALL_FILES}
+)
+
+target_link_libraries(${PROJECT_NAME}
+    Log
+)
+
+INCLUDE_DIRECTORIES("./")
+INCLUDE_DIRECTORIES("../")
+INCLUDE_DIRECTORIES("../../include")
+INCLUDE_DIRECTORIES("../../3rdparty")
+INCLUDE_DIRECTORIES("../Log")
