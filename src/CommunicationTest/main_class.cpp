@@ -9,9 +9,9 @@ void Main::Start()
 	Init();
 	iocp_->Start();	
 	//server_->Run(iocp_->GetCompletionPort());
-	//client_->Run(iocp_->GetCompletionPort());
+	client_->Run(iocp_->GetCompletionPort());
 	//udp_->Run(iocp_->GetCompletionPort());
-	serial_port_->Run(iocp_->GetCompletionPort());
+	//serial_port_->Run(iocp_->GetCompletionPort());
 }
 
 void Main::Stop()
@@ -36,7 +36,7 @@ void Main::Init()
 	server_ = std::make_shared<jaf::comm::TcpServer>("10.10.10.231", 8181);
 	server_->SetChannelUser(channel_user_);
 
-	client_ = std::make_shared<jaf::comm::TcpClient>("10.10.10.231", 8183, "10.10.10.231", 8182);
+	client_ = std::make_shared<jaf::comm::TcpClient>("10.10.10.231", 8182, "10.10.10.231", 0);
 	client_->SetChannelUser(channel_user_);
 
 	udp_ = std::make_shared<jaf::comm::Udp>("10.10.10.231", 8081, "10.10.10.231", 8082);

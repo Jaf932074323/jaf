@@ -2,35 +2,23 @@
 #include <memory>
 #include <type_traits>
 #include "Interface/log/i_logger.h"
-#include "manage_logger.h"
+#include "common_logger.h"
 
 namespace jaf
 {
 namespace log
 {
 
-template <jaf::fixed_string Str = "">
-struct RemoveStrQuotation
+inline std::shared_ptr<ILogger> GetLog()
 {
-	constexpr static size_t start_ = Str.m_data[0] == '"' ? 1 : 0;
-	constexpr static size_t len_ = Str.len_ - start_ - (Str.m_data[Str.len_ - start_ - 1] == '"' ? 1 : 0);
-
-	constexpr static jaf::fixed_string<len_> str_{ Str.m_data + start_, 1};
+	return jaf::log::CommonLogger::DefaultLogger();
 };
 
-template<::jaf::fixed_string LogName>
-std::shared_ptr<ILogger> GetLog()
+inline std::shared_ptr<ILogger> GetLog(const char* log_name)
 {
-	return jaf::log::CommonLogger<LogName>::Logger();
+	return jaf::log::CommonLogger::Logger(log_name);
 };
 
-template<::jaf::fixed_string LogName>
-std::shared_ptr<ILogger> GetLog(const char[])
-{
-	return jaf::log::CommonLogger<LogName>::Logger();
-};
-
-template<::jaf::fixed_string LogName>
 inline std::shared_ptr<ILogger> GetLog(std::shared_ptr<ILogger> logger)
 {
 	return logger;

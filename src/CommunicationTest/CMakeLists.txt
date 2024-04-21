@@ -17,6 +17,9 @@ ADD_EXECUTABLE(
 target_link_libraries(${PROJECT_NAME}
     Log
     Communication
+    Time
+    Mswsock
+    ws2_32
 )
 
 INCLUDE_DIRECTORIES("./")
@@ -26,3 +29,4 @@ INCLUDE_DIRECTORIES("../../3rdparty")
 INCLUDE_DIRECTORIES("../../3rdparty")
 INCLUDE_DIRECTORIES("../Communication")
 INCLUDE_DIRECTORIES("../Log")
+INCLUDE_DIRECTORIES("../Time")

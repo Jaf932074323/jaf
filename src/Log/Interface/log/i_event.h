@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <thread>
+#include "define_log_export.h"
 
 namespace jaf
 {
@@ -15,16 +16,20 @@ constexpr uint32_t LOG_LEVEL_DEBUG = 4; // 调试信息
 constexpr uint32_t LOG_LEVEL_TRANCE = 5; // 追踪信息
 
 // 日志事件
-struct Event
+class API_LOG_EXPORT IEvent
 {
-	uint32_t level_;
-	uint32_t group_number_;
-	std::thread::id thread_id_;
-	std::chrono::system_clock::time_point time_;
-	std::string file_name_;
-	uint32_t line_;
-	std::string fun_name_;
-	std::string info_;
+public:
+	IEvent() {};
+	virtual ~IEvent() {}
+
+public:
+	virtual uint32_t Level() const = 0;
+	virtual uint32_t GroupNumber() const = 0;
+	virtual uint64_t ThreadId() const = 0;
+	virtual uint64_t Time() const = 0;
+	virtual const char* FileName() const = 0;
+	virtual uint32_t Line() const = 0;
+	virtual const char* Info() const = 0;
 };
 
 }

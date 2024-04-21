@@ -1,9 +1,10 @@
 #pragma once
+#include "define_log_export.h"
 #include "Impl/console_appender.h"
 #include "Impl/filter.h"
 #include "Impl/logger.h"
 #include "Impl/log_format.h"
 #include "Impl/create_log_event.h"
-#include "Impl/manage_logger.h"
+#include "Impl/common_logger.h"
 #include "Impl/log_macro.h"
 #include "Impl/get_log_helper.h"

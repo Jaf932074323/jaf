@@ -9,7 +9,7 @@ jaf::Coroutine<void> Unpack::Run(std::shared_ptr<jaf::comm::IChannel> channel, s
 	{
 		size_t recv_len = 0;
 		auto [buff, len] = recv_buffer.GetRecvBuff();
-		bool read_result = co_await channel->Read(buff, len, &recv_len);
+		bool read_result = co_await channel->Read(buff, len, &recv_len, 50000);
 		if (!read_result)
 		{
 			break;

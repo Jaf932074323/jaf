@@ -18,9 +18,9 @@ public:
 	virtual ~UdpChannel();
 public:
     virtual Coroutine<bool> Start();
-	virtual Coroutine<bool> Read(unsigned char* buff, size_t buff_size, size_t* recv_len) override;
-	virtual Coroutine<bool> Write(const unsigned char* buff, size_t buff_size) override;
-	virtual Coroutine<bool> WriteTo(const unsigned char* buff, size_t buff_size, std::string remote_ip, uint16_t remote_port);
+	virtual Coroutine<bool> Read(unsigned char* buff, size_t buff_size, size_t* recv_len, uint64_t timeout) override;
+	virtual Coroutine<bool> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
+	virtual Coroutine<bool> WriteTo(const unsigned char* buff, size_t buff_size, std::string remote_ip, uint16_t remote_port, uint64_t timeout);
 	virtual void Stop() override;
 
 private:
@@ -31,7 +31,7 @@ private:
         ~ReadAwaitable();
         bool await_ready();
         bool await_suspend(std::coroutine_handle<> co_handle);
-        size_t await_resume();
+        size_t await_resume() const;
         void IoCallback(IOCP_DATA* pData);
     private:
         UdpChannel* tcp_channel_ = nullptr;
@@ -53,7 +53,7 @@ private:
         ~WriteAwaitable();
         bool await_ready();
         bool await_suspend(std::coroutine_handle<> co_handle);
-        size_t await_resume();
+        size_t await_resume() const;
         void IoCallback(IOCP_DATA* pData);
     private:
         UdpChannel* tcp_channel_ = nullptr;

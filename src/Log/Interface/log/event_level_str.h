@@ -1,6 +1,5 @@
 #pragma once
 #include <map>
-#include "event.h"
 
 namespace jaf
 {

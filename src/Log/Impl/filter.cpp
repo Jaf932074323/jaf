@@ -10,9 +10,9 @@ Filter::Filter(uint32_t min_level)
 {
 }
 
-bool Filter::Filtration(const Event& log_event)
+bool Filter::Filtration(const IEvent& log_event)
 {
-	return min_level_ >= log_event.level_;
+	return min_level_ >= log_event.Level();
 }
 
 }

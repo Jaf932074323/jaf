@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
+#include "define_log_export.h"
 #include "Interface/log/i_logger.h"
-#include "Interface/log/event.h"
 
 namespace jaf
 {
@@ -9,7 +9,7 @@ namespace log
 {
 
 // 控制台日志输出器
-class CreateLogEvent
+class API_LOG_EXPORT CreateLogEvent
 {
 public:
 	CreateLogEvent(
@@ -18,8 +18,8 @@ public:
 		, uint32_t line
 		, std::string fun_name
 		, std::shared_ptr<jaf::log::ILogger> logger
-		, std::chrono::system_clock::time_point time = std::chrono::system_clock::now()
-		, std::thread::id thread_id = std::this_thread::get_id()
+		, uint64_t time = GetCurTime()
+		, uint64_t thread_id = GetCurThreadId()
 		, uint32_t group_number = 0
 	);
 
@@ -28,8 +28,8 @@ public:
 		, std::string file_name
 		, uint32_t line
 		, std::string fun_name
-		, std::chrono::system_clock::time_point time = std::chrono::system_clock::now()
-		, std::thread::id thread_id = std::this_thread::get_id()
+		, uint64_t time = GetCurTime()
+		, uint64_t thread_id = GetCurThreadId()
 		, uint32_t group_number = 0
 	);
 
@@ -38,21 +38,15 @@ public:
 	CreateLogEvent(const CreateLogEvent&) = delete;
 	CreateLogEvent& operator=(const CreateLogEvent&) = delete;
 public:
-	CreateLogEvent& operator<<(const std::string_view& arg)
-	{
-		log_event_.info_ += arg;
-		return *this;
-	}
+	CreateLogEvent& operator<<(const std::string_view& arg);
+	CreateLogEvent& operator<<(const char* arg);
 
-	CreateLogEvent& operator<<(const char* arg)
-	{
-		log_event_.info_ += std::string_view(arg);
-		return *this;
-	}
+	static uint64_t GetCurThreadId();
+	static uint64_t GetCurTime();
 
 protected:
-	std::shared_ptr<jaf::log::ILogger> logger_;
-	Event log_event_;
+	struct Impl;
+	Impl* m_impl;
 };
 
 }

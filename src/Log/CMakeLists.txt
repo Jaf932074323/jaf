@@ -9,8 +9,10 @@ set(
 
 source_group(TREE ${CMAKE_SOURCE_DIR}/${PROJECT_NAME} FILES ${ALL_FILES})
 
+add_definitions(-D_API_LOG_EXPORT)
+
 add_library(
-    ${PROJECT_NAME} STATIC
+    ${PROJECT_NAME} SHARED
     ${ALL_FILES}
 )
 

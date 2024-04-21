@@ -12,14 +12,15 @@ LogFormat::LogFormat()
 {
 }
 
-std::string LogFormat::EventToString(const Event& log_event)
+std::string LogFormat::EventToString(const IEvent& log_event)
 {
-	std::string str_log = std::format("[{:%Y-%m-%d %H:%M:%S}][{}][{:16X}]:{}"
-		, floor<std::chrono::milliseconds>(log_event.time_)
-		, jaf::log::LogLevelManage::Get(log_event.level_)
-		, std::hash<std::thread::id>()(log_event.thread_id_) // TODO:这里有点坑，正常手段难以获取到线程的整数值
-		, log_event.info_
+	std::string str_log = std::format("[{:%Y-%m-%d %H:%M:%S}][{}][{:6X}]:{}"
+		, std::chrono::system_clock::time_point{ std::chrono::milliseconds{log_event.Time()} }
+		, jaf::log::LogLevelManage::Get(log_event.Level())
+		, log_event.ThreadId()
+		, log_event.Info()
 	);
+
 	return str_log;
 }
 

@@ -5,14 +5,19 @@ namespace jaf
 namespace log
 {
 
+struct Logger::Impl
+{
+	std::shared_ptr<IAppender> appender_; // ÈÕÖ¾Êä³öÆ÷
+};
+
 Logger::Logger(std::shared_ptr<IAppender> appender)
-	: appender_(appender)
+	: m_impl(new Impl{ .appender_ = appender })
 {
 }
 
-void Logger::OnLogEvent(const Event& log_event)
+void Logger::OnLogEvent(const IEvent& log_event)
 {
-	appender_->OnLogEvent(log_event);
+	m_impl->appender_->OnLogEvent(log_event);
 }
 
 }

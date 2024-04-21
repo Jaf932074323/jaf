@@ -1,6 +1,6 @@
 #pragma once
 #include <memory>
-#include "Interface/log/i_appender.h"
+#include "define_log_export.h"
 #include "Interface/log/i_filter.h"
 #include "Interface/log/i_format.h"
 
@@ -10,19 +10,19 @@ namespace log
 {
 
 // 控制台日志输出器
-class ConsoleAppender:public IAppender
+class API_LOG_EXPORT ConsoleAppender:public IAppender
 {
 public:
-	ConsoleAppender(std::shared_ptr < IFormat> format = nullptr, std::shared_ptr< IFilter> filter = nullptr);
-	virtual ~ConsoleAppender(){}
+	ConsoleAppender(std::shared_ptr< IFormat> format = nullptr, std::shared_ptr< IFilter> filter = nullptr);
+	virtual ~ConsoleAppender();
 
 public:
 	// 处理日志事件
-	virtual void OnLogEvent(const Event& log_event) override;
+	virtual void OnLogEvent(const IEvent& log_event) override;
 
 protected:
-	std::shared_ptr< IFilter> filter_; // 过滤器
-	std::shared_ptr < IFormat> format_; // 日志格式化
+	struct Impl;
+	Impl* m_impl = nullptr;
 };
 
 }

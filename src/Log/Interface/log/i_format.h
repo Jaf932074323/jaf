@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
-#include "event.h"
+#include "define_log_export.h"
+#include "i_event.h"
 
 namespace jaf
 {
@@ -8,14 +9,14 @@ namespace log
 {
 
 // 日志事件
-class IFormat
+class API_LOG_EXPORT IFormat
 {
 public:
 	virtual ~IFormat() {};
 
 public:
 	// 日志事件转字符串
-	virtual std::string EventToString(const Event& log_event) = 0;
+	virtual std::string EventToString(const IEvent& log_event) = 0;
 };
 
 }

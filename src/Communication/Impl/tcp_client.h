@@ -13,7 +13,7 @@ namespace comm
 class TcpClient
 {
 public:
-	TcpClient(std::string local_ip, uint16_t local_port, std::string remote_ip, uint16_t remote_port);
+	TcpClient(std::string remote_ip, uint16_t remote_port, std::string local_ip = "0.0.0.0", uint16_t local_port = 0);
 	virtual ~TcpClient();
 
 public:

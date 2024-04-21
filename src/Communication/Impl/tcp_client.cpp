@@ -30,7 +30,7 @@ static LPFN_CONNECTEX GetConnectEx(SOCKET a_socket)
 	return func;
 }
 
-comm::TcpClient::TcpClient(std::string local_ip, uint16_t local_port, std::string remote_ip, uint16_t remote_port)
+comm::TcpClient::TcpClient(std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port)
 	: local_ip_(local_ip)
 	, local_port_(local_port)
 	, remote_ip_(remote_ip)
@@ -129,7 +129,7 @@ bool TcpClient::ConnectAwaitable::await_suspend(std::coroutine_handle<> co_handl
 	//绑定套接字, 绑定到端口
 	::bind(socket_, (SOCKADDR*)&bind_addr, sizeof(bind_addr));//会返回一个SOCKET_ERROR
 
-	CreateIoCompletionPort((HANDLE)socket_, client_->completion_handle_, NULL, 0);
+	CreateIoCompletionPort((HANDLE)socket_, client_->completion_handle_, 0, 0);
 
 	static LPFN_CONNECTEX func = GetConnectEx(socket_);
 
@@ -162,6 +162,10 @@ void TcpClient::ConnectAwaitable::IoCallback(IOCP_DATA* pData)
 {
 	if (pData->success_ == 0)
 	{
+		DWORD dw = GetLastError();
+		std::string str = std::format("Iocp code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
+		LOG_ERROR() << str;
+
 		closesocket(socket_);
 		socket_ = INVALID_SOCKET;
 	}

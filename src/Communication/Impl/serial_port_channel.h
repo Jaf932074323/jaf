@@ -18,8 +18,8 @@ public:
 	virtual ~SerialPortChannel();
 public:
     virtual Coroutine<bool> Start();
-	virtual Coroutine<bool> Read(unsigned char* buff, size_t buff_size, size_t* recv_len) override;
-	virtual Coroutine<bool> Write(const unsigned char* buff, size_t buff_size) override;
+	virtual Coroutine<bool> Read(unsigned char* buff, size_t buff_size, size_t* recv_len, uint64_t timeout) override;
+	virtual Coroutine<bool> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 	virtual void Stop() override;
 
 private:

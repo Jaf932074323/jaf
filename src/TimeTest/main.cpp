@@ -3,10 +3,9 @@
 #include <thread>
 #include <string>
 #include <format>
-#include "Impl/timer.h"
-#include "log_head.h"
-#include "Impl/co_timer.h"
 #include "Impl/co_notify.h"
+#include "log_head.h"
+#include "time_head.h"
 
 jaf::Coroutine<void> TestCoTimer()
 {
@@ -64,7 +63,7 @@ jaf::Coroutine<void> TestTimer()
 int main()
 {
 	std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
-	jaf::log::CommonLogger<"">::SetLogger(std::make_shared<jaf::log::Logger>(appender));
+	jaf::log::CommonLogger::SetDefaultLogger(std::make_shared<jaf::log::Logger>(appender));
 	LOG_INFO() << "¶¨Ê±²âÊÔÆô¶¯";
 
 	std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();

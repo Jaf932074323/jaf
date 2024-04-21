@@ -116,7 +116,7 @@ void TcpServer::Init(void)
 		return;
 	}
 
-	CreateIoCompletionPort((HANDLE)listen_socket_, completion_handle_, NULL, 0);
+	CreateIoCompletionPort((HANDLE)listen_socket_, completion_handle_, 0, 0);
 
 	if (SOCKET_ERROR == listen(listen_socket_, 100))
 	{

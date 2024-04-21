@@ -8,11 +8,7 @@ int main()
 {
 	std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
 	std::shared_ptr<jaf::log::ILogger> logger = std::make_shared<jaf::log::Logger>(appender);
-	jaf::log::CommonLogger<"">::SetLogger(logger);
-
-	//LOG_ERROR(logger) << "²âÊÔ" << "123";
-	//LOG_WARNING() << "²âÊÔ" << "123";
-
+	jaf::log::CommonLogger::SetDefaultLogger(logger);
 
 	for (size_t i = 0; i < 100; ++i)
 	{

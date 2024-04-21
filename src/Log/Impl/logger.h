@@ -1,6 +1,6 @@
 #pragma once
 #include <memory>
-#include <list>
+#include "define_log_export.h"
 #include "Interface/log/i_logger.h"
 
 namespace jaf
@@ -9,7 +9,7 @@ namespace log
 {
 
 // 日志
-class Logger:public ILogger
+class API_LOG_EXPORT Logger:public ILogger
 {
 public:
 	// min_level通过的最低日志等级
@@ -18,10 +18,11 @@ public:
 
 public:
 	// 处理日志事件
-	virtual void OnLogEvent(const Event& log_event) override;
+	virtual void OnLogEvent(const IEvent& log_event) override;
 
 protected:
-	std::shared_ptr<IAppender> appender_; // 日志输出器
+	struct Impl;
+	Impl* m_impl = nullptr;
 };
 
 }
