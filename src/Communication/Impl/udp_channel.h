@@ -18,9 +18,9 @@ public:
 	virtual ~UdpChannel();
 public:
     virtual Coroutine<bool> Start();
-	virtual Coroutine<bool> Read(unsigned char* buff, size_t buff_size, size_t* recv_len, uint64_t timeout) override;
-	virtual Coroutine<bool> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-	virtual Coroutine<bool> WriteTo(const unsigned char* buff, size_t buff_size, std::string remote_ip, uint16_t remote_port, uint64_t timeout);
+    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, std::string remote_ip, uint16_t remote_port, uint64_t timeout);
 	virtual void Stop() override;
 
 private:

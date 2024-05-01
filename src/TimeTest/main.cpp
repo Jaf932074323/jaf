@@ -45,16 +45,28 @@ jaf::Coroutine<void> TestTimer()
 	jaf::time::Timer timer;
 	timer.Start();
 
-	jaf::time::STimerTask task;
+	std::mutex task_mutex;
+	bool run = true;
+
+	jaf::time::STimerPara task;
 	task.fun = [&]()
 		{
 			LOG_INFO() << "timer";
-			//timer.AddTask(task);
+			std::unique_lock<std::mutex> lock(task_mutex);
+			if (run)
+			{
+				timer.StartTask(task);
+			}
 		};
 	task.interval = 0;
-	timer.AddTask(task);
+	timer.StartTask(task);
 
-	co_await jaf::time::CoSleep(2000);
+	co_await jaf::time::CoSleep(1000);
+
+	{
+		std::unique_lock<std::mutex> lock(task_mutex);
+		run = false;
+	}
 
 	timer.Stop();
 }

@@ -1,8 +1,9 @@
 #pragma once
-#include <string>
-#include "util/co_coroutine.h"
 #include "Interface/communication/i_channel_user.h"
 #include "Interface/communication/i_unpack.h"
+#include "time_head.h"
+#include "util/co_coroutine.h"
+#include <string>
 
 namespace jaf
 {
@@ -13,49 +14,39 @@ namespace comm
 class TcpClient
 {
 public:
-	TcpClient(std::string remote_ip, uint16_t remote_port, std::string local_ip = "0.0.0.0", uint16_t local_port = 0);
-	virtual ~TcpClient();
+    TcpClient(std::string remote_ip, uint16_t remote_port, std::string local_ip = "0.0.0.0", uint16_t local_port = 0, std::shared_ptr<jaf::time::Timer> timer = nullptr);
+    virtual ~TcpClient();
 
 public:
-	virtual void SetChannelUser(std::shared_ptr<IChannelUser> user);
-	virtual jaf::Coroutine<void> Run(HANDLE completion_handle);
-	virtual void Stop();
+    // 重连等待时间
+    virtual void SetReconnectWaitTime(uint64_t reconnect_wait_time);
+    virtual void SetChannelUser(std::shared_ptr<IChannelUser> user);
+    virtual jaf::Coroutine<void> Run(HANDLE completion_handle);
+    virtual void Stop();
 
 private:
-	void Init(void);
-	jaf::Coroutine<void> Run();
+    void Init(void);
+    jaf::Coroutine<void> Run();
 
 private:
-    class ConnectAwaitable
-    {
-    public:
-        ConnectAwaitable(TcpClient* client);
-        ~ConnectAwaitable();
-        bool await_ready();
-        bool await_suspend(std::coroutine_handle<> co_handle);
-		SOCKET await_resume();
-        void IoCallback(IOCP_DATA* pData);
-    private:
-        TcpClient* client_ = nullptr;
-        SOCKET socket_ = INVALID_SOCKET; // 连接套接字
-        IOCP_DATA iocp_data_;
-        std::coroutine_handle<> handle_;
+    struct ConnectResult;
+    class ConnectAwaitable;
 
-        char buf_[1] = { 0 };
-        DWORD dwBytes_ = 0;
-    };
 private:
-	bool run_flag_ = false;
+    bool run_flag_ = false;
 
-	HANDLE completion_handle_ = nullptr;
+    std::shared_ptr<jaf::time::ITimer> timer_;
 
-	std::string local_ip_ = "0.0.0.0";
-	uint16_t local_port_ = 0;
-	std::string remote_ip_;
-	uint16_t remote_port_ = 0;
+    HANDLE completion_handle_ = nullptr;
 
-	std::shared_ptr<IChannelUser> user_ = nullptr; // 通道使用者
+    std::string local_ip_ = "0.0.0.0";
+    uint16_t local_port_  = 0;
+    std::string remote_ip_;
+    uint16_t remote_port_         = 0;
+    uint64_t reconnect_wait_time_ = 5000; // 重连等待时间
+
+    std::shared_ptr<IChannelUser> user_ = nullptr; // 通道使用者
 };
 
-}
-}
+} // namespace comm
+} // namespace jaf

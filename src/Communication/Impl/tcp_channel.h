@@ -1,10 +1,10 @@
 #pragma once
-#include <memory>
-#include <functional>
-#include <string>
-#include "Interface/communication/i_channel.h"
 #include "Interface/communication/comm_struct.h"
+#include "Interface/communication/i_channel.h"
 #include "time_head.h"
+#include <functional>
+#include <memory>
+#include <string>
 
 namespace jaf
 {
@@ -12,22 +12,21 @@ namespace comm
 {
 
 // TCPÍ¨µÀ
-class TcpChannel:public IChannel
+class TcpChannel : public IChannel
 {
 public:
-    TcpChannel(HANDLE completion_handle, SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::Timer> timer = nullptr);
-	virtual ~TcpChannel();
+    TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::Timer> timer = nullptr);
+    virtual ~TcpChannel();
+
 public:
-    virtual Coroutine<bool> Start();
-	virtual Coroutine<bool> Read(unsigned char* buff, size_t buff_size, size_t* recv_len, uint64_t timeout) override;
-	virtual Coroutine<bool> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-	virtual void Stop() override;
+    virtual Coroutine<bool> Start() override;
+    virtual void Stop() override;
+    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
     class ReadAwaitable;
     class WriteAwaitable;
-
-    HANDLE completion_handle_ = nullptr;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
@@ -39,6 +38,5 @@ private:
 };
 
 
-
-}
-}
+} // namespace comm
+} // namespace jaf
