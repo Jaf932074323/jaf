@@ -1,5 +1,4 @@
 #include "tcp_client.h"
-#include "Impl/co_notify.h"
 #include "Log/log_head.h"
 #include "tcp_channel.h"
 #include "util/finally.h"
@@ -33,15 +32,14 @@ static LPFN_CONNECTEX GetConnectEx(SOCKET a_socket)
 
 struct TcpClient::ConnectResult
 {
-    bool success   = false;
-    SOCKET socket_ = INVALID_SOCKET; // 连接套接字
+    bool success = false;
     std::string error_info_;
 };
 
 class TcpClient::ConnectAwaitable
 {
 public:
-    ConnectAwaitable(TcpClient* client);
+    ConnectAwaitable(TcpClient* client, SOCKET connect_socket);
     ~ConnectAwaitable();
     bool await_ready();
     bool await_suspend(std::coroutine_handle<> co_handle);
@@ -50,10 +48,12 @@ public:
 
 private:
     TcpClient* client_ = nullptr;
-    SOCKET socket_     = INVALID_SOCKET; // 连接套接字
     std::string error_info_;
     IOCP_DATA iocp_data_;
     std::coroutine_handle<> handle_;
+    SOCKET connect_socket_;
+
+    bool success_ = false;
 
     char buf_[1]   = {0};
     DWORD dwBytes_ = 0;
@@ -65,6 +65,7 @@ TcpClient::TcpClient(std::string remote_ip, uint16_t remote_port, std::string lo
     , remote_ip_(remote_ip)
     , remote_port_(remote_port)
     , timer_(timer == nullptr ? jaf::time::CommonTimer::Timer() : timer)
+    , notify_(timer_)
 {
 }
 
@@ -89,6 +90,7 @@ jaf::Coroutine<void> TcpClient::Run(HANDLE completion_handle)
         co_return;
     }
     run_flag_ = true;
+    notify_.Start();
 
     completion_handle_ = completion_handle;
     Init();
@@ -100,6 +102,17 @@ jaf::Coroutine<void> TcpClient::Run(HANDLE completion_handle)
 
 void TcpClient::Stop()
 {
+    run_flag_ = false;
+
+    {
+        std::unique_lock<std::mutex> lock(channel_mutex_);
+        if (channel_)
+        {
+            channel_->Stop();
+        }
+    }
+
+    notify_.Stop();
 }
 
 void TcpClient::Init(void)
@@ -108,11 +121,23 @@ void TcpClient::Init(void)
 
 jaf::Coroutine<void> TcpClient::Run()
 {
-    jaf::time::CoNotify notify(timer_);
+    SOCKET connect_socket = INVALID_SOCKET; // 连接套接字
 
     while (run_flag_)
     {
-        auto result = co_await ConnectAwaitable(this);
+        connect_socket = CreationSocket();
+        if (connect_socket == INVALID_SOCKET)
+        {
+            LOG_ERROR() << error_info_;
+            co_return;
+        }
+        FINALLY(closesocket(connect_socket); connect_socket = INVALID_SOCKET;);
+
+        auto result = co_await ConnectAwaitable(this, connect_socket);
+        if (!run_flag_)
+        {
+            co_return;
+        }
         if (!result.success)
         {
             LOG_WARNING() << std::format("TCP连接失败,本地{}:{},远程{}:{},{}",
@@ -120,25 +145,18 @@ jaf::Coroutine<void> TcpClient::Run()
                 remote_ip_, remote_port_,
                 result.error_info_);
 
-            co_await notify.Wait(reconnect_wait_time_);
+            co_await notify_.Wait(reconnect_wait_time_);
             continue;
         }
-        FINALLY(closesocket(result.socket_););
 
-        if (CreateIoCompletionPort((HANDLE) result.socket_, completion_handle_, 0, 0) == 0)
+
+        std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket, remote_ip_, remote_port_, local_ip_, local_port_);
+
         {
-            DWORD dw    = GetLastError();
-            std::string str_err = std::format("TCP绑定完成端口失败,本地{}:{},远程{}:{},code:{},{}",
-                local_ip_, local_port_,
-                remote_ip_, remote_port_,
-                dw, GetFormatMessage(dw));
-            LOG_ERROR() << str_err;
-
-            co_await notify.Wait(reconnect_wait_time_);
-            continue;
+            std::unique_lock lock(channel_mutex_);
+            channel_ = channel;
         }
 
-        std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(result.socket_, remote_ip_, remote_port_, local_ip_, local_port_);
         if (co_await channel->Start())
         {
             co_await user_->Access(channel);
@@ -149,8 +167,56 @@ jaf::Coroutine<void> TcpClient::Run()
     co_return;
 }
 
-TcpClient::ConnectAwaitable::ConnectAwaitable(TcpClient* client)
+SOCKET TcpClient::CreationSocket()
+{
+    SOCKET connect_socket = INVALID_SOCKET; // 连接套接字
+    connect_socket        = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (INVALID_SOCKET == connect_socket)
+    {
+        DWORD dw    = GetLastError();
+        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},{},code:{},:{}",
+            local_ip_, local_port_,
+            remote_ip_, remote_port_,
+            dw, GetFormatMessage(dw));
+        return false;
+    }
+
+    sockaddr_in bind_addr = {};
+    inet_pton(AF_INET, local_ip_.c_str(), (void*) &bind_addr.sin_addr);
+    bind_addr.sin_family = AF_INET;
+    bind_addr.sin_port   = htons(local_port_);
+
+    //绑定套接字, 绑定到端口
+    if (SOCKET_ERROR == ::bind(connect_socket, (SOCKADDR*) &bind_addr, sizeof(bind_addr)))
+    {
+        DWORD dw    = GetLastError();
+        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},{},code:{},:{}",
+            local_ip_, local_port_,
+            remote_ip_, remote_port_,
+            dw, GetFormatMessage(dw));
+        closesocket(connect_socket);
+        connect_socket = INVALID_SOCKET;
+        return false;
+    }
+
+    if (CreateIoCompletionPort((HANDLE) connect_socket, completion_handle_, 0, 0) == 0)
+    {
+        DWORD dw    = GetLastError();
+        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},{},code:{},:{}",
+            local_ip_, local_port_,
+            remote_ip_, remote_port_,
+            dw, GetFormatMessage(dw));
+        closesocket(connect_socket);
+        connect_socket = INVALID_SOCKET;
+        return false;
+    }
+
+    return connect_socket;
+}
+
+TcpClient::ConnectAwaitable::ConnectAwaitable(TcpClient* client, SOCKET connect_socket)
     : client_(client)
+    , connect_socket_(connect_socket)
 {
 }
 
@@ -165,48 +231,22 @@ bool TcpClient::ConnectAwaitable::await_ready()
 
 bool TcpClient::ConnectAwaitable::await_suspend(std::coroutine_handle<> co_handle)
 {
-    handle_ = co_handle;
+    static LPFN_CONNECTEX func_connect = GetConnectEx(connect_socket_);
 
+    handle_          = co_handle;
     iocp_data_.call_ = std::bind(&ConnectAwaitable::IoCallback, this, std::placeholders::_1);
-
-    socket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (INVALID_SOCKET == socket_)
-    {
-        DWORD dw    = GetLastError();
-        error_info_ = std::format("code:{},:{}", dw, GetFormatMessage(dw));
-        return false;
-    }
-
-    sockaddr_in bind_addr = {};
-    inet_pton(AF_INET, client_->local_ip_.c_str(), (void*) &bind_addr.sin_addr);
-    bind_addr.sin_family = AF_INET;
-    bind_addr.sin_port   = htons(client_->local_port_);
-
-    //绑定套接字, 绑定到端口
-    ::bind(socket_, (SOCKADDR*) &bind_addr, sizeof(bind_addr)); //会返回一个SOCKET_ERROR
-
-    if (CreateIoCompletionPort((HANDLE) socket_, client_->completion_handle_, 0, 0) == 0)
-    {
-        DWORD dw    = GetLastError();
-        error_info_ = std::format("code:{},:{}", dw, GetFormatMessage(dw));
-        return false;
-    }
-
-    static LPFN_CONNECTEX func_connect = GetConnectEx(socket_);
 
     sockaddr_in connect_addr = {0};
     inet_pton(AF_INET, client_->remote_ip_.c_str(), (void*) &connect_addr.sin_addr);
     connect_addr.sin_family = AF_INET;
     connect_addr.sin_port   = htons(client_->remote_port_);
     DWORD bytes;
-    bool connect_result = func_connect(socket_, (const sockaddr*) &connect_addr, sizeof(connect_addr), nullptr, 0, &bytes, &iocp_data_.overlapped);
+    bool connect_result = func_connect(connect_socket_, (const sockaddr*) &connect_addr, sizeof(connect_addr), nullptr, 0, &bytes, &iocp_data_.overlapped);
 
     if (!connect_result && WSAGetLastError() != ERROR_IO_PENDING)
     {
         DWORD dw    = GetLastError();
         error_info_ = std::format("code:{},:{}", dw, GetFormatMessage(dw));
-        closesocket(socket_);
-        socket_ = INVALID_SOCKET;
         return false;
     }
 
@@ -215,7 +255,7 @@ bool TcpClient::ConnectAwaitable::await_suspend(std::coroutine_handle<> co_handl
 
 TcpClient::ConnectResult TcpClient::ConnectAwaitable::await_resume()
 {
-    return ConnectResult{.success = socket_ != INVALID_SOCKET, .socket_ = socket_, .error_info_ = error_info_};
+    return ConnectResult{.success = success_, .error_info_ = error_info_};
 }
 
 void TcpClient::ConnectAwaitable::IoCallback(IOCP_DATA* pData)
@@ -224,8 +264,11 @@ void TcpClient::ConnectAwaitable::IoCallback(IOCP_DATA* pData)
     {
         DWORD dw    = GetLastError();
         error_info_ = std::format("code:{},:{}", dw, GetFormatMessage(dw));
-        closesocket(socket_);
-        socket_ = INVALID_SOCKET;
+        success_    = false;
+    }
+    else
+    {
+        success_ = true;
     }
 
     handle_.resume();

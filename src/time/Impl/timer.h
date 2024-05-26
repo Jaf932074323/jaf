@@ -53,7 +53,7 @@ public:
 private:
     // 执行达到时间的任务
     virtual void GainNeedExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks);
-    virtual void ExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks);
+    virtual void ExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks, TimerResultType result_type);
 
 private:
     std::shared_ptr<IThreadPool> thread_pool_;

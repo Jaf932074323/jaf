@@ -38,7 +38,7 @@ inline jaf::Coroutine<void> CoSleep(uint64_t millisecond)
         bool await_suspend(std::coroutine_handle<> co_handle)
         {
             handle_ = co_handle;
-            CommonTimer::Timer()->StartTask(jaf::time::STimerPara{[this]() { TimerCallback(); }, sleep_time_});
+            CommonTimer::Timer()->StartTask(jaf::time::STimerPara{[this](TimerResultType result_type) { TimerCallback(); }, sleep_time_});
             return true;
         }
 
@@ -95,7 +95,7 @@ public:
             bool await_suspend(std::coroutine_handle<> co_handle)
             {
                 handle_ = co_handle;
-                co_timer_->timer_->StartTask(jaf::time::STimerPara{[this]() { TimerCallback(); }, sleep_time_});
+                co_timer_->timer_->StartTask(jaf::time::STimerPara{[this](TimerResultType result_type) { TimerCallback(); }, sleep_time_});
                 return true;
             }
 

@@ -7,10 +7,17 @@ namespace jaf
 namespace time
 {
 
+enum class TimerResultType
+{
+    TRT_SUCCESS   = 0, // 定时成功
+    TRT_TASK_STOP = 1, // 这个定时任务停止
+    TRT_TIMER_STOP = 2, // 定时器停止
+};
+
 // 定时参数
 struct STimerPara
 {
-    std::function<void(void)> fun; // 定时执行函数
+    std::function<void(TimerResultType result_type)> fun; // 定时执行函数
     uint64_t interval = 1000;      // 定时时间间隔（毫秒）
 };
 

@@ -44,7 +44,8 @@ private:
 	bool run_flag_ = false; // 运行标志
 	
 	std::shared_ptr<std::latch> work_threads_latch_ = std::make_shared<std::latch>(0);
-
+		
+    size_t work_thread_count_ = 10;
 	std::shared_ptr<IThreadPool> thread_pool_;
 };
 

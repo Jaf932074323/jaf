@@ -1,9 +1,11 @@
 #pragma once
+#include "Impl/co_notify.h"
 #include "Interface/communication/i_channel_user.h"
 #include "Interface/communication/i_unpack.h"
 #include "time_head.h"
 #include "util/co_coroutine.h"
 #include <string>
+#include "Interface/communication/i_channel.h"
 
 namespace jaf
 {
@@ -28,6 +30,8 @@ private:
     void Init(void);
     jaf::Coroutine<void> Run();
 
+    SOCKET CreationSocket();
+
 private:
     struct ConnectResult;
     class ConnectAwaitable;
@@ -36,6 +40,7 @@ private:
     bool run_flag_ = false;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
+    jaf::time::CoNotify notify_;
 
     HANDLE completion_handle_ = nullptr;
 
@@ -45,7 +50,12 @@ private:
     uint16_t remote_port_         = 0;
     uint64_t reconnect_wait_time_ = 5000; // 重连等待时间
 
+    std::string error_info_;
+
     std::shared_ptr<IChannelUser> user_ = nullptr; // 通道使用者
+
+    std::mutex channel_mutex_;
+    std::shared_ptr<IChannel> channel_ = nullptr;
 };
 
 } // namespace comm

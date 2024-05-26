@@ -56,25 +56,41 @@ void Timer::Clear()
 
 void Timer::StopTask(uint64_t task_id)
 {
-    std::unique_lock<std::mutex> ul(tasks_mutex_);
-    auto it = tasks_time_id_.find(task_id);
-    if (it == tasks_time_id_.end())
+    std::shared_ptr<STimerParaInter> timer_task = nullptr;
     {
-        return;
+        std::unique_lock<std::mutex> ul(tasks_mutex_);
+        auto it = tasks_time_id_.find(task_id);
+        if (it == tasks_time_id_.end())
+        {
+            return;
+        }
+
+        auto time_it = tasks_time_time_.find(it->second->time);
+
+        tasks_time_id_.erase(task_id);
+
+        if (time_it == tasks_time_time_.end())
+        {
+            return;
+        }
+
+        auto time_it2 = time_it->second.find(task_id);
+        if (time_it2 != time_it->second.end())
+        {
+            timer_task = time_it2->second;
+            time_it->second.erase(time_it2);
+        }
+
+        if (time_it->second.empty())
+        {
+            tasks_time_time_.erase(time_it);
+        }
     }
 
-    auto time_it = tasks_time_time_.find(it->second->time);
-
-    tasks_time_id_.erase(task_id);
-
-    if (time_it == tasks_time_time_.end())
+    if (timer_task != nullptr)
     {
-        return;
-    }
-    time_it->second.erase(task_id);
-    if (time_it->second.empty())
-    {
-        tasks_time_time_.erase(time_it);
+        std::function<void(TimerResultType result_type)> fun = timer_task->m_timerTask.fun;
+        thread_pool_->Post([fun]() { fun(TimerResultType::TRT_TASK_STOP); });
     }
 }
 
@@ -102,8 +118,6 @@ void Timer::Stop()
             return;
         }
         run_flag_ = false;
-        tasks_time_id_.clear();
-        tasks_time_time_.clear();
 
         m_workCondition.notify_all();
     }
@@ -125,7 +139,7 @@ void Timer::Work()
 
     while (true)
     {
-        ExecuteTasks(need_execute_tasks);
+        ExecuteTasks(need_execute_tasks, TimerResultType::TRT_SUCCESS);
         need_execute_tasks.clear();
 
         {
@@ -152,6 +166,26 @@ void Timer::Work()
             GainNeedExecuteTasks(need_execute_tasks);
         }
     }
+
+    // 处理剩余的所有定时任务
+    std::map<uint64_t, std::map<uint64_t, std::shared_ptr<STimerParaInter>>> residue_tasks_time_time_;
+    {
+        std::unique_lock<std::mutex> ul(tasks_mutex_);
+        residue_tasks_time_time_ = std::move(tasks_time_time_);
+
+        tasks_time_id_.clear();
+        tasks_time_time_.clear();
+    }
+
+    for (auto it : residue_tasks_time_time_)
+    {
+        for (auto it_2 : it.second)
+        {
+            assert(it_2.second->m_timerTask.fun);
+            std::function<void(TimerResultType result_type)> fun = it_2.second->m_timerTask.fun;
+            thread_pool_->Post([fun]() { fun(TimerResultType::TRT_TIMER_STOP); });
+        }
+    }
 }
 
 void Timer::GainNeedExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks)
@@ -171,14 +205,15 @@ void Timer::GainNeedExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<ST
     tasks_time_time_.erase(tasks_time_time_.begin(), end_it);
 }
 
-void Timer::ExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks)
+void Timer::ExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks, TimerResultType result_type)
 {
     for (auto it : need_execute_tasks)
     {
         for (auto it_2 : it)
         {
             assert(it_2.second->m_timerTask.fun);
-            thread_pool_->Post(it_2.second->m_timerTask.fun);
+            std::function<void(TimerResultType result_type)> fun = it_2.second->m_timerTask.fun;
+            thread_pool_->Post([fun, result_type]() { fun(result_type); });
         }
     }
 }

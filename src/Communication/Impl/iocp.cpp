@@ -48,6 +48,12 @@ void Iocp::Stop()
         return;
     }
     run_flag_ = false;
+
+    for (size_t i = 0; i < work_thread_count_; ++i)
+    {
+        PostQueuedCompletionStatus(m_completionPort, 0, (DWORD) NULL, NULL);
+    }
+
     CloseHandle(m_completionPort);
     m_completionPort = nullptr;
 }
@@ -62,10 +68,9 @@ void Iocp::CreateWorkThread()
     SYSTEM_INFO mySysInfo;
     GetSystemInfo(&mySysInfo);
     // size_t work_thread_count = mySysInfo.dwNumberOfProcessors * 2;
-    size_t work_thread_count = 1;
 
-    work_threads_latch_ = std::make_shared<std::latch>(work_thread_count);
-    for (size_t i = 0; i < work_thread_count; ++i)
+    work_threads_latch_ = std::make_shared<std::latch>(work_thread_count_);
+    for (size_t i = 0; i < work_thread_count_; ++i)
     {
         thread_pool_->Post(std::bind(&Iocp::WorkThreadRun, this));
     }
@@ -82,9 +87,9 @@ void Iocp::WorkThreadRun()
     {
         BOOL success = GetQueuedCompletionStatus(m_completionPort, &bytesTransferred, (PULONG_PTR) &completionKey, (LPOVERLAPPED*) &pPerIoData, INFINITE);
 
-        if (!success)
+        if (pPerIoData == nullptr)
         {
-            if (pPerIoData == nullptr)
+            if (!success)
             {
                 DWORD dw = GetLastError();
                 if (WAIT_TIMEOUT == dw)
@@ -95,10 +100,7 @@ void Iocp::WorkThreadRun()
                 std::string str = std::format("Iocp code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
                 LOG_ERROR(LOG_NAME) << str;
             }
-        }
 
-        if (pPerIoData == nullptr)
-        {
             continue;
         }
         pPerIoData->success_          = success;

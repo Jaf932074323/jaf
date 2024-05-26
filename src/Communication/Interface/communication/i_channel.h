@@ -13,7 +13,7 @@ struct SChannelResult
     bool success = false; // true成功,false失败
     size_t len   = 0;     // 处理长度
     bool timeout = false; // true超时,false未超时
-    std::string error;    // 当失败时，失败原因
+    std::string error;    // 当失败且未超时，失败原因
 };
 
 // 通信通道

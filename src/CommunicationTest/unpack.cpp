@@ -1,4 +1,5 @@
 #include "unpack.h"
+#include "log_head.h"
 
 jaf::Coroutine<void> Unpack::Run(std::shared_ptr<jaf::comm::IChannel> channel, std::shared_ptr<jaf::comm::IDealPack> deal_pack)
 {
@@ -15,6 +16,8 @@ jaf::Coroutine<void> Unpack::Run(std::shared_ptr<jaf::comm::IChannel> channel, s
             {
                 continue;
             }
+
+            LOG_WARNING() << result.error;
             break;
         }
 
