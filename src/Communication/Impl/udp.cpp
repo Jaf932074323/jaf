@@ -10,12 +10,12 @@ namespace comm
 
 std::string GetFormatMessage(DWORD dw);
 
-
-Udp::Udp(std::string local_ip, uint16_t local_port, std::string remote_ip, uint16_t remote_port)
+Udp::Udp(std::string local_ip, uint16_t local_port, std::string remote_ip, uint16_t remote_port, std::shared_ptr<jaf::time::ITimer> timer)
     : local_ip_(local_ip)
     , local_port_(local_port)
     , remote_ip_(remote_ip)
     , remote_port_(remote_port)
+    , timer_(timer)
 {
 }
 
@@ -36,24 +36,23 @@ jaf::Coroutine<void> Udp::Run(HANDLE completion_handle)
     }
     run_flag_ = true;
 
-    await_stop_.Start();
-
     completion_handle_ = completion_handle;
     Init();
 
-    jaf::Coroutine<void> run_socket = RunSocket();
-
-    co_await await_stop_.Wait();
-
-    run_flag_ = false;
+    std::shared_ptr<UdpChannel> channel = std::make_shared<UdpChannel>(completion_handle_, socket_, remote_ip_, remote_port_, local_ip_, local_port_, timer_);
 
     {
-        std::unique_lock<std::mutex> lock(channel_mutex_);
-        if (channel_)
-        {
-            channel_->Stop();
-        }
+        std::unique_lock lock(channel_mutex_);
+        channel_ = channel;
     }
+
+    if (co_await channel->Start())
+    {
+        co_await user_->Access(channel);
+        channel->Stop();
+    }
+
+    run_flag_ = false;
 
     CancelIo((HANDLE) socket_);
     closesocket(socket_);
@@ -64,7 +63,13 @@ jaf::Coroutine<void> Udp::Run(HANDLE completion_handle)
 
 void Udp::Stop()
 {
-    await_stop_.Stop();
+    run_flag_ = false;
+    std::unique_lock lock(channel_mutex_);
+    if (channel_ != nullptr)
+    {
+        channel_->Stop();
+        channel_ = nullptr;
+    }
 }
 
 void Udp::Init(void)
@@ -85,22 +90,6 @@ void Udp::Init(void)
 
     //绑定套接字, 绑定到端口
     ::bind(socket_, (SOCKADDR*) &addrSrv, sizeof(addrSrv)); //会返回一个SOCKET_ERROR
-}
-
-jaf::Coroutine<void> Udp::RunSocket()
-{
-    std::shared_ptr<UdpChannel> channel = std::make_shared<UdpChannel>(completion_handle_, socket_, remote_ip_, remote_port_, local_ip_, local_port_);
-
-    {
-        std::unique_lock lock(channel_mutex_);
-        channel_ = channel;
-    }
-
-    if (co_await channel->Start())
-    {
-        co_await user_->Access(channel);
-        channel->Stop();
-    }
 }
 
 } // namespace comm

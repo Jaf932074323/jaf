@@ -69,7 +69,7 @@ private:
     bool callback_flag_ = false; // 已经回调标记
 };
 
-TcpChannel::TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::Timer> timer)
+TcpChannel::TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
     : socket_(socket)
     , remote_ip_(remote_ip)
     , remote_port_(remote_port)
@@ -84,6 +84,7 @@ TcpChannel::~TcpChannel() {}
 
 Coroutine<bool> TcpChannel::Start()
 {
+    stop_flag_ = false;
     read_await_.Start();
     write_await_.Start();
     co_return true;
@@ -210,7 +211,6 @@ bool TcpChannel::ReadAwaitable::await_ready()
 bool TcpChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_handle)
 {
     handle = co_handle;
-
     DWORD flags      = 0;
     iocp_data_.call_ = [this](IOCP_DATA* pData) { IoCallback(pData); };
 

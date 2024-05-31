@@ -2,6 +2,7 @@
 #include "impl/co_await_time.h"
 #include "interface/communication/comm_struct.h"
 #include "interface/communication/i_channel.h"
+#include "time_head.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -14,8 +15,12 @@ namespace comm
 // TCP通道
 class UdpChannel : public IChannel
 {
+    struct AwaitableResult;
+    class ReadAwaitable;
+    class WriteAwaitable;
+
 public:
-    UdpChannel(HANDLE completion_handle, SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port);
+    UdpChannel(HANDLE completion_handle, SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
     virtual ~UdpChannel();
 
 public:
@@ -26,8 +31,7 @@ public:
     virtual void Stop() override;
 
 private:
-    class ReadAwaitable;
-    class WriteAwaitable;
+    bool stop_flag_ = false;
 
     HANDLE completion_handle_ = nullptr;
     SOCKET socket_            = 0; // 收发数据的套接字

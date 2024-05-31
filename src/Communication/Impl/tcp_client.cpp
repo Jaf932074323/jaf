@@ -168,7 +168,7 @@ jaf::Coroutine<void> TcpClient::Execute()
         }
 
 
-        std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket, remote_ip_, remote_port_, local_ip_, local_port_);
+        std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket, remote_ip_, remote_port_, local_ip_, local_port_, timer_);
 
         {
             std::unique_lock lock(channel_mutex_);

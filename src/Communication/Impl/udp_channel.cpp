@@ -1,4 +1,5 @@
 #include "udp_channel.h"
+#include "impl/tool/run_with_timeout.h"
 #include <WS2tcpip.h>
 #include <assert.h>
 #include <format>
@@ -12,6 +13,12 @@ namespace comm
 
 std::string GetFormatMessage(DWORD dw);
 
+struct UdpChannel::AwaitableResult
+{
+    size_t len_ = 0; // 接收数据长度 为0时表示接收失败
+    int err_    = 0; // 错误代码
+};
+
 class UdpChannel::ReadAwaitable
 {
 public:
@@ -19,14 +26,14 @@ public:
     ~ReadAwaitable();
     bool await_ready();
     bool await_suspend(std::coroutine_handle<> co_handle);
-    size_t await_resume() const;
+    AwaitableResult await_resume() const;
     void IoCallback(IOCP_DATA* pData);
     void Stop();
 
 private:
     UdpChannel* tcp_channel_ = nullptr;
     SOCKET socket_           = 0; // 收发数据的套接字
-    size_t recv_len_         = 0; // 接收数据长度
+    AwaitableResult reslult_;
 
     IOCP_DATA iocp_data_;
     std::coroutine_handle<> handle;
@@ -45,14 +52,14 @@ public:
     ~WriteAwaitable();
     bool await_ready();
     bool await_suspend(std::coroutine_handle<> co_handle);
-    size_t await_resume() const;
+    AwaitableResult await_resume() const;
     void IoCallback(IOCP_DATA* pData);
     void Stop();
 
 private:
     UdpChannel* tcp_channel_ = nullptr;
     SOCKET socket_           = 0; // 收发数据的套接字
-    size_t write_len_        = 0; // 接收数据长度
+    AwaitableResult reslult_;
 
     sockaddr_in send_addr_ = {};
 
@@ -70,13 +77,16 @@ private:
 
 UdpChannel::UdpChannel(HANDLE completion_handle, SOCKET socket,
     std::string remote_ip, uint16_t remote_port,
-    std::string local_ip, uint16_t local_port)
+    std::string local_ip, uint16_t local_port
+    , std::shared_ptr<jaf::time::ITimer> timer)
     : completion_handle_(completion_handle)
     , socket_(socket)
     , remote_ip_(remote_ip)
     , remote_port_(remote_port)
     , local_ip_(local_ip)
     , local_port_(local_port)
+    , read_await_(timer)
+    , write_await_(timer)
 {
     send_addr_.sin_family      = AF_INET;
     send_addr_.sin_port        = htons(remote_port_);
@@ -89,27 +99,112 @@ UdpChannel::~UdpChannel()
 
 Coroutine<bool> UdpChannel::Start()
 {
+    stop_flag_ = false;
+    read_await_.Start();
+    write_await_.Start();
     CreateIoCompletionPort((HANDLE) socket_, completion_handle_, 0, 0);
     co_return true;
 }
 
+void UdpChannel::Stop()
+{
+    stop_flag_ = true;
+    write_await_.Stop();
+    read_await_.Stop();
+    closesocket(socket_);
+}
+
 Coroutine<SChannelResult> UdpChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
-    SChannelResult result;
-    result.len = co_await ReadAwaitable{this, socket_, buff, buff_size};
+    ReadAwaitable read_awaitable(this, socket_, buff, buff_size);
+    RunWithTimeout run_with_timeout(read_await_, read_awaitable, timeout);
+    co_await run_with_timeout.Run();
 
-    if (result.len == 0)
+    SChannelResult result;
+
+    const AwaitableResult& read_result = run_with_timeout.Result();
+    if (run_with_timeout.IsTimeout())
     {
-        co_return SChannelResult{.state = SChannelResult::EState::CRS_UNKNOWN};
+        result.state = SChannelResult::EState::CRS_TIMEOUT;
+    }
+    result.len = read_result.len_;
+
+    if (result.len != 0)
+    {
+        result.state = SChannelResult::EState::CRS_SUCCESS;
+        co_return result;
     }
 
-    co_return SChannelResult{.state = SChannelResult::EState::CRS_SUCCESS};
+    if (stop_flag_)
+    {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
+        co_return result;
+    }
+
+    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
+    {
+        if (read_result.err_ == 0)
+        {
+            result.state = SChannelResult::EState::CRS_UNKNOWN;
+        }
+        else
+        {
+            result.state = SChannelResult::EState::CRS_FAIL;
+            result.code_ = read_result.err_;
+            CancelIo((HANDLE) socket_);
+            closesocket(socket_);
+            socket_      = INVALID_SOCKET;
+            result.error = std::format("TcpChannel code error:{},error-msg:{}", read_result.err_, GetFormatMessage(read_result.err_));
+        }
+    }
+
+    co_return result;
 }
 
 Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
-    co_await WriteAwaitable{this, socket_, buff, buff_size, send_addr_};
-    co_return SChannelResult{.state = SChannelResult::EState::CRS_SUCCESS};
+    WriteAwaitable write_awaitable(this, socket_, buff, buff_size, send_addr_);
+    RunWithTimeout run_with_timeout(write_await_, write_awaitable, timeout);
+    co_await run_with_timeout.Run();
+        
+    SChannelResult result;
+    const AwaitableResult& write_result = run_with_timeout.Result();
+    if (run_with_timeout.IsTimeout())
+    {
+        result.state = SChannelResult::EState::CRS_TIMEOUT;
+    }
+    result.len = write_result.len_;
+
+    if (result.len != 0)
+    {
+        result.state = SChannelResult::EState::CRS_SUCCESS;
+        co_return result;
+    }
+
+    if (stop_flag_)
+    {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
+        co_return result;
+    }
+
+    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
+    {
+        if (write_result.err_ == 0)
+        {
+            result.state = SChannelResult::EState::CRS_UNKNOWN;
+        }
+        else
+        {
+            result.state = SChannelResult::EState::CRS_FAIL;
+            result.code_ = write_result.err_;
+            CancelIo((HANDLE) socket_);
+            closesocket(socket_);
+            socket_      = INVALID_SOCKET;
+            result.error = std::format("TcpChannel code error:{},error-msg: {}", write_result.err_, GetFormatMessage(write_result.err_));
+        }
+    }
+
+    co_return result;
 }
 
 Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, std::string remote_ip, uint16_t remote_port, uint64_t timeout)
@@ -119,15 +214,48 @@ Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t 
     send_addr.sin_port        = htons(remote_port);
     send_addr.sin_addr.s_addr = inet_addr(remote_ip.c_str());
 
-    co_await WriteAwaitable{this, socket_, buff, buff_size, send_addr};
-    co_return SChannelResult{.state = SChannelResult::EState::CRS_SUCCESS};
-}
+    WriteAwaitable write_awaitable(this, socket_, buff, buff_size, send_addr);
+    RunWithTimeout run_with_timeout(write_await_, write_awaitable, timeout);
+    co_await run_with_timeout.Run();
 
-void UdpChannel::Stop()
-{
-    write_await_.Stop();
-    read_await_.Stop();
-    closesocket(socket_);
+    SChannelResult result;
+    const AwaitableResult& write_result = run_with_timeout.Result();
+    if (run_with_timeout.IsTimeout())
+    {
+        result.state = SChannelResult::EState::CRS_TIMEOUT;
+    }
+    result.len = write_result.len_;
+
+    if (result.len != 0)
+    {
+        result.state = SChannelResult::EState::CRS_SUCCESS;
+        co_return result;
+    }
+
+    if (stop_flag_)
+    {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
+        co_return result;
+    }
+
+    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
+    {
+        if (write_result.err_ == 0)
+        {
+            result.state = SChannelResult::EState::CRS_UNKNOWN;
+        }
+        else
+        {
+            result.state = SChannelResult::EState::CRS_FAIL;
+            result.code_ = write_result.err_;
+            CancelIo((HANDLE) socket_);
+            closesocket(socket_);
+            socket_      = INVALID_SOCKET;
+            result.error = std::format("TcpChannel code error:{},error-msg: {}", write_result.err_, GetFormatMessage(write_result.err_));
+        }
+    }
+
+    co_return result;
 }
 
 UdpChannel::ReadAwaitable::ReadAwaitable(UdpChannel* tcp_channel, SOCKET socket, unsigned char* buff, size_t size)
@@ -140,6 +268,7 @@ UdpChannel::ReadAwaitable::ReadAwaitable(UdpChannel* tcp_channel, SOCKET socket,
 UdpChannel::ReadAwaitable::~ReadAwaitable()
 {
 }
+
 bool UdpChannel::ReadAwaitable::await_ready()
 {
     return false;
@@ -149,25 +278,23 @@ bool UdpChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_handle)
 {
     DWORD flags = 0;
     handle      = co_handle;
-
     iocp_data_.call_ = std::bind(&ReadAwaitable::IoCallback, this, std::placeholders::_1);
 
-    int recv = WSARecv(socket_, &wsbuffer_, 1, nullptr, &flags, &iocp_data_.overlapped, NULL);
-    DWORD dw = GetLastError();
-    if (WAIT_TIMEOUT != dw && ERROR_IO_PENDING != dw)
+    if (SOCKET_ERROR == WSARecv(socket_, &wsbuffer_, 1, nullptr, &flags, &iocp_data_.overlapped, NULL))
     {
-        std::string str =
-            std::format("UdpChannel code error: {} \t  error-msg: {}\r\n", dw,
-                GetFormatMessage(dw));
-        OutputDebugString(str.c_str());
+        int error = WSAGetLastError();
+        if (error != ERROR_IO_PENDING)
+        {
+            return false;
+        }
     }
 
     return true;
 }
 
-size_t UdpChannel::ReadAwaitable::await_resume() const
+UdpChannel::AwaitableResult UdpChannel::ReadAwaitable::await_resume() const
 {
-    return recv_len_;
+    return reslult_;
 }
 
 void UdpChannel::ReadAwaitable::IoCallback(IOCP_DATA* pData)
@@ -179,23 +306,12 @@ void UdpChannel::ReadAwaitable::IoCallback(IOCP_DATA* pData)
 
     if (pData->success_ == 0)
     {
-        DWORD dw = GetLastError();
-        if (WAIT_TIMEOUT != dw)
-        {
-            std::string str =
-                std::format("UdpChannel code error: {} \t  error-msg: {}\r\n", dw,
-                    GetFormatMessage(dw));
-            OutputDebugString(str.c_str());
-        }
-
-        CancelIo((HANDLE) socket_);
-        closesocket(socket_);
-        socket_   = INVALID_SOCKET;
-        recv_len_ = 0;
+        reslult_.len_ = 0;
+        reslult_.err_ = WSAGetLastError();
     }
     else
     {
-        recv_len_ = (size_t) pData->bytesTransferred_;
+        reslult_.len_ = (size_t) pData->bytesTransferred_;
     }
 
     handle.resume();
@@ -217,7 +333,6 @@ UdpChannel::WriteAwaitable::WriteAwaitable(UdpChannel* tcp_channel, SOCKET socke
     , tcp_channel_(tcp_channel)
     , socket_(socket)
     , wsbuffer_{.len = (ULONG) size, .buf = (char*) buff}
-// TODO: 写入的时候是否会修改buff，需要后续检查
 {
 }
 
@@ -234,18 +349,23 @@ bool UdpChannel::WriteAwaitable::await_suspend(std::coroutine_handle<> co_handle
 {
     DWORD flags = 0;
     handle      = co_handle;
-
     iocp_data_.call_ = std::bind(&WriteAwaitable::IoCallback, this, std::placeholders::_1);
 
-    int send = WSASendTo(socket_, &wsbuffer_, 1, nullptr, flags, (SOCKADDR*) &send_addr_,
-        sizeof(send_addr_), &iocp_data_.overlapped, NULL);
+    if(SOCKET_ERROR == WSASendTo(socket_, &wsbuffer_, 1, nullptr, flags, (SOCKADDR*) &send_addr_, sizeof(send_addr_), &iocp_data_.overlapped, NULL))
+    {
+        int error = WSAGetLastError();
+        if (error != ERROR_IO_PENDING)
+        {
+            return false;
+        }
+    }
 
     return true;
 }
 
-size_t UdpChannel::WriteAwaitable::await_resume() const
+UdpChannel::AwaitableResult UdpChannel::WriteAwaitable::await_resume() const
 {
-    return write_len_;
+    return reslult_;
 }
 
 void UdpChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
@@ -257,23 +377,12 @@ void UdpChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
 
     if (pData->success_ == 0)
     {
-        DWORD dw = GetLastError();
-        if (WAIT_TIMEOUT != dw)
-        {
-            std::string str =
-                std::format("UdpChannel code error: {} \t  error-msg: {}\r\n", dw,
-                    GetFormatMessage(dw));
-            OutputDebugString(str.c_str());
-        }
-
-        CancelIo((HANDLE) socket_);
-        closesocket(socket_);
-        socket_    = INVALID_SOCKET;
-        write_len_ = 0;
+        reslult_.len_ = 0;
+        reslult_.err_ = WSAGetLastError();
     }
     else
     {
-        write_len_ = (size_t) pData->bytesTransferred_;
+        reslult_.len_ = (size_t) pData->bytesTransferred_;
     }
 
     handle.resume();

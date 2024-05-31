@@ -22,15 +22,15 @@ jaf::Coroutine<void> Main::Run()
     await_stop_.Start();
 
     jaf::Coroutine<void> iocp_run = iocp_->Run();
-    coroutines.push_back(server_->Run(iocp_->GetCompletionPort()));
+    //coroutines.push_back(server_->Run(iocp_->GetCompletionPort()));
     //coroutines.push_back(client_->Run(iocp_->GetCompletionPort()));
-    //udp_->Run(iocp_->GetCompletionPort());
+    coroutines.push_back(udp_->Run(iocp_->GetCompletionPort()));
     //serial_port_->Run(iocp_->GetCompletionPort());
 
     co_await await_stop_.Wait();
 
-    //udp_->Stop();
-    server_->Stop();
+    udp_->Stop();
+    //server_->Stop();
     //client_->Stop();
     //serial_port_->Stop();
     for (auto& coroutine : coroutines)

@@ -1,6 +1,7 @@
 #pragma once
 #include "i_iocp_user.h"
 #include "interface/communication/i_unpack.h"
+#include "time_head.h"
 #include "util/co_await.h"
 #include <functional>
 #include <map>
@@ -16,7 +17,7 @@ namespace comm
 class Udp
 {
 public:
-    Udp(std::string local_ip, uint16_t local_port, std::string remote_ip, uint16_t remote_port);
+    Udp(std::string local_ip, uint16_t local_port, std::string remote_ip, uint16_t remote_port, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
     virtual ~Udp();
 
 public:
@@ -26,14 +27,12 @@ public:
 
 private:
     void Init(void);
-    jaf::Coroutine<void> RunSocket();
 
 private:
-    bool run_flag_ = false;
-    CoAwait await_stop_;
-
     HANDLE completion_handle_ = nullptr;
     SOCKET socket_            = 0; // 侦听套接字
+
+    std::shared_ptr<jaf::time::ITimer> timer_;
 
     std::string local_ip_ = "0.0.0.0";
     uint16_t local_port_  = 0;
@@ -42,6 +41,7 @@ private:
 
     std::shared_ptr<IChannelUser> user_ = nullptr; // 通道使用者
     std::mutex channel_mutex_;
+    bool run_flag_                     = false;
     std::shared_ptr<IChannel> channel_ = nullptr;
 };
 
