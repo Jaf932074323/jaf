@@ -1,11 +1,12 @@
 #pragma once
-#include "Impl/channel_user.h"
-#include "Impl/iocp.h"
-#include "Impl/serial_port.h"
-#include "Impl/tcp_client.h"
-#include "Impl/tcp_server.h"
-#include "Impl/udp.h"
+#include "impl/channel_user.h"
+#include "impl/iocp.h"
+#include "impl/serial_port.h"
+#include "impl/tcp_client.h"
+#include "impl/tcp_server.h"
+#include "impl/udp.h"
 #include "util/co_coroutine.h"
+#include "util/co_await.h"
 #include <memory>
 
 // 处理通信通道通信通道 负责从通道读写数据
@@ -13,7 +14,8 @@ class Main
 {
 public:
     Main();
-    virtual ~Main(){};
+    virtual ~Main();
+    ;
 
     jaf::Coroutine<void> Run();
     void Stop();
@@ -31,4 +33,6 @@ private:
     std::shared_ptr<jaf::comm::SerialPort> serial_port_   = nullptr;
 
     std::shared_ptr<std::latch> wait_finish_latch_ = std::make_shared<std::latch>(0);
+
+    jaf::CoAwait await_stop_;
 };

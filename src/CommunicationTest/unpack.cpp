@@ -9,15 +9,20 @@ jaf::Coroutine<void> Unpack::Run(std::shared_ptr<jaf::comm::IChannel> channel, s
     while (true)
     {
         auto [buff, len] = recv_buffer.GetRecvBuff();
-        auto result      = co_await channel->Read(buff, len, 5000);
-        if (!result.success)
+        jaf::comm::SChannelResult result = co_await channel->Read(buff, len, 5000);
+        if (result.state != jaf::comm::SChannelResult::EState::CRS_SUCCESS)
         {
-            if (result.timeout)
+            if (result.state == jaf::comm::SChannelResult::EState::CRS_TIMEOUT)
             {
                 continue;
             }
 
-            LOG_WARNING() << result.error;
+            if (result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
+            {
+                break;
+            }
+
+            LOG_INFO() << result.error;
             break;
         }
 

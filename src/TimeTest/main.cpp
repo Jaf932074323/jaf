@@ -1,4 +1,4 @@
-#include "Impl/co_notify.h"
+#include "impl/co_await_time.h"
 #include "log_head.h"
 #include "time_head.h"
 #include <chrono>
@@ -17,31 +17,31 @@ jaf::Coroutine<void> TestCoTimer()
     co_return;
 }
 
-jaf::Coroutine<void> WaitNotify(jaf::time::CoNotify& notify)
+jaf::Coroutine<void> WaitWait(jaf::time::CoAwaitTime& await_time)
 {
-    LOG_INFO() << "void WaitNotify() 1";
-    bool success = co_await notify.Wait(1000);
-    LOG_INFO() << std::format("void WaitNotify() 2 success = {}", success);
+    LOG_INFO() << "void WaitWait() 1";
+    bool success = co_await await_time.Wait(1000);
+    LOG_INFO() << std::format("void WaitWait() 2 success = {}", success);
     co_return;
 }
 
-jaf::Coroutine<void> TestNotify()
+jaf::Coroutine<void> TestWait()
 {
-    jaf::time::CoNotify notify;
-    notify.Start();
-    jaf::Coroutine<void> wait_notify = WaitNotify(notify);
-    LOG_INFO() << "void TestNotify() 1";
+    jaf::time::CoAwaitTime await_time;
+    await_time.Start();
+    jaf::Coroutine<void> wait_Wait = WaitWait(await_time);
+    LOG_INFO() << "void TestWait() 1";
     co_await jaf::time::CoSleep(2000);
-    notify.Notify();
-    LOG_INFO() << "void TestNotify() 2";
-    //WaitNotify(notify);
-    //LOG_INFO() << "void TestNotify() 3";
-    //notify.Notify();
-    //LOG_INFO() << "void TestNotify() 4";
+    await_time.Notify();
+    LOG_INFO() << "void TestWait() 2";
+    //WaitWait(Wait);
+    //LOG_INFO() << "void TestWait() 3";
+    //Wait.Wait();
+    //LOG_INFO() << "void TestWait() 4";
 
-    co_await wait_notify;
+    co_await wait_Wait;
 
-    notify.Stop();
+    await_time.Stop();
     co_return;
 }
 
@@ -54,7 +54,7 @@ jaf::Coroutine<void> TestTimer()
     bool run = true;
 
     jaf::time::STimerPara task;
-    task.fun = [&](jaf::time::TimerResultType result_type) {
+    task.fun = [&](jaf::time::ETimerResultType result_type, uint64_t task_id) {
         LOG_INFO() << "timer";
         std::unique_lock<std::mutex> lock(task_mutex);
         if (run)
@@ -86,7 +86,7 @@ int main()
     timer->Start();
     jaf::time::CommonTimer::SetTimer(timer);
 
-    TestNotify();
+    TestWait();
     //TestCoTimer();
     //TestTimer();
 

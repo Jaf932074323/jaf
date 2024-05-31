@@ -1,5 +1,5 @@
 #pragma once
-#include "CommonTimer.h"
+#include "common_timer.h"
 #include "Interface/i_timer.h"
 #include "util/co_coroutine.h"
 #include "util/finally.h"
@@ -13,15 +13,15 @@ namespace jaf
 namespace time
 {
 
-class CoNotify
+class CoAwaitTime
 {
 public:
-    CoNotify(std::shared_ptr<ITimer> timer = nullptr)
+    CoAwaitTime(std::shared_ptr<ITimer> timer = nullptr)
         : timer_(timer == nullptr ? CommonTimer::Timer() : timer)
     {
         assert(timer_ != nullptr);
     };
-    virtual ~CoNotify(){};
+    virtual ~CoAwaitTime(){};
 
 public:
     void Start()
@@ -36,6 +36,10 @@ public:
 
     jaf::Coroutine<bool> Wait(uint64_t millisecond)
     {
+        if (wait_flag_)
+        {
+            awaitable_.Notify();
+        }
         assert(!wait_flag_); // 同时只能等待一个
         wait_flag_ = true;
 
@@ -55,8 +59,8 @@ public:
 private:
     struct Awaitable
     {
-        Awaitable(CoNotify* co_timer)
-            : co_timer_(co_timer)
+        Awaitable(CoAwaitTime* co_await_time)
+            : co_await_time_(co_await_time)
         {
         }
 
@@ -83,9 +87,10 @@ private:
                     return;
                 }
                 wait_flag_ = false;
-
                 timeout_flag_ = false;
+                co_await_time_->timer_->StopTask(timeout_task_id_);
             }
+            time_latch_->wait();
             handle_.resume();
         }
 
@@ -112,7 +117,7 @@ private:
             wait_flag_ = true;
 
             time_latch_      = std::unique_ptr<std::latch>(new std::latch(1));
-            timeout_task_id_ = co_timer_->timer_->StartTask(jaf::time::STimerPara{[this](TimerResultType result_type) { TimerCallback(result_type); }, timeout_});
+            timeout_task_id_ = co_await_time_->timer_->StartTask(jaf::time::STimerPara{[this](ETimerResultType result_type, uint64_t task_id) { TimerCallback(result_type); }, timeout_});
             return true;
         }
 
@@ -121,24 +126,27 @@ private:
             return !timeout_flag_;
         }
 
-        void TimerCallback(TimerResultType result_type)
+        void TimerCallback(ETimerResultType result_type)
         {
-            FINALLY(time_latch_->count_down(););
-
-            if (result_type != TimerResultType::TRT_SUCCESS)
             {
-                return;
-            }
+                FINALLY(time_latch_->count_down(););
 
-            {
-                std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                if (!wait_flag_)
+                if (result_type != ETimerResultType::TRT_SUCCESS)
                 {
                     return;
                 }
-                wait_flag_    = false;
-                timeout_flag_ = true;
+
+                {
+                    std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+                    if (!wait_flag_)
+                    {
+                        return;
+                    }
+                    wait_flag_    = false;
+                    timeout_flag_ = true;
+                }
             }
+
             handle_.resume();
         }
 
@@ -152,7 +160,7 @@ private:
                 }
                 wait_flag_    = false;
                 timeout_flag_ = false;
-                co_timer_->timer_->StopTask(timeout_task_id_);
+                co_await_time_->timer_->StopTask(timeout_task_id_);
             }
 
             time_latch_->wait();
@@ -160,7 +168,7 @@ private:
         }
 
     private:
-        CoNotify* co_timer_;
+        CoAwaitTime* co_await_time_;
         std::coroutine_handle<> handle_;
 
 

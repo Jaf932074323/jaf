@@ -1,5 +1,5 @@
 #pragma once
-#include "Interface/communication/i_recv_buffer.h"
+#include "interface/communication/i_recv_buffer.h"
 
 namespace jaf
 {

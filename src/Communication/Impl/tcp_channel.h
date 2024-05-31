@@ -1,7 +1,7 @@
 #pragma once
-#include "Impl/co_notify.h"
-#include "Interface/communication/comm_struct.h"
-#include "Interface/communication/i_channel.h"
+#include "impl/co_await_time.h"
+#include "interface/communication/comm_struct.h"
+#include "interface/communication/i_channel.h"
 #include "time_head.h"
 #include <functional>
 #include <memory>
@@ -37,8 +37,8 @@ private:
     std::string local_ip_;
     uint16_t local_port_ = 0;
 
-    jaf::time::CoNotify read_notify_;
-    jaf::time::CoNotify write_notify_;
+    jaf::time::CoAwaitTime read_await_;
+    jaf::time::CoAwaitTime write_await_;
 };
 
 

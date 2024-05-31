@@ -1,6 +1,6 @@
 #pragma once
-#include "Interface/i_get_time.h"
-#include "Interface/i_timer.h"
+#include "interface/i_get_time.h"
+#include "interface/i_timer.h"
 #include "util/i_thread_pool.h"
 #include <condition_variable>
 #include <latch>
@@ -23,6 +23,11 @@ public:
     virtual ~Timer();
 
 public:
+    // 启动定时
+    virtual void Start() override;
+    // 停止定时
+    virtual void Stop() override;
+
     // 启动一个定时任务
     // rTask 定时任务信息
     // 返回定时任务Id，返回0时表示添加定时任务失败
@@ -34,11 +39,6 @@ public:
     virtual void StopTask(uint64_t task_id) override;
 
 public:
-    // 启动定时
-    void Start();
-    // 停止定时
-    void Stop();
-
     // 定时器工作线程执行函数
     virtual void Work();
 
@@ -53,7 +53,7 @@ public:
 private:
     // 执行达到时间的任务
     virtual void GainNeedExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks);
-    virtual void ExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks, TimerResultType result_type);
+    virtual void ExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks, ETimerResultType result_type);
 
 private:
     std::shared_ptr<IThreadPool> thread_pool_;

@@ -1,4 +1,5 @@
-﻿// MIT License
+﻿#pragma once
+// MIT License
 //
 // Copyright(c) 2021 Jaf932074323
 //
@@ -20,7 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "HighPrecisionTimer.h"
+// 2020-12-3 姜安富
+// Tick定时器
+// 使用GetTickCount64()的方式去获取系统时间，
+#include "interface/i_get_time.h"
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
@@ -29,22 +33,19 @@ namespace jaf
 namespace time
 {
 
-CHighPrecisionTimer::CHighPrecisionTimer()
-{
-	QueryPerformanceFrequency(&m_cpuFreq);
-}
+	class CHighPrecisionTimer :public IGetTime
+	{
+	public:
+		CHighPrecisionTimer();
+		virtual ~CHighPrecisionTimer();
 
-CHighPrecisionTimer::~CHighPrecisionTimer() {}
-
-uint64_t CHighPrecisionTimer::GetNowTime()
-{
-	LARGE_INTEGER time;
-	double rumTime = 0.0;
-	QueryPerformanceCounter(&time);
-	rumTime = (time.QuadPart * 1000.0f) / m_cpuFreq.QuadPart;
-
-	return (unsigned __int64)rumTime;
-}
+	protected:
+		// 获取当前时间，不同的方式获取的时间，得到的定时精度不相同
+		virtual uint64_t GetNowTime() override;
+	private:
+		LARGE_INTEGER m_cpuFreq;
+	};
 
 }
 }
+

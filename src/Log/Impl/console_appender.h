@@ -1,8 +1,8 @@
 #pragma once
 #include <memory>
 #include "define_log_export.h"
-#include "Interface/log/i_filter.h"
-#include "Interface/log/i_format.h"
+#include "interface/log/i_filter.h"
+#include "interface/log/i_format.h"
 
 namespace jaf
 {

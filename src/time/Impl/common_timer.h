@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Interface/i_timer.h"
+#include "interface/i_timer.h"
 
 namespace jaf
 {

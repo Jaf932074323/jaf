@@ -2,8 +2,8 @@
 #include <memory>
 #include <functional>
 #include <string>
-#include "Interface/communication/i_channel.h"
-#include "Interface/communication/comm_struct.h"
+#include "interface/communication/i_channel.h"
+#include "interface/communication/comm_struct.h"
 
 namespace jaf
 {

@@ -18,49 +18,54 @@ namespace comm
 std::string GetFormatMessage(DWORD dw);
 
 Iocp::Iocp(std::shared_ptr<IThreadPool> thread_pool)
-    : thread_pool_(thread_pool == nullptr ? std::make_shared<SimpleThreadPool>() : thread_pool) {}
+    : thread_pool_(thread_pool == nullptr ? std::make_shared<SimpleThreadPool>() : thread_pool)
+{
+}
 
 Iocp::~Iocp()
 {
+    await_work_thread_finish_.Stop();
 }
 
-void Iocp::Init()
+jaf::Coroutine<void> Iocp::Init()
 {
+    await_work_thread_finish_.Start();
+    co_return;
 }
 
-void Iocp::Start()
+jaf::Coroutine<void> Iocp::Run()
 {
     if (run_flag_)
     {
-        return;
+        co_return;
     }
     run_flag_ = true;
+
+    await_stop_.Start();
 
     m_completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 
     CreateWorkThread();
-}
 
-void Iocp::Stop()
-{
-    if (!run_flag_)
-    {
-        return;
-    }
+    co_await await_stop_.Wait();
+
     run_flag_ = false;
 
     for (size_t i = 0; i < work_thread_count_; ++i)
     {
         PostQueuedCompletionStatus(m_completionPort, 0, (DWORD) NULL, NULL);
     }
+    co_await await_work_thread_finish_.Wait();
 
     CloseHandle(m_completionPort);
     m_completionPort = nullptr;
+
+    co_return;
 }
 
-void Iocp::WaitEnd()
+void Iocp::Stop()
 {
-    work_threads_latch_->wait();
+    await_stop_.Stop();
 }
 
 void Iocp::CreateWorkThread()
@@ -69,7 +74,7 @@ void Iocp::CreateWorkThread()
     GetSystemInfo(&mySysInfo);
     // size_t work_thread_count = mySysInfo.dwNumberOfProcessors * 2;
 
-    work_threads_latch_ = std::make_shared<std::latch>(work_thread_count_);
+    await_work_thread_finish_.SetTimes(work_thread_count_);
     for (size_t i = 0; i < work_thread_count_; ++i)
     {
         thread_pool_->Post(std::bind(&Iocp::WorkThreadRun, this));
@@ -78,7 +83,7 @@ void Iocp::CreateWorkThread()
 
 void Iocp::WorkThreadRun()
 {
-    FINALLY(work_threads_latch_->count_down(););
+    FINALLY(await_work_thread_finish_.Notify(););
 
     ULONG_PTR completionKey = 0;
     IOCP_DATA* pPerIoData   = nullptr;

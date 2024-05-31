@@ -1,4 +1,5 @@
 #include "tcp_client.h"
+#include "impl/tool/run_with_timeout.h"
 #include "Log/log_head.h"
 #include "tcp_channel.h"
 #include "util/finally.h"
@@ -45,6 +46,7 @@ public:
     bool await_suspend(std::coroutine_handle<> co_handle);
     ConnectResult await_resume();
     void IoCallback(IOCP_DATA* pData);
+    void Stop();
 
 private:
     TcpClient* client_ = nullptr;
@@ -57,15 +59,18 @@ private:
 
     char buf_[1]   = {0};
     DWORD dwBytes_ = 0;
+
+    std::mutex mutex_;           // 超时使用的同步
+    bool callback_flag_ = false; // 已经回调标记
 };
 
-TcpClient::TcpClient(std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::Timer> timer)
+TcpClient::TcpClient(std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
     : local_ip_(local_ip)
     , local_port_(local_port)
     , remote_ip_(remote_ip)
     , remote_port_(remote_port)
     , timer_(timer == nullptr ? jaf::time::CommonTimer::Timer() : timer)
-    , notify_(timer_)
+    , await_time_(timer_)
 {
 }
 
@@ -73,8 +78,9 @@ TcpClient::~TcpClient()
 {
 }
 
-void TcpClient::SetReconnectWaitTime(uint64_t reconnect_wait_time)
+void TcpClient::SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time)
 {
+    connect_timeout_     = connect_timeout;
     reconnect_wait_time_ = reconnect_wait_time;
 }
 
@@ -90,18 +96,17 @@ jaf::Coroutine<void> TcpClient::Run(HANDLE completion_handle)
         co_return;
     }
     run_flag_ = true;
-    notify_.Start();
 
+    await_stop_.Start();
     completion_handle_ = completion_handle;
+    await_time_.Start();
+
     Init();
 
-    co_await Run();
+    jaf::Coroutine<void> execute = Execute();
 
-    co_return;
-}
+    co_await await_stop_.Wait();
 
-void TcpClient::Stop()
-{
     run_flag_ = false;
 
     {
@@ -112,14 +117,23 @@ void TcpClient::Stop()
         }
     }
 
-    notify_.Stop();
+    await_time_.Stop();
+
+    co_await execute;
+
+    co_return;
+}
+
+void TcpClient::Stop()
+{
+    await_stop_.Stop();
 }
 
 void TcpClient::Init(void)
 {
 }
 
-jaf::Coroutine<void> TcpClient::Run()
+jaf::Coroutine<void> TcpClient::Execute()
 {
     SOCKET connect_socket = INVALID_SOCKET; // 连接套接字
 
@@ -133,7 +147,11 @@ jaf::Coroutine<void> TcpClient::Run()
         }
         FINALLY(closesocket(connect_socket); connect_socket = INVALID_SOCKET;);
 
-        auto result = co_await ConnectAwaitable(this, connect_socket);
+        ConnectAwaitable connect_awaitable(this, connect_socket);
+        RunWithTimeout run_with_timeout(await_time_, connect_awaitable, connect_timeout_);
+        co_await run_with_timeout.Run();
+
+        const auto& result = run_with_timeout.Result();
         if (!run_flag_)
         {
             co_return;
@@ -145,7 +163,7 @@ jaf::Coroutine<void> TcpClient::Run()
                 remote_ip_, remote_port_,
                 result.error_info_);
 
-            co_await notify_.Wait(reconnect_wait_time_);
+            co_await await_time_.Wait(reconnect_wait_time_);
             continue;
         }
 
@@ -260,6 +278,11 @@ TcpClient::ConnectResult TcpClient::ConnectAwaitable::await_resume()
 
 void TcpClient::ConnectAwaitable::IoCallback(IOCP_DATA* pData)
 {
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        callback_flag_ = true;
+    }
+
     if (pData->success_ == 0)
     {
         DWORD dw    = GetLastError();
@@ -272,6 +295,17 @@ void TcpClient::ConnectAwaitable::IoCallback(IOCP_DATA* pData)
     }
 
     handle_.resume();
+}
+
+void TcpClient::ConnectAwaitable::Stop()
+{
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (callback_flag_)
+    {
+        return;
+    }
+    callback_flag_ = true;
+    CancelIoEx((HANDLE) connect_socket_, &iocp_data_.overlapped);
 }
 
 } // namespace comm

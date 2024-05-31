@@ -1,7 +1,7 @@
 #pragma once
 #include "util/co_coroutine.h"
-#include "Interface/communication/i_channel_user.h"
-#include "Interface/communication/i_unpack.h"
+#include "interface/communication/i_channel_user.h"
+#include "interface/communication/i_unpack.h"
 
 namespace jaf
 {

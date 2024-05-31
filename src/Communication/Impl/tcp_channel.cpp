@@ -1,5 +1,5 @@
 #include "tcp_channel.h"
-#include "Impl/tool/run_until_timeout.h"
+#include "impl/tool/run_with_timeout.h"
 #include "Log/log_head.h"
 #include <WS2tcpip.h>
 #include <assert.h>
@@ -39,7 +39,7 @@ private:
     std::coroutine_handle<> handle;
     WSABUF wsbuffer_;
 
-    std::mutex time_mutex_;      // 超时使用的同步
+    std::mutex mutex_;
     bool callback_flag_ = false; // 已经回调标记
 };
 
@@ -65,7 +65,7 @@ private:
     WSABUF wsbuffer_;
     DWORD dwBytes = 0;
 
-    std::mutex time_mutex_;      // 超时使用的同步
+    std::mutex mutex_;
     bool callback_flag_ = false; // 已经回调标记
 };
 
@@ -75,8 +75,8 @@ TcpChannel::TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_por
     , remote_port_(remote_port)
     , local_ip_(local_ip)
     , local_port_(local_port)
-    , read_notify_(timer)
-    , write_notify_(timer)
+    , read_await_(timer)
+    , write_await_(timer)
 {
 }
 
@@ -84,50 +84,56 @@ TcpChannel::~TcpChannel() {}
 
 Coroutine<bool> TcpChannel::Start()
 {
-    read_notify_.Start();
-    write_notify_.Start();
+    read_await_.Start();
+    write_await_.Start();
     co_return true;
 }
 
 void TcpChannel::Stop()
 {
     stop_flag_ = true;
-    write_notify_.Stop();
-    read_notify_.Stop();
-    //CancelIo((HANDLE) socket_);
+    write_await_.Stop();
+    read_await_.Stop();
 }
 
 Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
     ReadAwaitable read_awaitable(this, socket_, buff, buff_size);
-    RunUntilTimeout call_until_timeout(read_notify_, read_awaitable, timeout);
-    co_await call_until_timeout.Run();
+    RunWithTimeout run_with_timeout(read_await_, read_awaitable, timeout);
+    co_await run_with_timeout.Run();
 
     SChannelResult result;
-    const AwaitableResult& read_result = call_until_timeout.Result();
-    result.timeout                     = call_until_timeout.IsTimeout();
-    result.len                         = read_result.len_;
+
+    const AwaitableResult& read_result = run_with_timeout.Result();
+    if (run_with_timeout.IsTimeout())
+    {
+        result.state = SChannelResult::EState::CRS_TIMEOUT;
+    }
+    result.len = read_result.len_;
 
     if (result.len != 0)
     {
-        result.success = true;
+        result.state = SChannelResult::EState::CRS_SUCCESS;
         co_return result;
     }
 
     if (stop_flag_)
     {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
         co_return result;
     }
 
-    if (!result.timeout)
+    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
     {
         if (read_result.err_ == 0)
         {
+            result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
             result.error = "The connection has been disconnected";
         }
         else
         {
-            result.timeout = false;
+            result.state = SChannelResult::EState::CRS_FAIL;
+            result.code_ = read_result.err_;
             CancelIo((HANDLE) socket_);
             closesocket(socket_);
             socket_      = INVALID_SOCKET;
@@ -141,34 +147,40 @@ Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size
 Coroutine<SChannelResult> TcpChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
     WriteAwaitable write_awaitable(this, socket_, buff, buff_size);
-    RunUntilTimeout call_until_timeout(write_notify_, write_awaitable, timeout);
-    co_await call_until_timeout.Run();
+    RunWithTimeout run_with_timeout(write_await_, write_awaitable, timeout);
+    co_await run_with_timeout.Run();
 
     SChannelResult result;
-    const AwaitableResult& write_result = call_until_timeout.Result();
-    result.timeout                      = call_until_timeout.IsTimeout();
-    result.len                          = write_result.len_;
+    const AwaitableResult& write_result = run_with_timeout.Result();
+    if (run_with_timeout.IsTimeout())
+    {
+        result.state = SChannelResult::EState::CRS_TIMEOUT;
+    }
+    result.len = write_result.len_;
 
     if (result.len != 0)
     {
-        result.success = true;
+        result.state = SChannelResult::EState::CRS_SUCCESS;
         co_return result;
     }
 
     if (stop_flag_)
     {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
         co_return result;
     }
 
-    if (!result.timeout)
+    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
     {
         if (write_result.err_ == 0)
         {
+            result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
             result.error = "The connection has been disconnected";
         }
         else
         {
-            result.timeout = false;
+            result.state = SChannelResult::EState::CRS_FAIL;
+            result.code_ = write_result.err_;
             CancelIo((HANDLE) socket_);
             closesocket(socket_);
             socket_      = INVALID_SOCKET;
@@ -222,7 +234,7 @@ TcpChannel::AwaitableResult TcpChannel::ReadAwaitable::await_resume() const
 void TcpChannel::ReadAwaitable::IoCallback(IOCP_DATA* pData)
 {
     {
-        std::unique_lock<std::mutex> lock(time_mutex_);
+        std::unique_lock<std::mutex> lock(mutex_);
         callback_flag_ = true;
     }
 
@@ -241,7 +253,7 @@ void TcpChannel::ReadAwaitable::IoCallback(IOCP_DATA* pData)
 
 void TcpChannel::ReadAwaitable::Stop()
 {
-    std::unique_lock<std::mutex> lock(time_mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
     if (callback_flag_)
     {
         return;
@@ -292,7 +304,7 @@ TcpChannel::AwaitableResult TcpChannel::WriteAwaitable::await_resume() const
 void TcpChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
 {
     {
-        std::unique_lock<std::mutex> lock(time_mutex_);
+        std::unique_lock<std::mutex> lock(mutex_);
         callback_flag_ = true;
     }
 
@@ -311,7 +323,7 @@ void TcpChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
 
 void TcpChannel::WriteAwaitable::Stop()
 {
-    std::unique_lock<std::mutex> lock(time_mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
     if (callback_flag_)
     {
         return;

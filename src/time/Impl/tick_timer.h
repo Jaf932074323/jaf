@@ -1,4 +1,5 @@
-﻿// MIT License
+﻿#pragma once
+// MIT License
 //
 // Copyright(c) 2021 Jaf932074323
 //
@@ -20,25 +21,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "TickTimer.h"
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+// 2020-12-3 姜安富
+// Tick定时器
+// 使用GetTickCount64()的方式去获取系统时间
+#include "interface/i_get_time.h"
 
 namespace jaf
 {
 namespace time
 {
 
-CTickTimer::CTickTimer()
-{
+	class CTickTimer :public IGetTime
+	{
+	public:
+		CTickTimer();
+		virtual ~CTickTimer();
+
+	protected:
+		// 获取当前时间，不同的方式获取的时间，得到的定时精度不相同
+		virtual uint64_t GetNowTime() override;
+	};
+
+}
 }
 
-CTickTimer::~CTickTimer() {}
-
-uint64_t CTickTimer::GetNowTime()
-{
-	return GetTickCount64();
-}
-
-}
-}

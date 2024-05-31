@@ -41,6 +41,18 @@ void TcpServer::SetChannelUser(std::shared_ptr<IChannelUser> user)
     user_ = user;
 }
 
+void TcpServer::SetAcceptCount(size_t accept_count)
+{
+    assert(!run_flag_);
+    accept_count_ = accept_count;
+}
+
+void TcpServer::SetMaxClientCount(size_t max_client_count)
+{
+    assert(!run_flag_);
+    max_client_count_ = max_client_count;
+}
+
 jaf::Coroutine<void> TcpServer::Run(HANDLE completion_handle)
 {
     if (run_flag_)
@@ -49,21 +61,17 @@ jaf::Coroutine<void> TcpServer::Run(HANDLE completion_handle)
     }
     run_flag_ = true;
 
+    await_stop_.Start();
+
     completion_handle_ = completion_handle;
     Init();
-    for (size_t i = 0; i < 10; ++i)
+    for (size_t i = 0; i < accept_count_; ++i)
     {
         Accept();
     }
-    co_return;
-}
 
-void TcpServer::Stop()
-{
-    if (!run_flag_)
-    {
-        return;
-    }
+    co_await await_stop_.Wait();
+
     run_flag_ = false;
 
     {
@@ -77,6 +85,13 @@ void TcpServer::Stop()
 
     closesocket(listen_socket_);
     listen_socket_ = INVALID_SOCKET;
+
+    co_return;
+}
+
+void TcpServer::Stop()
+{
+    await_stop_.Stop();
 }
 
 void TcpServer::Init(void)
@@ -116,7 +131,7 @@ void TcpServer::Init(void)
 
     CreateIoCompletionPort((HANDLE) listen_socket_, completion_handle_, 0, 0);
 
-    if (SOCKET_ERROR == listen(listen_socket_, 100))
+    if (SOCKET_ERROR == listen(listen_socket_, max_client_count_))
     {
         closesocket(listen_socket_);
         DWORD dw        = GetLastError();

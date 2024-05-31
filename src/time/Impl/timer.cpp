@@ -1,5 +1,5 @@
 #include "timer.h"
-#include "TickTimer.h"
+#include "tick_timer.h"
 #include "util/finally.h"
 #include "util/simple_thread_pool.h"
 #include <assert.h>
@@ -18,6 +18,37 @@ Timer::Timer(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<IGetTime>
 
 Timer::~Timer()
 {
+}
+
+void Timer::Start()
+{
+    {
+        std::unique_lock<std::mutex> ul(tasks_mutex_);
+        if (run_flag_)
+        {
+            return;
+        }
+        run_flag_ = true;
+    }
+
+    work_threads_latch_ = std::make_shared<std::latch>(1);
+    thread_pool_->Post([this]() { Work(); });
+}
+
+void Timer::Stop()
+{
+    {
+        std::unique_lock<std::mutex> ul(tasks_mutex_);
+        if (!run_flag_)
+        {
+            return;
+        }
+        run_flag_ = false;
+
+        m_workCondition.notify_all();
+    }
+
+    work_threads_latch_->wait();
 }
 
 uint64_t Timer::StartTask(const STimerPara& para)
@@ -89,40 +120,10 @@ void Timer::StopTask(uint64_t task_id)
 
     if (timer_task != nullptr)
     {
-        std::function<void(TimerResultType result_type)> fun = timer_task->m_timerTask.fun;
-        thread_pool_->Post([fun]() { fun(TimerResultType::TRT_TASK_STOP); });
+        std::function<void(ETimerResultType result_type, uint64_t task_id)> fun = timer_task->m_timerTask.fun;
+        uint64_t task_id                                                        = timer_task->task_id;
+        thread_pool_->Post([fun, task_id]() { fun(ETimerResultType::TRT_TASK_STOP, task_id); });
     }
-}
-
-void Timer::Start()
-{
-    {
-        std::unique_lock<std::mutex> ul(tasks_mutex_);
-        if (run_flag_)
-        {
-            return;
-        }
-        run_flag_ = true;
-    }
-
-    work_threads_latch_ = std::make_shared<std::latch>(1);
-    thread_pool_->Post([this]() { Work(); });
-}
-
-void Timer::Stop()
-{
-    {
-        std::unique_lock<std::mutex> ul(tasks_mutex_);
-        if (!run_flag_)
-        {
-            return;
-        }
-        run_flag_ = false;
-
-        m_workCondition.notify_all();
-    }
-
-    work_threads_latch_->wait();
 }
 
 void Timer::Work()
@@ -139,32 +140,30 @@ void Timer::Work()
 
     while (true)
     {
-        ExecuteTasks(need_execute_tasks, TimerResultType::TRT_SUCCESS);
+        ExecuteTasks(need_execute_tasks, ETimerResultType::TRT_SUCCESS);
         need_execute_tasks.clear();
 
+        std::unique_lock<std::mutex> ul(tasks_mutex_);
+        if (!run_flag_)
         {
-            std::unique_lock<std::mutex> ul(tasks_mutex_);
-            if (!run_flag_)
-            {
-                break;
-            }
-
-            if (tasks_time_time_.empty())
-            {
-                m_workCondition.wait(ul);
-            }
-            else
-            {
-                min_wait_time    = tasks_time_time_.begin()->first - get_time_->GetNowTime();
-                auto wait_result = m_workCondition.wait_for(ul, std::chrono::milliseconds(min_wait_time));
-            }
-            if (!run_flag_)
-            {
-                break;
-            }
-
-            GainNeedExecuteTasks(need_execute_tasks);
+            break;
         }
+
+        if (tasks_time_time_.empty())
+        {
+            m_workCondition.wait(ul);
+        }
+        else
+        {
+            min_wait_time    = tasks_time_time_.begin()->first - get_time_->GetNowTime();
+            auto wait_result = m_workCondition.wait_for(ul, std::chrono::milliseconds(min_wait_time));
+        }
+        if (!run_flag_)
+        {
+            break;
+        }
+
+        GainNeedExecuteTasks(need_execute_tasks);
     }
 
     // 处理剩余的所有定时任务
@@ -182,8 +181,9 @@ void Timer::Work()
         for (auto it_2 : it.second)
         {
             assert(it_2.second->m_timerTask.fun);
-            std::function<void(TimerResultType result_type)> fun = it_2.second->m_timerTask.fun;
-            thread_pool_->Post([fun]() { fun(TimerResultType::TRT_TIMER_STOP); });
+            std::function<void(ETimerResultType result_type, uint64_t task_id)> fun = it_2.second->m_timerTask.fun;
+            uint64_t task_id                                                        = it_2.second->task_id;
+            thread_pool_->Post([fun, task_id]() { fun(ETimerResultType::TRT_TIMER_STOP, task_id); });
         }
     }
 }
@@ -205,15 +205,16 @@ void Timer::GainNeedExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<ST
     tasks_time_time_.erase(tasks_time_time_.begin(), end_it);
 }
 
-void Timer::ExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks, TimerResultType result_type)
+void Timer::ExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks, ETimerResultType result_type)
 {
     for (auto it : need_execute_tasks)
     {
         for (auto it_2 : it)
         {
             assert(it_2.second->m_timerTask.fun);
-            std::function<void(TimerResultType result_type)> fun = it_2.second->m_timerTask.fun;
-            thread_pool_->Post([fun, result_type]() { fun(result_type); });
+            std::function<void(ETimerResultType result_type, uint64_t task_id)> fun = it_2.second->m_timerTask.fun;
+            uint64_t task_id                                                        = it_2.second->task_id;
+            thread_pool_->Post([fun, task_id, result_type]() { fun(result_type, task_id); });
         }
     }
 }

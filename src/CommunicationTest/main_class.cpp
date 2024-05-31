@@ -8,45 +8,56 @@ Main::Main()
 {
 }
 
+Main::~Main()
+{
+}
+
 jaf::Coroutine<void> Main::Run()
 {
     wait_finish_latch_ = std::make_shared<std::latch>(1);
     std::list<jaf::Coroutine<void>> coroutines;
 
     Init();
-    iocp_->Start();
-    //server_->Run(iocp_->GetCompletionPort());
-    coroutines.push_back(client_->Run(iocp_->GetCompletionPort()));
+
+    await_stop_.Start();
+
+    jaf::Coroutine<void> iocp_run = iocp_->Run();
+    coroutines.push_back(server_->Run(iocp_->GetCompletionPort()));
+    //coroutines.push_back(client_->Run(iocp_->GetCompletionPort()));
     //udp_->Run(iocp_->GetCompletionPort());
     //serial_port_->Run(iocp_->GetCompletionPort());
 
+    co_await await_stop_.Wait();
+
+    //udp_->Stop();
+    server_->Stop();
+    //client_->Stop();
+    //serial_port_->Stop();
     for (auto& coroutine : coroutines)
     {
         co_await coroutine;
     }
+
+    iocp_->Stop();
+    co_await iocp_run;
     wait_finish_latch_->count_down();
 }
 
 void Main::Stop()
 {
-    //udp_->Stop();
-    //server_->Stop();
-    client_->Stop();
-    //serial_port_->Stop();
-    iocp_->Stop();
+    await_stop_.Stop();
 }
 
 void Main::WaitFinish()
 {
     wait_finish_latch_->wait();
-    iocp_->WaitEnd();
 }
 
 void Main::Init()
 {
     iocp_->Init();
 
-    std::string str_ip = "192.168.2.45";
+    std::string str_ip = "127.0.0.1";
 
     std::shared_ptr<Unpack> unpack      = std::make_shared<Unpack>();
     std::shared_ptr<DealPack> deal_pack = std::make_shared<DealPack>();

@@ -41,10 +41,10 @@ Coroutine<SChannelResult> SerialPortChannel::Read(unsigned char* buff, size_t bu
 
     if (result.len == 0)
     {
-        result.success = false;
+        result.state = SChannelResult::EState::CRS_UNKNOWN;
         co_return result;
     }
-    result.success = true;
+    result.state = SChannelResult::EState::CRS_SUCCESS;
     co_return result;
 }
 
@@ -52,7 +52,7 @@ Coroutine<SChannelResult> SerialPortChannel::Write(const unsigned char* buff,
     size_t buff_size, uint64_t timeout)
 {
     co_await WriteAwaitable{this, buff, buff_size};
-    co_return SChannelResult{.success = true};
+    co_return SChannelResult{.state = SChannelResult::EState::CRS_SUCCESS};
 }
 
 void SerialPortChannel::Stop()
