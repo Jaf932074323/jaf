@@ -18,6 +18,7 @@ class TcpChannel : public IChannel
     struct AwaitableResult;
     class ReadAwaitable;
     class WriteAwaitable;
+
 public:
     TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
     virtual ~TcpChannel();

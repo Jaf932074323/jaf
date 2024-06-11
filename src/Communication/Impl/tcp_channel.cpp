@@ -1,6 +1,6 @@
 #include "tcp_channel.h"
-#include "impl/tool/run_with_timeout.h"
 #include "Log/log_head.h"
+#include "impl/tool/run_with_timeout.h"
 #include <WS2tcpip.h>
 #include <assert.h>
 #include <format>
@@ -210,7 +210,7 @@ bool TcpChannel::ReadAwaitable::await_ready()
 
 bool TcpChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_handle)
 {
-    handle = co_handle;
+    handle           = co_handle;
     DWORD flags      = 0;
     iocp_data_.call_ = [this](IOCP_DATA* pData) { IoCallback(pData); };
 

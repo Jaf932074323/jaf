@@ -1,6 +1,6 @@
 #pragma once
-#include <memory>
 #include "i_pack.h"
+#include <memory>
 
 namespace jaf
 {
@@ -11,13 +11,13 @@ namespace comm
 class IDealPack
 {
 public:
-	IDealPack(){}
-	virtual ~IDealPack() {};
+    IDealPack() {}
+    virtual ~IDealPack(){};
 
 public:
-	// 处理包
-	virtual void Deal(std::shared_ptr<IPack> pack) = 0;
+    // 处理包
+    virtual void Deal(std::shared_ptr<IPack> pack) = 0;
 };
 
-}
-}
+} // namespace comm
+} // namespace jaf

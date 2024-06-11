@@ -63,9 +63,9 @@ private:
 private:
     jaf::time::CoAwaitTime& await_time_;
     AwaitObj& await_obj_; // 协程相关的可等待的对象
-    uint64_t timeout_;  // 超时时间 毫秒
+    uint64_t timeout_;    // 超时时间 毫秒
 
-    bool timeout_flag_ = false;          // 是否超时true超时,false未超时
+    bool timeout_flag_ = false;       // 是否超时true超时,false未超时
     AwaitObjResult await_obj_result_; // 等待结果
 };
 

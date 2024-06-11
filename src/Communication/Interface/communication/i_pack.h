@@ -1,7 +1,7 @@
 #pragma once
-#include <memory>
 #include "comm_struct.h"
 #include "i_channel.h"
+#include <memory>
 
 namespace jaf
 {
@@ -12,14 +12,14 @@ namespace comm
 class IPack
 {
 public:
-	IPack(){}
-	virtual ~IPack() {};
+    IPack() {}
+    virtual ~IPack(){};
 
 public:
-	// 获取对应的通道
-	virtual std::shared_ptr<IChannel> GetChannel() = 0;
-	virtual SConstData GetData() = 0;
+    // 获取对应的通道
+    virtual std::shared_ptr<IChannel> GetChannel() = 0;
+    virtual SConstData GetData()                   = 0;
 };
 
-}
-}
+} // namespace comm
+} // namespace jaf

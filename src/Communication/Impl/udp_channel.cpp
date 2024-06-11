@@ -77,8 +77,7 @@ private:
 
 UdpChannel::UdpChannel(HANDLE completion_handle, SOCKET socket,
     std::string remote_ip, uint16_t remote_port,
-    std::string local_ip, uint16_t local_port
-    , std::shared_ptr<jaf::time::ITimer> timer)
+    std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
     : completion_handle_(completion_handle)
     , socket_(socket)
     , remote_ip_(remote_ip)
@@ -166,7 +165,7 @@ Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t bu
     WriteAwaitable write_awaitable(this, socket_, buff, buff_size, send_addr_);
     RunWithTimeout run_with_timeout(write_await_, write_awaitable, timeout);
     co_await run_with_timeout.Run();
-        
+
     SChannelResult result;
     const AwaitableResult& write_result = run_with_timeout.Result();
     if (run_with_timeout.IsTimeout())
@@ -276,8 +275,8 @@ bool UdpChannel::ReadAwaitable::await_ready()
 
 bool UdpChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_handle)
 {
-    DWORD flags = 0;
-    handle      = co_handle;
+    DWORD flags      = 0;
+    handle           = co_handle;
     iocp_data_.call_ = std::bind(&ReadAwaitable::IoCallback, this, std::placeholders::_1);
 
     if (SOCKET_ERROR == WSARecv(socket_, &wsbuffer_, 1, nullptr, &flags, &iocp_data_.overlapped, NULL))
@@ -347,11 +346,11 @@ bool UdpChannel::WriteAwaitable::await_ready()
 
 bool UdpChannel::WriteAwaitable::await_suspend(std::coroutine_handle<> co_handle)
 {
-    DWORD flags = 0;
-    handle      = co_handle;
+    DWORD flags      = 0;
+    handle           = co_handle;
     iocp_data_.call_ = std::bind(&WriteAwaitable::IoCallback, this, std::placeholders::_1);
 
-    if(SOCKET_ERROR == WSASendTo(socket_, &wsbuffer_, 1, nullptr, flags, (SOCKADDR*) &send_addr_, sizeof(send_addr_), &iocp_data_.overlapped, NULL))
+    if (SOCKET_ERROR == WSASendTo(socket_, &wsbuffer_, 1, nullptr, flags, (SOCKADDR*) &send_addr_, sizeof(send_addr_), &iocp_data_.overlapped, NULL))
     {
         int error = WSAGetLastError();
         if (error != ERROR_IO_PENDING)

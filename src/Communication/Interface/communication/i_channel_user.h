@@ -1,7 +1,7 @@
 #pragma once
-#include <memory>
-#include "util/co_coroutine.h"
 #include "i_channel.h"
+#include "util/co_coroutine.h"
+#include <memory>
 
 namespace jaf
 {
@@ -12,13 +12,13 @@ namespace comm
 class IChannelUser
 {
 public:
-	IChannelUser() {}
-	virtual ~IChannelUser() {};
+    IChannelUser() {}
+    virtual ~IChannelUser(){};
 
 public:
-	// 操作通道
-	virtual Coroutine<void> Access(std::shared_ptr<IChannel> channel) = 0;
+    // 操作通道
+    virtual Coroutine<void> Access(std::shared_ptr<IChannel> channel) = 0;
 };
 
-}
-}
+} // namespace comm
+} // namespace jaf

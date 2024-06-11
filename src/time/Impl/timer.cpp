@@ -31,7 +31,7 @@ void Timer::Start()
         run_flag_ = true;
     }
 
-    work_threads_latch_ = std::make_shared<std::latch>(1);
+    work_threads_latch_.Reset();
     thread_pool_->Post([this]() { Work(); });
 }
 
@@ -48,7 +48,7 @@ void Timer::Stop()
         m_workCondition.notify_all();
     }
 
-    work_threads_latch_->wait();
+    work_threads_latch_.Wait();
 }
 
 uint64_t Timer::StartTask(const STimerPara& para)
@@ -128,7 +128,7 @@ void Timer::StopTask(uint64_t task_id)
 
 void Timer::Work()
 {
-    FINALLY(work_threads_latch_->count_down(););
+    FINALLY(work_threads_latch_.CountDown(););
 
     std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>> need_execute_tasks;
     uint64_t min_wait_time = 0xffffffffffffffff; // 所有任务中最小的等待时间，用于计算下一次执行需要多久

@@ -29,7 +29,7 @@ public:
 
 public:
     // 启动定时器
-    virtual  void Start() = 0;
+    virtual void Start() = 0;
     // 停止定时器
     virtual void Stop() = 0;
     // 启动一个定时任务

@@ -31,20 +31,20 @@ namespace time
 
 CHighPrecisionTimer::CHighPrecisionTimer()
 {
-	QueryPerformanceFrequency(&m_cpuFreq);
+    QueryPerformanceFrequency(&m_cpuFreq);
 }
 
 CHighPrecisionTimer::~CHighPrecisionTimer() {}
 
 uint64_t CHighPrecisionTimer::GetNowTime()
 {
-	LARGE_INTEGER time;
-	double rumTime = 0.0;
-	QueryPerformanceCounter(&time);
-	rumTime = (time.QuadPart * 1000.0f) / m_cpuFreq.QuadPart;
+    LARGE_INTEGER time;
+    double rumTime = 0.0;
+    QueryPerformanceCounter(&time);
+    rumTime = (time.QuadPart * 1000.0f) / m_cpuFreq.QuadPart;
 
-	return (unsigned __int64)rumTime;
+    return (unsigned __int64) rumTime;
 }
 
-}
-}
+} // namespace time
+} // namespace jaf

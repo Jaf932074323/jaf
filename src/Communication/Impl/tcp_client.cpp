@@ -1,6 +1,6 @@
 #include "tcp_client.h"
-#include "impl/tool/run_with_timeout.h"
 #include "Log/log_head.h"
+#include "impl/tool/run_with_timeout.h"
 #include "tcp_channel.h"
 #include "util/finally.h"
 #include <WS2tcpip.h>
@@ -192,7 +192,7 @@ SOCKET TcpClient::CreationSocket()
     if (INVALID_SOCKET == connect_socket)
     {
         DWORD dw    = GetLastError();
-        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},{},code:{},:{}",
+        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},code:{},:{}",
             local_ip_, local_port_,
             remote_ip_, remote_port_,
             dw, GetFormatMessage(dw));
@@ -208,7 +208,7 @@ SOCKET TcpClient::CreationSocket()
     if (SOCKET_ERROR == ::bind(connect_socket, (SOCKADDR*) &bind_addr, sizeof(bind_addr)))
     {
         DWORD dw    = GetLastError();
-        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},{},code:{},:{}",
+        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},code:{},:{}",
             local_ip_, local_port_,
             remote_ip_, remote_port_,
             dw, GetFormatMessage(dw));
@@ -220,7 +220,7 @@ SOCKET TcpClient::CreationSocket()
     if (CreateIoCompletionPort((HANDLE) connect_socket, completion_handle_, 0, 0) == 0)
     {
         DWORD dw    = GetLastError();
-        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},{},code:{},:{}",
+        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},code:{},:{}",
             local_ip_, local_port_,
             remote_ip_, remote_port_,
             dw, GetFormatMessage(dw));

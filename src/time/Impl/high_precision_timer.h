@@ -33,19 +33,19 @@ namespace jaf
 namespace time
 {
 
-	class CHighPrecisionTimer :public IGetTime
-	{
-	public:
-		CHighPrecisionTimer();
-		virtual ~CHighPrecisionTimer();
+class CHighPrecisionTimer : public IGetTime
+{
+public:
+    CHighPrecisionTimer();
+    virtual ~CHighPrecisionTimer();
 
-	protected:
-		// 获取当前时间，不同的方式获取的时间，得到的定时精度不相同
-		virtual uint64_t GetNowTime() override;
-	private:
-		LARGE_INTEGER m_cpuFreq;
-	};
+protected:
+    // 获取当前时间，不同的方式获取的时间，得到的定时精度不相同
+    virtual uint64_t GetNowTime() override;
 
-}
-}
+private:
+    LARGE_INTEGER m_cpuFreq;
+};
 
+} // namespace time
+} // namespace jaf

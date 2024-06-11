@@ -11,5 +11,5 @@ cd windows
 
 if exist %curpath%setenv.gitignore.bat call %curpath%setenv.gitignore.bat
 
-cmake -G"Visual Studio 17 2022" -DHOST_PLATFORM=PLATFORM_X64 -DHOST_OS=WINDOWS ../../../src
+cmake -G"Visual Studio 17 2022" -DHOST_PLATFORM=PLATFORM_X64 -DHOST_OS=WINDOWS ../../..
 @pause

@@ -1,10 +1,10 @@
 #pragma once
-#include "common_timer.h"
 #include "Interface/i_timer.h"
+#include "common_timer.h"
 #include "util/co_coroutine.h"
 #include "util/finally.h"
+#include "util/latch.h"
 #include <assert.h>
-#include <latch>
 #include <memory>
 #include <mutex>
 
@@ -86,11 +86,11 @@ private:
                 {
                     return;
                 }
-                wait_flag_ = false;
+                wait_flag_    = false;
                 timeout_flag_ = false;
                 co_await_time_->timer_->StopTask(timeout_task_id_);
             }
-            time_latch_->wait();
+            time_latch_.Wait();
             handle_.resume();
         }
 
@@ -116,7 +116,7 @@ private:
             }
             wait_flag_ = true;
 
-            time_latch_      = std::unique_ptr<std::latch>(new std::latch(1));
+            time_latch_.Reset();
             timeout_task_id_ = co_await_time_->timer_->StartTask(jaf::time::STimerPara{[this](ETimerResultType result_type, uint64_t task_id) { TimerCallback(result_type); }, timeout_});
             return true;
         }
@@ -129,7 +129,7 @@ private:
         void TimerCallback(ETimerResultType result_type)
         {
             {
-                FINALLY(time_latch_->count_down(););
+                FINALLY(time_latch_.CountDown(););
 
                 if (result_type != ETimerResultType::TRT_SUCCESS)
                 {
@@ -163,7 +163,7 @@ private:
                 co_await_time_->timer_->StopTask(timeout_task_id_);
             }
 
-            time_latch_->wait();
+            time_latch_.Wait();
             handle_.resume();
         }
 
@@ -179,7 +179,7 @@ private:
         bool timeout_flag_        = true;
         uint64_t timeout_         = 0;
         uint64_t timeout_task_id_ = 0;
-        std::unique_ptr<std::latch> time_latch_;
+        Latch time_latch_{1};
     };
 
 private:

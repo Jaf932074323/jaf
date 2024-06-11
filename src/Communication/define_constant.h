@@ -8,4 +8,4 @@ namespace comm
 constexpr char LOG_NAME[] = "jaf::comm";
 
 }
-}
+} // namespace jaf

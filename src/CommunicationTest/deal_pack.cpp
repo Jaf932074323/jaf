@@ -1,12 +1,12 @@
 #include "deal_pack.h"
+#include "log_head.h"
 #include <iostream>
 #include <string>
-#include "log_head.h"
 
 void DealPack::Deal(std::shared_ptr<jaf::comm::IPack> pack)
 {
-	auto [buff, len] = pack->GetData();
-	std::string str((const char*)buff, len);
-	LOG_INFO() << "接收:" << str;
-	pack->GetChannel()->Write(buff, len, 1000);
+    auto [buff, len] = pack->GetData();
+    std::string str((const char*) buff, len);
+    LOG_INFO() << "接收:" << str;
+    pack->GetChannel()->Write(buff, len, 1000);
 }

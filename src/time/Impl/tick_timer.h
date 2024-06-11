@@ -31,17 +31,16 @@ namespace jaf
 namespace time
 {
 
-	class CTickTimer :public IGetTime
-	{
-	public:
-		CTickTimer();
-		virtual ~CTickTimer();
+class CTickTimer : public IGetTime
+{
+public:
+    CTickTimer();
+    virtual ~CTickTimer();
 
-	protected:
-		// 获取当前时间，不同的方式获取的时间，得到的定时精度不相同
-		virtual uint64_t GetNowTime() override;
-	};
+protected:
+    // 获取当前时间，不同的方式获取的时间，得到的定时精度不相同
+    virtual uint64_t GetNowTime() override;
+};
 
-}
-}
-
+} // namespace time
+} // namespace jaf

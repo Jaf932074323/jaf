@@ -7,7 +7,7 @@ set(
     ${PROJECT_ROOT_FILES}
 )
 
-source_group(TREE ${CMAKE_SOURCE_DIR}/${PROJECT_NAME} FILES ${ALL_FILES})
+source_group(TREE ${CMAKE_SOURCE_DIR}/src/${PROJECT_NAME} FILES ${ALL_FILES})
 
 add_library(
     ${PROJECT_NAME} STATIC

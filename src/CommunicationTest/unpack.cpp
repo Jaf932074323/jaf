@@ -8,7 +8,7 @@ jaf::Coroutine<void> Unpack::Run(std::shared_ptr<jaf::comm::IChannel> channel, s
 
     while (true)
     {
-        auto [buff, len] = recv_buffer.GetRecvBuff();
+        auto [buff, len]                 = recv_buffer.GetRecvBuff();
         jaf::comm::SChannelResult result = co_await channel->Read(buff, len, 5000);
         if (result.state != jaf::comm::SChannelResult::EState::CRS_SUCCESS)
         {

@@ -123,7 +123,7 @@ private:
                     return;
                 }
 
-                wait_flag_    = false;
+                wait_flag_ = false;
             }
 
             handle_.resume();

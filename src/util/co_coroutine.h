@@ -1,6 +1,6 @@
 #pragma once
-#include <exception>
 #include <coroutine>
+#include <exception>
 
 namespace jaf
 {
@@ -19,7 +19,7 @@ struct PromiseBase
 
     auto get_return_object()
     {
-        return Coroutine<T>{ HandleType<T>::from_promise(static_cast<PromiseType<T>&>(*this)) };
+        return Coroutine<T>{HandleType<T>::from_promise(static_cast<PromiseType<T>&>(*this))};
     }
 
     auto initial_suspend()
@@ -80,17 +80,19 @@ struct Coroutine
 {
     using promise_type = PromiseType<T>;
 
-    Coroutine(HandleType<T> h) : handle{ h }
+    Coroutine(HandleType<T> h)
+        : handle{h}
     {
     }
     ~Coroutine()
     {
     }
 
-    Coroutine(const Coroutine&) = delete;
+    Coroutine(const Coroutine&)            = delete;
     Coroutine& operator=(const Coroutine&) = delete;
 
-    Coroutine(Coroutine&& other) noexcept : handle{ other.handle }
+    Coroutine(Coroutine&& other) noexcept
+        : handle{other.handle}
     {
         other.handle = nullptr;
     }
@@ -102,7 +104,7 @@ struct Coroutine
             return *this;
         }
 
-        handle = other.handle;
+        handle       = other.handle;
         other.handle = nullptr;
         return *this;
     }
@@ -132,5 +134,4 @@ struct Coroutine
     HandleType<T> handle;
 };
 
-}
-
+} // namespace jaf

@@ -7,9 +7,9 @@ namespace jaf
 class IThreadPool
 {
 public:
-	virtual ~IThreadPool() {}
+    virtual ~IThreadPool() {}
 
-	virtual void Post(std::function<void(void)> fun) = 0;
+    virtual void Post(std::function<void(void)> fun) = 0;
 };
 
-}
+} // namespace jaf

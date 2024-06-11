@@ -37,8 +37,8 @@ CTickTimer::~CTickTimer() {}
 
 uint64_t CTickTimer::GetNowTime()
 {
-	return GetTickCount64();
+    return GetTickCount64();
 }
 
-}
-}
+} // namespace time
+} // namespace jaf

@@ -1,9 +1,9 @@
 #pragma once
-#include <memory>
-#include <functional>
-#include <string>
-#include "interface/communication/i_channel.h"
 #include "interface/communication/comm_struct.h"
+#include "interface/communication/i_channel.h"
+#include <functional>
+#include <memory>
+#include <string>
 
 namespace jaf
 {
@@ -11,14 +11,15 @@ namespace comm
 {
 
 // 串口通道
-class SerialPortChannel:public IChannel
+class SerialPortChannel : public IChannel
 {
 public:
     SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle);
-	virtual ~SerialPortChannel();
+    virtual ~SerialPortChannel();
+
 public:
     virtual Coroutine<bool> Start();
-	virtual void Stop() override;
+    virtual void Stop() override;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
@@ -32,9 +33,10 @@ private:
         bool await_suspend(std::coroutine_handle<> co_handle);
         size_t await_resume();
         void IoCallback(IOCP_DATA* pData);
+
     private:
         SerialPortChannel* serial_port_channel_ = nullptr;
-        size_t recv_len_ = 0; // 接收数据长度
+        size_t recv_len_                        = 0; // 接收数据长度
 
         IOCP_DATA iocp_data_;
         std::coroutine_handle<> handle;
@@ -53,9 +55,10 @@ private:
         bool await_suspend(std::coroutine_handle<> co_handle);
         size_t await_resume();
         void IoCallback(IOCP_DATA* pData);
+
     private:
         SerialPortChannel* serial_port_channel_ = nullptr;
-        size_t write_len_ = 0; // 接收数据长度
+        size_t write_len_                       = 0; // 接收数据长度
 
         sockaddr_in send_addr_ = {};
 
@@ -72,6 +75,5 @@ private:
 };
 
 
-
-}
-}
+} // namespace comm
+} // namespace jaf

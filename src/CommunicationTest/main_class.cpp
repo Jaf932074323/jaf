@@ -14,7 +14,7 @@ Main::~Main()
 
 jaf::Coroutine<void> Main::Run()
 {
-    wait_finish_latch_ = std::make_shared<std::latch>(1);
+    wait_finish_latch_.Reset();
     std::list<jaf::Coroutine<void>> coroutines;
 
     Init();
@@ -40,7 +40,7 @@ jaf::Coroutine<void> Main::Run()
 
     iocp_->Stop();
     co_await iocp_run;
-    wait_finish_latch_->count_down();
+    wait_finish_latch_.CountDown();
 }
 
 void Main::Stop()
@@ -50,14 +50,14 @@ void Main::Stop()
 
 void Main::WaitFinish()
 {
-    wait_finish_latch_->wait();
+    wait_finish_latch_.Wait();
 }
 
 void Main::Init()
 {
     iocp_->Init();
 
-    std::string str_ip = "127.0.0.1";
+    std::string str_ip = "192.168.2.45";
 
     std::shared_ptr<Unpack> unpack      = std::make_shared<Unpack>();
     std::shared_ptr<DealPack> deal_pack = std::make_shared<DealPack>();

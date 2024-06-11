@@ -2,8 +2,8 @@
 #include "interface/i_get_time.h"
 #include "interface/i_timer.h"
 #include "util/i_thread_pool.h"
+#include "util/latch.h"
 #include <condition_variable>
-#include <latch>
 #include <list>
 #include <map>
 #include <memory>
@@ -66,7 +66,7 @@ private:
 
     std::atomic<uint64_t> lead_time_ = 5; // 执行任务的提前量，每个任务可以提前lead_time_毫秒执行
 
-    std::shared_ptr<std::latch> work_threads_latch_ = std::make_shared<std::latch>(0);
+    Latch work_threads_latch_{1};
     std::condition_variable_any m_workCondition;                                               // 定时用条件变量，用其超时特性来定时，在定时的过程中也能随时唤醒
     std::mutex tasks_mutex_;                                                                   // 定时任务锁
     std::map<uint64_t, std::shared_ptr<STimerParaInter>> tasks_time_id_;                       // 作为索引的定时任务集合 key为定时任务ID
