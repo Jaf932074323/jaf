@@ -29,7 +29,6 @@ Iocp::~Iocp()
 
 jaf::Coroutine<void> Iocp::Init()
 {
-    await_work_thread_finish_.Start();
     co_return;
 }
 
@@ -42,6 +41,7 @@ jaf::Coroutine<void> Iocp::Run()
     run_flag_ = true;
 
     await_stop_.Start();
+    await_work_thread_finish_.Start(work_thread_count_);
 
     m_completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 
@@ -74,7 +74,6 @@ void Iocp::CreateWorkThread()
     GetSystemInfo(&mySysInfo);
     // size_t work_thread_count = mySysInfo.dwNumberOfProcessors * 2;
 
-    await_work_thread_finish_.SetTimes(work_thread_count_);
     for (size_t i = 0; i < work_thread_count_; ++i)
     {
         thread_pool_->Post(std::bind(&Iocp::WorkThreadRun, this));

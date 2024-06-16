@@ -14,19 +14,14 @@ public:
     virtual ~CoAwaitTimes(){};
 
 public:
-    void Start()
+    void Start(size_t times)
     {
-        awaitable_.Start();
+        awaitable_.Start(times);
     }
 
     void Stop()
     {
         awaitable_.Stop();
-    }
-
-    void SetTimes(size_t times)
-    {
-        awaitable_.SetTimes(times);
     }
 
     jaf::Coroutine<void> Wait()
@@ -57,10 +52,11 @@ private:
 
         ~Awaitable() {}
 
-        void Start()
+        void Start(size_t times)
         {
             std::unique_lock<std::mutex> lock(wait_flag_mutex_);
             run_flag_ = true;
+            times_    = times;
         }
 
         void Stop()
@@ -68,6 +64,7 @@ private:
             {
                 std::unique_lock<std::mutex> lock(wait_flag_mutex_);
                 run_flag_ = false;
+                times_    = 0;
                 if (!wait_flag_)
                 {
                     return;
@@ -79,7 +76,7 @@ private:
 
         bool await_ready() const
         {
-            return times_ == 0;
+            return true;
         }
 
         bool await_suspend(std::coroutine_handle<> co_handle)
@@ -87,10 +84,15 @@ private:
             handle_ = co_handle;
 
             std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+            if (times_ == 0)
+            {
+                return false;
+            }
             if (!run_flag_)
             {
                 return false;
             }
+
             assert(!wait_flag_);
             wait_flag_ = true;
 
@@ -102,23 +104,19 @@ private:
             return;
         }
 
-        void SetTimes(size_t times)
-        {
-            assert(!wait_flag_); // 不能在等待期间修改次数
-            times_ = times;
-        }
-
         void Notify()
         {
             {
                 std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                if (!wait_flag_)
+                if (times_ != 0)
+                {
+                    --times_;
+                }
+                if (times_ != 0)
                 {
                     return;
                 }
-
-                --times_;
-                if (times_ != 0)
+                if (!wait_flag_)
                 {
                     return;
                 }

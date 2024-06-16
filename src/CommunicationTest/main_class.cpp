@@ -57,7 +57,7 @@ void Main::Init()
 {
     iocp_->Init();
 
-    std::string str_ip = "192.168.2.45";
+    std::string str_ip = "127.0.0.1";
 
     std::shared_ptr<Unpack> unpack      = std::make_shared<Unpack>();
     std::shared_ptr<DealPack> deal_pack = std::make_shared<DealPack>();
