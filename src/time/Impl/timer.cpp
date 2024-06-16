@@ -51,7 +51,7 @@ void Timer::Stop()
     work_threads_latch_.Wait();
 }
 
-uint64_t Timer::StartTask(const STimerPara& para)
+std::shared_ptr<ITimerTask> Timer::StartTask(const STimerPara& para)
 {
     assert(para.fun);
     assert(run_flag_);
@@ -62,7 +62,8 @@ uint64_t Timer::StartTask(const STimerPara& para)
 
     uint64_t task_id_ = next_task_id_++;
 
-    std::shared_ptr<STimerParaInter> inter_task = std::make_shared<STimerParaInter>(para, time, task_id_);
+    std::shared_ptr<TimerTask> timer_task       = std::make_shared<TimerTask>(this, task_id_);
+    std::shared_ptr<STimerParaInter> inter_task = std::make_shared<STimerParaInter>(para, time, timer_task);
     tasks_time_id_.insert(std::make_pair(task_id_, inter_task));
     if (auto it = tasks_time_time_.find(time); it == tasks_time_time_.end())
     {
@@ -75,7 +76,7 @@ uint64_t Timer::StartTask(const STimerPara& para)
 
     m_workCondition.notify_all();
 
-    return task_id_;
+    return inter_task->task;
 }
 
 void Timer::Clear()
@@ -120,9 +121,8 @@ void Timer::StopTask(uint64_t task_id)
 
     if (timer_task != nullptr)
     {
-        std::function<void(ETimerResultType result_type, uint64_t task_id)> fun = timer_task->m_timerTask.fun;
-        uint64_t task_id                                                        = timer_task->task_id;
-        thread_pool_->Post([fun, task_id]() { fun(ETimerResultType::TRT_TASK_STOP, task_id); });
+        std::function<void(ETimerResultType result_type)> fun = timer_task->m_timerTask.fun;
+        thread_pool_->Post([fun, task_id]() { fun(ETimerResultType::TRT_TASK_STOP); });
     }
 }
 
@@ -181,9 +181,8 @@ void Timer::Work()
         for (auto it_2 : it.second)
         {
             assert(it_2.second->m_timerTask.fun);
-            std::function<void(ETimerResultType result_type, uint64_t task_id)> fun = it_2.second->m_timerTask.fun;
-            uint64_t task_id                                                        = it_2.second->task_id;
-            thread_pool_->Post([fun, task_id]() { fun(ETimerResultType::TRT_TIMER_STOP, task_id); });
+            std::function<void(ETimerResultType result_type)> fun = it_2.second->m_timerTask.fun;
+            thread_pool_->Post([fun]() { fun(ETimerResultType::TRT_TIMER_STOP); });
         }
     }
 }
@@ -197,7 +196,7 @@ void Timer::GainNeedExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<ST
     {
         for (auto it_2 : it->second)
         {
-            tasks_time_id_.erase(it_2.second->task_id);
+            tasks_time_id_.erase(it_2.second->task->TaskId());
         }
 
         need_execute_tasks.emplace_back(std::move(it->second));
@@ -212,11 +211,26 @@ void Timer::ExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerPara
         for (auto it_2 : it)
         {
             assert(it_2.second->m_timerTask.fun);
-            std::function<void(ETimerResultType result_type, uint64_t task_id)> fun = it_2.second->m_timerTask.fun;
-            uint64_t task_id                                                        = it_2.second->task_id;
-            thread_pool_->Post([fun, task_id, result_type]() { fun(result_type, task_id); });
+            std::function<void(ETimerResultType result_type)> fun = it_2.second->m_timerTask.fun;
+            thread_pool_->Post([fun, result_type]() { fun(result_type); });
         }
     }
+}
+
+Timer::TimerTask::TimerTask(Timer* timer, uint64_t task_id)
+    : task_id_(task_id)
+    , timer_(timer)
+{
+}
+
+uint64_t Timer::TimerTask::TaskId()
+{
+    return task_id_;
+}
+
+void Timer::TimerTask::Stop()
+{
+    timer_->StopTask(task_id_);
 }
 
 } // namespace time

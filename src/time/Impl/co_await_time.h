@@ -88,7 +88,7 @@ private:
                 }
                 wait_flag_    = false;
                 timeout_flag_ = false;
-                co_await_time_->timer_->StopTask(timeout_task_id_);
+                timeout_task_->Stop();
             }
             time_latch_.Wait();
             handle_.resume();
@@ -117,7 +117,7 @@ private:
             wait_flag_ = true;
 
             time_latch_.Reset();
-            timeout_task_id_ = co_await_time_->timer_->StartTask(jaf::time::STimerPara{[this](ETimerResultType result_type, uint64_t task_id) { TimerCallback(result_type); }, timeout_});
+            timeout_task_ = co_await_time_->timer_->StartTask(jaf::time::STimerPara{[this](ETimerResultType result_type) { TimerCallback(result_type); }, timeout_});
             return true;
         }
 
@@ -160,7 +160,7 @@ private:
                 }
                 wait_flag_    = false;
                 timeout_flag_ = false;
-                co_await_time_->timer_->StopTask(timeout_task_id_);
+                timeout_task_->Stop();
             }
 
             time_latch_.Wait();
@@ -178,7 +178,7 @@ private:
 
         bool timeout_flag_        = true;
         uint64_t timeout_         = 0;
-        uint64_t timeout_task_id_ = 0;
+        std::shared_ptr<ITimerTask> timeout_task_ = 0;
         Latch time_latch_{1};
     };
 
