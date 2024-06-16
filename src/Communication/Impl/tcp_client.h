@@ -1,8 +1,10 @@
 #pragma once
+#include "Interface/communication/i_tcp_client.h"
 #include "impl/co_await_time.h"
 #include "interface/communication/i_channel.h"
 #include "interface/communication/i_channel_user.h"
 #include "interface/communication/i_unpack.h"
+#include "iocp_head.h"
 #include "time_head.h"
 #include "util/co_await.h"
 #include "util/co_coroutine.h"
@@ -14,20 +16,21 @@ namespace comm
 {
 
 // TCP客户端
-class TcpClient
+class TcpClient : public ITcpClient
 {
 public:
-    TcpClient(std::string remote_ip, uint16_t remote_port, std::string local_ip = "0.0.0.0", uint16_t local_port = 0, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
+    TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
     virtual ~TcpClient();
 
 public:
+    virtual void SetAddr(const std::string& remote_ip, uint16_t remote_port, const std::string& local_ip = "0.0.0.0", uint16_t local_port = 0) override;
     // 设置连接时间
     // connect_timeout 连接超时时间
     // reconnect_wait_time 重连等待时间
-    virtual void SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time);
-    void SetChannelUser(std::shared_ptr<IChannelUser> user);
-    virtual jaf::Coroutine<void> Run(HANDLE completion_handle);
-    virtual void Stop();
+    virtual void SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time) override;
+    void SetChannelUser(std::shared_ptr<IChannelUser> user) override;
+    virtual jaf::Coroutine<void> Run() override;
+    virtual void Stop() override;
 
 private:
     void Init(void);
@@ -46,7 +49,8 @@ private:
     std::shared_ptr<jaf::time::ITimer> timer_;
     jaf::time::CoAwaitTime await_time_;
 
-    HANDLE completion_handle_ = nullptr;
+    IGetCompletionPort* get_completion_port_ = nullptr;
+    HANDLE completion_handle_                = nullptr;
 
     std::string local_ip_ = "0.0.0.0";
     uint16_t local_port_  = 0;

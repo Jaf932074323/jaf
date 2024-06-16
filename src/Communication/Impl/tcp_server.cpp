@@ -26,14 +26,20 @@ std::string GetFormatMessage(DWORD dw)
     return strText;
 }
 
-TcpServer::TcpServer(std::string ip, uint16_t port)
-    : ip_(ip)
-    , port_(port)
+TcpServer::TcpServer(IGetCompletionPort* get_completion_port)
+    :get_completion_port_(get_completion_port)
 {
+    assert(get_completion_port_ != nullptr);
 }
 
 TcpServer::~TcpServer()
 {
+}
+
+void TcpServer::SetAddr(const std::string& ip, uint16_t port)
+{
+    ip_   = ip;
+    port_ = port;
 }
 
 void TcpServer::SetChannelUser(std::shared_ptr<IChannelUser> user)
@@ -53,7 +59,7 @@ void TcpServer::SetMaxClientCount(size_t max_client_count)
     max_client_count_ = max_client_count;
 }
 
-jaf::Coroutine<void> TcpServer::Run(HANDLE completion_handle)
+jaf::Coroutine<void> TcpServer::Run()
 {
     if (run_flag_)
     {
@@ -63,7 +69,7 @@ jaf::Coroutine<void> TcpServer::Run(HANDLE completion_handle)
 
     await_stop_.Start();
 
-    completion_handle_ = completion_handle;
+    completion_handle_ = get_completion_port_->Get();
     Init();
     for (size_t i = 0; i < accept_count_; ++i)
     {

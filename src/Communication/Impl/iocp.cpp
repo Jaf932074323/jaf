@@ -1,6 +1,10 @@
 #include "Iocp.h"
 #include "define_constant.h"
 #include "log_head.h"
+#include "serial_port.h"
+#include "tcp_client.h"
+#include "tcp_server.h"
+#include "udp.h"
 #include "util/finally.h"
 #include "util/simple_thread_pool.h"
 #include <assert.h>
@@ -17,8 +21,11 @@ namespace comm
 
 std::string GetFormatMessage(DWORD dw);
 
-Iocp::Iocp(std::shared_ptr<IThreadPool> thread_pool)
+
+Iocp::Iocp(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<jaf::time::ITimer> timer)
     : thread_pool_(thread_pool == nullptr ? std::make_shared<SimpleThreadPool>() : thread_pool)
+    , timer_(timer == nullptr ? jaf::time::CommonTimer::Timer() : timer)
+    , get_completion_port_(this)
 {
 }
 
@@ -66,6 +73,30 @@ jaf::Coroutine<void> Iocp::Run()
 void Iocp::Stop()
 {
     await_stop_.Stop();
+}
+
+std::shared_ptr<ITcpServer> Iocp::CreateTcpServer()
+{
+    std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(&get_completion_port_);
+    return std::static_pointer_cast<ITcpServer>(server);
+}
+
+std::shared_ptr<ITcpClient> Iocp::CreateTcpClient()
+{
+    std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(&get_completion_port_, timer_);
+    return std::static_pointer_cast<ITcpClient>(client);
+}
+
+std::shared_ptr<IUdp> Iocp::CreateUdp()
+{
+    std::shared_ptr<Udp> udp = std::make_shared<Udp>(&get_completion_port_, timer_);
+    return std::static_pointer_cast<IUdp>(udp);
+}
+
+std::shared_ptr<ISerialPort> Iocp::CreateSerialPort()
+{
+    std::shared_ptr<SerialPort> server = std::make_shared<SerialPort>(&get_completion_port_);
+    return std::static_pointer_cast<ISerialPort>(server);
 }
 
 void Iocp::CreateWorkThread()

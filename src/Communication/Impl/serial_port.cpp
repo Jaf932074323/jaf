@@ -12,17 +12,23 @@ namespace comm
 
 std::string GetFormatMessage(DWORD dw);
 
-SerialPort::SerialPort(uint8_t comm, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity)
-    : comm_(comm >= 10 ? std::format("\\\\.\\COM{}", comm) : std::format("COM{}", comm))
-    , baud_rate_(baud_rate)
-    , data_bit_(data_bit)
-    , stop_bit_(stop_bit)
-    , parity_(parity)
+SerialPort::SerialPort(IGetCompletionPort* get_completion_port)
+    : get_completion_port_(get_completion_port)
 {
+    assert(get_completion_port_ != nullptr);
 }
 
 SerialPort::~SerialPort()
 {
+}
+
+void SerialPort::SetAddr(uint8_t comm, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity)
+{
+    comm_      = comm >= 10 ? std::format("\\\\.\\COM{}", comm) : std::format("COM{}", comm);
+    baud_rate_ = baud_rate;
+    data_bit_  = data_bit;
+    stop_bit_  = stop_bit;
+    parity_    = parity;
 }
 
 void SerialPort::SetChannelUser(std::shared_ptr<IChannelUser> user)
@@ -30,7 +36,7 @@ void SerialPort::SetChannelUser(std::shared_ptr<IChannelUser> user)
     user_ = user;
 }
 
-jaf::Coroutine<void> SerialPort::Run(HANDLE completion_handle)
+jaf::Coroutine<void> SerialPort::Run()
 {
     if (run_flag_)
     {
@@ -38,7 +44,7 @@ jaf::Coroutine<void> SerialPort::Run(HANDLE completion_handle)
     }
     run_flag_ = true;
 
-    completion_handle_ = completion_handle;
+    completion_handle_ = get_completion_port_->Get();
     Init();
 
     std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(completion_handle_, comm_handle_);

@@ -78,7 +78,8 @@ private:
 
 UdpChannel::UdpChannel(HANDLE completion_handle, SOCKET socket,
     std::string remote_ip, uint16_t remote_port,
-    std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
+    std::string local_ip, uint16_t local_port,
+    std::shared_ptr<jaf::time::ITimer> timer)
     : completion_handle_(completion_handle)
     , socket_(socket)
     , remote_ip_(remote_ip)

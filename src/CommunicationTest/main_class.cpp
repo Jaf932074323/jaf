@@ -22,16 +22,16 @@ jaf::Coroutine<void> Main::Run()
     await_stop_.Start();
 
     jaf::Coroutine<void> iocp_run = iocp_->Run();
-    //coroutines.push_back(server_->Run(iocp_->GetCompletionPort()));
-    //coroutines.push_back(client_->Run(iocp_->GetCompletionPort()));
-    //coroutines.push_back(udp_->Run(iocp_->GetCompletionPort()));
-    serial_port_->Run(iocp_->GetCompletionPort());
+    coroutines.push_back(server_->Run());
+    coroutines.push_back(client_->Run());
+    coroutines.push_back(udp_->Run());
+    coroutines.push_back(serial_port_->Run());
 
     co_await await_stop_.Wait();
 
-    //server_->Stop();
-    //client_->Stop();
-    //udp_->Stop();
+    server_->Stop();
+    client_->Stop();
+    udp_->Stop();
     serial_port_->Stop();
     for (auto& coroutine : coroutines)
     {
@@ -63,15 +63,19 @@ void Main::Init()
     std::shared_ptr<DealPack> deal_pack = std::make_shared<DealPack>();
     channel_user_                       = std::make_shared<jaf::comm::ChannelUser>(unpack, deal_pack);
 
-    server_ = std::make_shared<jaf::comm::TcpServer>(str_ip, 8181);
+    server_ = iocp_->CreateTcpServer();
+    server_->SetAddr(str_ip, 8181);
     server_->SetChannelUser(channel_user_);
 
-    client_ = std::make_shared<jaf::comm::TcpClient>(str_ip, 8182, str_ip, 0);
+    client_ = iocp_->CreateTcpClient();
+    client_->SetAddr(str_ip, 8182, str_ip, 0);
     client_->SetChannelUser(channel_user_);
 
-    udp_ = std::make_shared<jaf::comm::Udp>(str_ip, 8081, str_ip, 8082);
+    udp_ = iocp_->CreateUdp();
+    udp_->SetAddr(str_ip, 8081, str_ip, 8082);
     udp_->SetChannelUser(channel_user_);
 
-    serial_port_ = std::make_shared<jaf::comm::SerialPort>(11, 9600, 8, 0, 0);
+    serial_port_ = iocp_->CreateSerialPort();
+    serial_port_->SetAddr(11, 9600, 8, 0, 0);
     serial_port_->SetChannelUser(channel_user_);
 }

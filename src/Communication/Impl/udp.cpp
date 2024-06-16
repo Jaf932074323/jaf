@@ -10,17 +10,23 @@ namespace comm
 
 std::string GetFormatMessage(DWORD dw);
 
-Udp::Udp(std::string local_ip, uint16_t local_port, std::string remote_ip, uint16_t remote_port, std::shared_ptr<jaf::time::ITimer> timer)
-    : local_ip_(local_ip)
-    , local_port_(local_port)
-    , remote_ip_(remote_ip)
-    , remote_port_(remote_port)
+Udp::Udp(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
+    : get_completion_port_(get_completion_port)
     , timer_(timer)
 {
+    assert(get_completion_port_ != nullptr);
 }
 
 Udp::~Udp()
 {
+}
+
+void Udp::SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port)
+{
+    local_ip_    = local_ip;
+    local_port_  = local_port;
+    remote_ip_   = remote_ip;
+    remote_port_ = remote_port;
 }
 
 void Udp::SetChannelUser(std::shared_ptr<IChannelUser> user)
@@ -28,7 +34,7 @@ void Udp::SetChannelUser(std::shared_ptr<IChannelUser> user)
     user_ = user;
 }
 
-jaf::Coroutine<void> Udp::Run(HANDLE completion_handle)
+jaf::Coroutine<void> Udp::Run()
 {
     if (run_flag_)
     {
@@ -36,7 +42,7 @@ jaf::Coroutine<void> Udp::Run(HANDLE completion_handle)
     }
     run_flag_ = true;
 
-    completion_handle_ = completion_handle;
+    completion_handle_ = get_completion_port_->Get();
     Init();
 
     std::shared_ptr<UdpChannel> channel = std::make_shared<UdpChannel>(completion_handle_, socket_, remote_ip_, remote_port_, local_ip_, local_port_, timer_);

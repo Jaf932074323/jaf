@@ -64,11 +64,8 @@ private:
     bool callback_flag_ = false; // 已经回调标记
 };
 
-TcpClient::TcpClient(std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
-    : local_ip_(local_ip)
-    , local_port_(local_port)
-    , remote_ip_(remote_ip)
-    , remote_port_(remote_port)
+TcpClient::TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
+    : get_completion_port_(get_completion_port)
     , timer_(timer == nullptr ? jaf::time::CommonTimer::Timer() : timer)
     , await_time_(timer_)
 {
@@ -76,6 +73,14 @@ TcpClient::TcpClient(std::string remote_ip, uint16_t remote_port, std::string lo
 
 TcpClient::~TcpClient()
 {
+}
+
+void TcpClient::SetAddr(const std::string& remote_ip, uint16_t remote_port, const std::string& local_ip, uint16_t local_port)
+{
+    local_ip_    = local_ip;
+    local_port_  = local_port;
+    remote_ip_   = remote_ip;
+    remote_port_ = remote_port;
 }
 
 void TcpClient::SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time)
@@ -89,7 +94,7 @@ void TcpClient::SetChannelUser(std::shared_ptr<IChannelUser> user)
     user_ = user;
 }
 
-jaf::Coroutine<void> TcpClient::Run(HANDLE completion_handle)
+jaf::Coroutine<void> TcpClient::Run()
 {
     if (run_flag_)
     {
@@ -98,7 +103,7 @@ jaf::Coroutine<void> TcpClient::Run(HANDLE completion_handle)
     run_flag_ = true;
 
     await_stop_.Start();
-    completion_handle_ = completion_handle;
+    completion_handle_ = get_completion_port_->Get();
     await_time_.Start();
 
     Init();

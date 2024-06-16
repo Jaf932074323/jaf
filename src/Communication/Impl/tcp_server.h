@@ -1,8 +1,10 @@
 #pragma once
-#include "i_iocp_user.h"
+#include "Interface/communication/i_tcp_server.h"
 #include "interface/communication/i_deal_pack.h"
 #include "interface/communication/i_unpack.h"
+#include "iocp_head.h"
 #include "util/co_await.h"
+#include "util/co_coroutine.h"
 #include <functional>
 #include <map>
 #include <memory>
@@ -15,23 +17,24 @@ namespace comm
 {
 
 // TCP·þÎñ¶Ë
-class TcpServer : public IIocpUser
+class TcpServer : public ITcpServer
 {
 public:
-    TcpServer(std::string ip, uint16_t port);
+    TcpServer(IGetCompletionPort* get_completion_port);
     virtual ~TcpServer();
 
 public:
+    virtual void SetAddr(const std::string& ip, uint16_t port) override;
     virtual void SetChannelUser(std::shared_ptr<IChannelUser> user) override;
     virtual void SetAcceptCount(size_t accept_count) override;
     virtual void SetMaxClientCount(size_t max_client_count) override;
-    virtual jaf::Coroutine<void> Run(HANDLE completion_handle) override;
+    virtual Coroutine<void> Run() override;
     virtual void Stop() override;
 
 private:
     void Init(void);
-    jaf::Coroutine<void> Accept();
-    jaf::Coroutine<void> RunSocket(SOCKET socket);
+    Coroutine<void> Accept();
+    Coroutine<void> RunSocket(SOCKET socket);
 
 private:
     class AcceptAwaitable
@@ -59,6 +62,7 @@ private:
     bool run_flag_ = false;
     CoAwait await_stop_;
 
+    IGetCompletionPort* get_completion_port_ = nullptr;
     HANDLE completion_handle_ = nullptr;
     SOCKET listen_socket_     = 0; // ÕìÌýÌ×½Ó×Ö
 
