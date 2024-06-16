@@ -25,10 +25,10 @@ public:
 
 public:
     virtual Coroutine<bool> Start();
+    virtual void Stop() override;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, std::string remote_ip, uint16_t remote_port, uint64_t timeout);
-    virtual void Stop() override;
 
 private:
     bool stop_flag_ = false;

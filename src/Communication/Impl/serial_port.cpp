@@ -41,8 +41,7 @@ jaf::Coroutine<void> SerialPort::Run(HANDLE completion_handle)
     completion_handle_ = completion_handle;
     Init();
 
-    std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(
-        completion_handle_, comm_handle_);
+    std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(completion_handle_, comm_handle_);
 
     if (co_await channel->Start())
     {

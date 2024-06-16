@@ -24,15 +24,15 @@ jaf::Coroutine<void> Main::Run()
     jaf::Coroutine<void> iocp_run = iocp_->Run();
     //coroutines.push_back(server_->Run(iocp_->GetCompletionPort()));
     //coroutines.push_back(client_->Run(iocp_->GetCompletionPort()));
-    coroutines.push_back(udp_->Run(iocp_->GetCompletionPort()));
-    //serial_port_->Run(iocp_->GetCompletionPort());
+    //coroutines.push_back(udp_->Run(iocp_->GetCompletionPort()));
+    serial_port_->Run(iocp_->GetCompletionPort());
 
     co_await await_stop_.Wait();
 
-    udp_->Stop();
     //server_->Stop();
     //client_->Stop();
-    //serial_port_->Stop();
+    //udp_->Stop();
+    serial_port_->Stop();
     for (auto& coroutine : coroutines)
     {
         co_await coroutine;
@@ -72,6 +72,6 @@ void Main::Init()
     udp_ = std::make_shared<jaf::comm::Udp>(str_ip, 8081, str_ip, 8082);
     udp_->SetChannelUser(channel_user_);
 
-    serial_port_ = std::make_shared<jaf::comm::SerialPort>(15, 9600, 8, 0, 0);
+    serial_port_ = std::make_shared<jaf::comm::SerialPort>(11, 9600, 8, 0, 0);
     serial_port_->SetChannelUser(channel_user_);
 }

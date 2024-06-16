@@ -1,4 +1,5 @@
 #include "udp_channel.h"
+#include "Log/log_head.h"
 #include "impl/tool/run_with_timeout.h"
 #include <WS2tcpip.h>
 #include <assert.h>
@@ -101,7 +102,13 @@ Coroutine<bool> UdpChannel::Start()
     stop_flag_ = false;
     read_await_.Start();
     write_await_.Start();
-    CreateIoCompletionPort((HANDLE) socket_, completion_handle_, 0, 0);
+    if (CreateIoCompletionPort((HANDLE) socket_, completion_handle_, 0, 0) == 0)
+    {
+        DWORD dw        = GetLastError();
+        std::string str = std::format("Iocp code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
+        LOG_ERROR() << str;
+        co_return false;
+    }
     co_return true;
 }
 
@@ -284,6 +291,7 @@ bool UdpChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_handle)
         int error = WSAGetLastError();
         if (error != ERROR_IO_PENDING)
         {
+            reslult_.err_ = error;
             return false;
         }
     }
@@ -386,7 +394,6 @@ void UdpChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
 
     handle.resume();
 }
-
 
 void UdpChannel::WriteAwaitable::Stop()
 {
