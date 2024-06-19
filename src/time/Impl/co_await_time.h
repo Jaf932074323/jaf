@@ -84,13 +84,14 @@ private:
         Awaitable(CoAwaitTime* co_await_time)
             : co_await_time_(co_await_time)
         {
+            timeout_task_.fun = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(result_type); };
         }
 
         ~Awaitable() {}
 
         void SetTimeout(uint64_t timeout)
         {
-            timeout_ = timeout;
+            timeout_task_.interval = timeout;
         }
 
         void Start()
@@ -110,7 +111,7 @@ private:
                 }
                 wait_flag_    = false;
                 timeout_flag_ = false;
-                timeout_task_->Stop();
+                co_await_time_->timer_->StopTask(&timeout_task_);
             }
             time_latch_.Wait();
             handle_.resume();
@@ -118,11 +119,6 @@ private:
 
         bool await_ready() const
         {
-            if (timeout_ == 0)
-            {
-                return true;
-            }
-
             return false;
         }
 
@@ -139,7 +135,7 @@ private:
             wait_flag_ = true;
 
             time_latch_.Reset();
-            timeout_task_ = co_await_time_->timer_->StartTask(jaf::time::STimerPara{[this](ETimerResultType result_type) { TimerCallback(result_type); }, timeout_});
+            co_await_time_->timer_->StartTask(&timeout_task_);
             return true;
         }
 
@@ -182,7 +178,7 @@ private:
                 }
                 wait_flag_    = false;
                 timeout_flag_ = false;
-                timeout_task_->Stop();
+                co_await_time_->timer_->StopTask(&timeout_task_);
             }
 
             time_latch_.Wait();
@@ -199,8 +195,7 @@ private:
         bool wait_flag_ = false;
 
         bool timeout_flag_        = true;
-        uint64_t timeout_         = 0;
-        std::shared_ptr<ITimerTask> timeout_task_ = 0;
+        STimerTask timeout_task_;
         Latch time_latch_{1};
     };
 

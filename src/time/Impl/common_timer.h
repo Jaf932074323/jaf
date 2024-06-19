@@ -22,6 +22,7 @@
 // SOFTWARE.
 // 2024-6-16 姜安富
 #include "interface/i_timer.h"
+#include <memory>
 
 namespace jaf
 {
