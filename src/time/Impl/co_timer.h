@@ -37,19 +37,20 @@ inline jaf::Coroutine<void> CoSleep(uint64_t millisecond)
 
     struct SleepAwaitable
     {
-        uint64_t sleep_time_;
+        STimerTask timer_task_;
         std::coroutine_handle<> handle_;
 
         SleepAwaitable(uint64_t sleep_time)
-            : sleep_time_(sleep_time)
         {
+            timer_task_.interval = sleep_time;
+            timer_task_.fun      = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(); };
         }
 
         ~SleepAwaitable() {}
 
         bool await_ready()
         {
-            if (sleep_time_ == 0)
+            if (timer_task_.interval == 0)
             {
                 return true;
             }
@@ -60,7 +61,7 @@ inline jaf::Coroutine<void> CoSleep(uint64_t millisecond)
         bool await_suspend(std::coroutine_handle<> co_handle)
         {
             handle_ = co_handle;
-            CommonTimer::Timer()->StartTask(jaf::time::STimerPara{[this](ETimerResultType result_type) { TimerCallback(); }, sleep_time_});
+            CommonTimer::Timer()->StartTask(&timer_task_);
             return true;
         }
 
@@ -93,20 +94,21 @@ public:
         struct SleepAwaitable
         {
             CoTimer* co_timer_;
-            uint64_t sleep_time_;
+            STimerTask timer_task_;
             std::coroutine_handle<> handle_;
 
             SleepAwaitable(CoTimer* co_timer, uint64_t sleep_time)
                 : co_timer_(co_timer)
-                , sleep_time_(sleep_time)
             {
+                timer_task_.interval = sleep_time;
+                timer_task_.fun = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(); };
             }
 
             ~SleepAwaitable() {}
 
             bool await_ready()
             {
-                if (sleep_time_ == 0)
+                if (timer_task_.interval == 0)
                 {
                     return true;
                 }
@@ -117,7 +119,7 @@ public:
             bool await_suspend(std::coroutine_handle<> co_handle)
             {
                 handle_ = co_handle;
-                co_timer_->timer_->StartTask(jaf::time::STimerPara{[this](ETimerResultType result_type) { TimerCallback(); }, sleep_time_});
+                co_timer_->timer_->StartTask(&timer_task_);
                 return true;
             }
 

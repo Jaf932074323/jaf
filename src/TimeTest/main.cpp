@@ -75,8 +75,8 @@ jaf::Coroutine<void> TestTimer()
     std::mutex task_mutex;
     bool run = true;
 
-    jaf::time::STimerPara task;
-    task.fun = [&](jaf::time::ETimerResultType result_type) {
+    jaf::time::STimerTask task;
+    task.fun = [&](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) {
         LOG_INFO() << "timer";
         std::unique_lock<std::mutex> lock(task_mutex);
         if (run)
@@ -85,7 +85,7 @@ jaf::Coroutine<void> TestTimer()
         }
     };
     task.interval = 0;
-    timer.StartTask(task);
+    timer.StartTask(&task);
 
     co_await jaf::time::CoSleep(1000);
 
@@ -109,8 +109,8 @@ int main()
     jaf::time::CommonTimer::SetTimer(timer);
 
     //TestWait();
-    TestCoTimer();
-    //TestTimer();
+    //TestCoTimer();
+    TestTimer();
 
     getchar();
 

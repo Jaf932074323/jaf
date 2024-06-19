@@ -40,18 +40,6 @@ namespace time
 // 定时器
 class Timer : public ITimer
 {
-    class TimerTask : public ITimerTask
-    {
-    public:
-        TimerTask(Timer* timer, uint64_t task_id);
-    public:
-        uint64_t TaskId();
-        // 结束定时任务
-        virtual void Stop() override;
-    private:
-        uint64_t task_id_ = 0; // 定时任务ID   
-        Timer* timer_ = nullptr;
-    };
 public:
     // min_level通过的最低日志等级
     Timer(std::shared_ptr<IThreadPool> thread_pool = nullptr, std::shared_ptr<IGetTime> get_time = nullptr);
@@ -64,12 +52,13 @@ public:
     virtual void Stop() override;
 
     // 启动一个定时任务
-    // rTask 定时任务信息
-    // 返回定时任务，返回nullptr时表示添加定时任务失败
+    // task 定时任务信息
+    // 返回是否成功
     // 当StartTask成功后，para中的定时执行函数一定要执行一次，且只会执行一次
-    virtual std::shared_ptr<ITimerTask> StartTask(const STimerPara& para) override;
-    // 清除所有定时任务
-    virtual void Clear() override;
+    virtual bool StartTask(STimerTask* task);
+    // 停止一个定时任务
+    // task 定时任务信息
+    virtual void StopTask(STimerTask* task);
 private:
     // 停止一个定时任务
     // task_id 要移除的定时任务的Id
@@ -82,9 +71,10 @@ public:
     // 内部使用的定时任务
     struct STimerParaInter
     {
-        STimerPara m_timerTask;
+        STimerTask* m_timerTask = nullptr;
+        std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // 定时执行函数
         uint64_t time = 0; // 执行时间
-        std::shared_ptr<TimerTask> task = nullptr;
+        uint64_t task_id = 0;
     };
 
 private:

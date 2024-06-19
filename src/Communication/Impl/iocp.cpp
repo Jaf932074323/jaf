@@ -43,7 +43,6 @@ namespace comm
 
 std::string GetFormatMessage(DWORD dw);
 
-
 Iocp::Iocp(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<jaf::time::ITimer> timer)
     : thread_pool_(thread_pool == nullptr ? std::make_shared<SimpleThreadPool>() : thread_pool)
     , timer_(timer == nullptr ? jaf::time::CommonTimer::Timer() : timer)

@@ -22,7 +22,6 @@
 // SOFTWARE.
 // 2024-6-16 姜安富
 #include <functional>
-#include <memory>
 
 namespace jaf
 {
@@ -37,20 +36,11 @@ enum class ETimerResultType
 };
 
 // 定时参数
-struct STimerPara
+struct STimerTask
 {
-    std::function<void(ETimerResultType result_type)> fun; // 定时执行函数
-    uint64_t interval = 1000;                                                // 定时时间间隔（毫秒）
-};
-
-class ITimerTask
-{
-public:
-    virtual ~ITimerTask(){};
-
-public:
-    // 结束定时任务
-    virtual void Stop() = 0;
+    std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // 定时执行函数
+    uint64_t interval = 1000;                              // 定时时间间隔（毫秒）
+    void* timer_data_ = nullptr;                           // 定时器维护的数据，由定时器记录其自身需要的数据，只能定时器修改
 };
 
 // 定时器接口
@@ -65,12 +55,13 @@ public:
     // 停止定时器
     virtual void Stop() = 0;
     // 启动一个定时任务
-    // rTask 定时任务信息
-    // 返回定时任务，返回nullptr时表示添加定时任务失败
+    // task 定时任务信息
+    // 返回是否成功
     // 当StartTask成功后，para中的定时执行函数一定要执行一次，且只会执行一次
-    virtual std::shared_ptr<ITimerTask> StartTask(const STimerPara& para) = 0;
-    // 清除所有定时任务
-    virtual void Clear() = 0;
+    virtual bool StartTask(STimerTask* task) = 0;
+    // 停止一个定时任务
+    // task 定时任务信息
+    virtual void StopTask(STimerTask* task) = 0;
 };
 
 } // namespace time
