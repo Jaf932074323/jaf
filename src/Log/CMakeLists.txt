@@ -7,7 +7,7 @@ set(
     ${PROJECT_ROOT_FILES}
 )
 
-source_group(TREE ${CMAKE_SOURCE_DIR}/src/${PROJECT_NAME} FILES ${ALL_FILES})
+source_group(TREE ${CMAKE_SOURCE_DIR}/src FILES ${ALL_FILES})
 
 add_definitions(-D_API_LOG_EXPORT)
 

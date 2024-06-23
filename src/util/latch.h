@@ -60,7 +60,7 @@ public:
         }
     }
 
-    void arrive_and_wait(const int64_t update = 1)
+    void ArriveAndWait(const int64_t update = 1)
     {
         assert(update >= 0);
         const int64_t current = counter_.fetch_sub(update) - update;
