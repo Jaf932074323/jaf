@@ -34,8 +34,8 @@ int main()
     std::shared_ptr<jaf::log::ILogger> logger           = std::make_shared<jaf::log::Logger>(appender);
     jaf::log::CommonLogger::SetDefaultLogger(logger);
 
-    test_single_thread_exec();
-    //test_multi_threads_exec();
+    //test_single_thread_exec();
+    test_multi_threads_exec();
 
     return 0;
 }

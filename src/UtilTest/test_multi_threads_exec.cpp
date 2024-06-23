@@ -32,37 +32,37 @@
 class TestMultiThreadsExec
 {
 public:
-    jaf::Coroutine<void> Test(jaf::Latch& wait_stop)
+    jaf::Coroutine<void> Test(jaf::Latch& wait_finish)
     {
-        // 检查方式：
-        // 将检查数组中的元素全部置0
-        // 然后在执行任务时，每个任务设置检查数组中一个元素的值为其下标
-        // 任务全部执行完成后，检查对应的检查数组的值是否设置正确
+        // 测试方式：
+        // 将测试数组中的元素全部置0
+        // 然后在执行任务时，每个任务设置测试数组中一个元素的值加上其下标
+        // 任务全部执行完成后，检查测试数组的的每项元素值是否复合预期
 
-        checks_numbers_.resize(deal_time);
+        // 准备测试数组
+        test_numbers_.resize(deal_time);
         for (int64_t i = 0; i < deal_time; ++i)
         {
-            checks_numbers_[i] = 0;
+            test_numbers_[i] = 0;
         }
 
+        // 执行处理任务
         auto run = multi_thread_exec_.Run();
-
         for (int64_t i = 0; i < deal_time; ++i)
         {
             Deal(i);
         }
-
         multi_thread_exec_.Stop();
-
         co_await run;
 
+        // 检查
         bool check_pass = true;
         for (int64_t i = 0; i < deal_time; ++i)
         {
-            if (checks_numbers_[i] != i)
+            if (test_numbers_[i] != i)
             {
                 check_pass = false;
-                LOG_ERROR() << std::format("第{}项检查数字处理错误，预计={},实际值={}", i, i, checks_numbers_[i]);
+                LOG_ERROR() << std::format("第{}项数字处理错误，预计={},实际值={}", i, i, test_numbers_[i]);
             }
         }
         if (check_pass)
@@ -74,7 +74,7 @@ public:
             LOG_ERROR() << "检查数字未通过";
         }
 
-        wait_stop.CountDown();
+        wait_finish.CountDown();
         co_return;
     }
 
@@ -83,7 +83,7 @@ private:
     {
         co_await multi_thread_exec_.Switch(); // 切换线程执行
 
-        checks_numbers_[number] += number;
+        test_numbers_[number] += number;
         LOG_INFO() << std::to_string(number);
 
         co_return;
@@ -92,16 +92,16 @@ private:
 private:
     const int64_t deal_time = 1000;
     jaf::MultiThreadsExec multi_thread_exec_{10};
-    std::vector<int64_t> checks_numbers_; // 用于检查是否有重复和遗漏
+    std::vector<int64_t> test_numbers_; // 测试数组，用于检查是否有重复和遗漏
 };
 
 void test_multi_threads_exec()
 {
-    jaf::Latch wait_stop(1);
+    jaf::Latch wait_finish(1);
     TestMultiThreadsExec test;
-    test.Test(wait_stop);
+    test.Test(wait_finish);
 
-    wait_stop.Wait();
+    wait_finish.Wait();
 
     return;
 }
