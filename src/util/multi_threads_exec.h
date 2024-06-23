@@ -1,155 +1,95 @@
 #pragma once
-#include "co_coroutine.h"
-#include "concurrent_queue.h"
-#include "latch.h"
-#include <assert.h>
-#include <functional>
+// MIT License
+//
+// Copyright(c) 2021 Jaf932074323
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this softwareand associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+//
+// The above copyright noticeand this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+// 2024-6-23 姜安富
+#include "threads_exec.h"
+#include <thread>
+#include <vector>
+#include "co_await.h"
 
 namespace jaf
 {
 
-// 线程池执行
+// 多线程执行
 class MultiThreadsExec
 {
 public:
-    MultiThreadsExec()
+    MultiThreadsExec(size_t thread_count)
+        : thread_count_(thread_count)
     {
     }
     ~MultiThreadsExec()
     {
     }
 
-    // 运行,每调用一次则多一个工作线程
-    // 会阻塞直到停止
-    void Run()
+    jaf::Coroutine<void> Run()
     {
-        CountUpWorker();
-        WorkerRun();
-        stop_ = false;
-        CountDownWorker();
+        assert(!runing_); // 不能重复调用run
+        runing_ = true;
+        wait_stop_.Start();
+        threads_exec_.Start();
+
+        std::vector<std::thread> threads;
+        threads.reserve(thread_count_);
+
+        auto fun_thread_run = [this]() {
+            threads_exec_.Run();
+        };
+        for (size_t i = 0; i < thread_count_; ++i)
+        {
+            threads.push_back(std::thread(fun_thread_run));
+        }
+
+        co_await wait_stop_.Wait();
+
+        threads_exec_.Stop();
+        for (auto& thread : threads)
+        {
+            thread.join();
+        }
+
+        co_return;
     }
 
     void Stop()
     {
-        stop_ = true;
-        task_queue_.QuitAllWait();
-    }
-
-    void Wait()
-    {
-        WaitZeroWorker();
+        wait_stop_.Stop();
     }
 
 public:
     // 切换线程
     jaf::Coroutine<void> Switch()
     {
-        assert(!stop_);
-        co_await SwitchAwaitable(this);
+        assert(runing_);
+        co_await threads_exec_.Switch();
     }
 
 private:
-    void WorkerRun()
-    {
-        std::function<void()> task;
+    bool runing_ = false;
+    CoAwait wait_stop_;
 
-        while (!stop_)
-        {
-            bool wait_result = task_queue_.WaitAndPop(task);
-            if (!wait_result)
-            {
-                continue;
-            }
-            task();
-        }
+    ThreadsExec threads_exec_;
 
-        // 处理掉剩余的任务
-        while (task_queue_.TryPop(task))
-        {
-            task();
-        }
-    }
-
-private:
-    void CountUpWorker(const int64_t update = 1)
-    {
-        assert(update > 0);
-        const int64_t current = worker_counter_.fetch_add(update);
-        assert(current >= 0);
-    }
-    void CountDownWorker(const int64_t update = 1)
-    {
-        assert(update >= 0);
-        const int64_t current = worker_counter_.fetch_sub(update) - update;
-        if (current == 0)
-        {
-            worker_counter_.notify_all();
-        }
-        else
-        {
-            assert(current >= 0);
-        }
-    }
-
-    void WaitZeroWorker() const noexcept
-    {
-        for (;;)
-        {
-            const int64_t current = worker_counter_.load();
-            if (current == 0)
-            {
-                return;
-            }
-            else
-            {
-                assert(current >= 0);
-            }
-            worker_counter_.wait(current, std::memory_order_relaxed);
-        }
-    }
-
-private:
-    class SwitchAwaitable
-    {
-    public:
-        SwitchAwaitable(MultiThreadsExec* simple_thread_exec)
-            : simple_thread_exec_(simple_thread_exec)
-        {
-        }
-        ~SwitchAwaitable() {}
-
-        bool await_ready()
-        {
-            return false;
-        }
-        bool await_suspend(std::coroutine_handle<> co_handle)
-        {
-            handle_ = co_handle;
-
-            std::function<void(void)> callback = std::bind(&SwitchAwaitable::TaskCallback, this);
-            simple_thread_exec_->task_queue_.Push(callback);
-
-            return true;
-        }
-        void await_resume() const
-        {
-            return;
-        }
-        void TaskCallback()
-        {
-            handle_.resume();
-        }
-
-    private:
-        MultiThreadsExec* simple_thread_exec_;
-        std::coroutine_handle<> handle_;
-    };
-
-private:
-    bool stop_ = false;
-    ConcurrentQueue<std::function<void(void)>> task_queue_;
-
-    std::atomic<int64_t> worker_counter_ = 0; // 工作线程计数
+    size_t thread_count_;
 };
 
 } // namespace jaf

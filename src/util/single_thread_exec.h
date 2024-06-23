@@ -1,9 +1,29 @@
 #pragma once
-#include "co_coroutine.h"
-#include "concurrent_queue.h"
-#include "latch.h"
-#include <assert.h>
-#include <functional>
+// MIT License
+//
+// Copyright(c) 2021 Jaf932074323
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this softwareand associated documentation files(the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions :
+//
+// The above copyright noticeand this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+// 2024-6-23 姜安富
+#include "threads_exec.h"
+#include <thread>
+#include "co_await.h"
 
 namespace jaf
 {
@@ -19,100 +39,45 @@ public:
     {
     }
 
-    // 运行
-    // 会阻塞直到停止
-    void Run()
+    jaf::Coroutine<void> Run()
     {
-        assert(!stop_);
-        WorkerRun();
-        stop_ = false;
-        latch_.Reset();
-        latch_.CountDown();
-    }
-    void Stop()
-    {
-        stop_ = true;
-        task_queue_.QuitAllWait();
+        assert(!runing_); // 不能重复调用run
+        runing_ = true;
+        wait_stop_.Start();
+        threads_exec_.Start();
+
+
+        auto fun_thread_run = [this]() {
+            threads_exec_.Run();
+            };
+        std::thread work_thread(fun_thread_run);
+
+        co_await wait_stop_.Wait();
+
+        threads_exec_.Stop();
+        work_thread.join();
+
+        co_return;
     }
 
-    void Wait()
+    void Stop()
     {
-        latch_.Wait();
-        return;
+        wait_stop_.Stop();
     }
 
 public:
     // 切换线程
     jaf::Coroutine<void> Switch()
     {
-        assert(!stop_);
-        co_await SwitchAwaitable(this);
+        assert(runing_);
+        co_await threads_exec_.Switch();
     }
 
 private:
-    void WorkerRun()
-    {
-        std::function<void()> task;
+    bool runing_ = false;
+    CoAwait wait_stop_;
 
-        while (!stop_)
-        {
-            bool wait_result = task_queue_.WaitAndPop(task);
-            if (!wait_result)
-            {
-                continue;
-            }
-            task();
-        }
-
-        // 处理掉剩余的任务
-        while (task_queue_.TryPop(task))
-        {
-            task();
-        }
-    }
-
-    class SwitchAwaitable
-    {
-    public:
-        SwitchAwaitable(SimpleThreadExec* simple_thread_exec)
-            : simple_thread_exec_(simple_thread_exec)
-        {
-        }
-        ~SwitchAwaitable() {}
-
-        bool await_ready()
-        {
-            return false;
-        }
-        bool await_suspend(std::coroutine_handle<> co_handle)
-        {
-            handle_ = co_handle;
-
-            std::function<void(void)> callback = std::bind(&SwitchAwaitable::TaskCallback, this);
-            simple_thread_exec_->task_queue_.Push(callback);
-
-            return true;
-        }
-        void await_resume() const
-        {
-            return;
-        }
-        void TaskCallback()
-        {
-            handle_.resume();
-        }
-
-    private:
-        SimpleThreadExec* simple_thread_exec_;
-        std::coroutine_handle<> handle_;
-    };
-
-
-private:
-    bool stop_ = false;
-    ConcurrentQueue<std::function<void(void)>> task_queue_;
-
-    Latch latch_{1};
+    ThreadsExec threads_exec_;
 };
 
 } // namespace jaf

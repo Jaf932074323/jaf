@@ -23,63 +23,85 @@
 #include "test_multi_threads_exec.h"
 #include "log_head.h"
 #include "util/co_coroutine.h"
+#include "util/latch.h"
 #include "util/multi_threads_exec.h"
 #include <format>
 #include <iostream>
-#include <thread>
 #include <list>
 
 class TestMultiThreadsExec
 {
 public:
-    void Test()
+    jaf::Coroutine<void> Test(jaf::Latch& wait_stop)
     {
-        std::list<std::thread> exec_threads;
-        // 准备
-        for (int64_t i = 0; i < thread_number_; ++i)
+        // 检查方式：
+        // 将检查数组中的元素全部置0
+        // 然后在执行任务时，每个任务设置检查数组中一个元素的值为其下标
+        // 任务全部执行完成后，检查对应的检查数组的值是否设置正确
+
+        checks_numbers_.resize(deal_time);
+        for (int64_t i = 0; i < deal_time; ++i)
         {
-            exec_threads.push_back(std::thread(
-                [this]() {
-                    multi_thread_exec_.Run();
-                }));
+            checks_numbers_[i] = 0;
         }
 
-        for (int64_t i = 0; i < show_time; ++i)
+        auto run = multi_thread_exec_.Run();
+
+        for (int64_t i = 0; i < deal_time; ++i)
         {
-            Show(i);
+            Deal(i);
         }
 
         multi_thread_exec_.Stop();
 
-        for (auto& exce_thread : exec_threads)
+        co_await run;
+
+        bool check_pass = true;
+        for (int64_t i = 0; i < deal_time; ++i)
         {
-            exce_thread.join();
+            if (checks_numbers_[i] != i)
+            {
+                check_pass = false;
+                LOG_ERROR() << std::format("第{}项检查数字处理错误，预计={},实际值={}", i, i, checks_numbers_[i]);
+            }
+        }
+        if (check_pass)
+        {
+            LOG_ERROR() << "检查数字通过";
+        }
+        else
+        {
+            LOG_ERROR() << "检查数字未通过";
         }
 
-        multi_thread_exec_.Wait();
-
+        wait_stop.CountDown();
+        co_return;
     }
 
 private:
-    jaf::Coroutine<void> Show(size_t number)
+    jaf::Coroutine<void> Deal(size_t number)
     {
         co_await multi_thread_exec_.Switch(); // 切换线程执行
 
+        checks_numbers_[number] += number;
         LOG_INFO() << std::to_string(number);
 
         co_return;
     }
 
 private:
-    const int64_t thread_number_ = 10;
-    const int64_t show_time      = 1000;
-
-    jaf::MultiThreadsExec multi_thread_exec_;
+    const int64_t deal_time = 1000;
+    jaf::MultiThreadsExec multi_thread_exec_{10};
+    std::vector<int64_t> checks_numbers_; // 用于检查是否有重复和遗漏
 };
 
 void test_multi_threads_exec()
 {
+    jaf::Latch wait_stop(1);
     TestMultiThreadsExec test;
-    test.Test();
+    test.Test(wait_stop);
+
+    wait_stop.Wait();
+
     return;
 }

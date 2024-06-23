@@ -21,127 +21,114 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-23 姜安富
-#include "util/co_coroutine.h"
+#include "co_coroutine.h"
+#include "concurrent_queue.h"
+#include "latch.h"
 #include <assert.h>
-#include <mutex>
+#include <functional>
 
 namespace jaf
 {
 
-class CoAwait
+// 线程执行
+class ThreadsExec
 {
 public:
-    CoAwait(){};
-    virtual ~CoAwait(){};
+    ThreadsExec()
+    {
+    }
+    ~ThreadsExec()
+    {
+    }
 
-public:
     void Start()
     {
-        awaitable_.Start();
+        stop_ = false;
+    }
+
+    // 运行,每调用一次则多一个工作线程
+    // 会阻塞直到停止
+    void Run()
+    {
+        WorkerRun();
     }
 
     void Stop()
     {
-        awaitable_.Stop();
+        stop_ = true;
+        task_queue_.QuitAllWait();
     }
 
-    jaf::Coroutine<void> Wait()
+public:
+    // 切换线程
+    jaf::Coroutine<void> Switch()
     {
-        assert(!wait_flag_); // 同时只能等待一个
-        wait_flag_ = true;
-
-        co_await awaitable_;
-
-        wait_flag_ = false;
-
-        co_return;
-    }
-
-    void Notify()
-    {
-        awaitable_.Notify();
+        assert(!stop_);
+        co_await SwitchAwaitable(this);
     }
 
 private:
-    struct Awaitable
+    void WorkerRun()
     {
-        Awaitable()
-        {
-        }
+        std::function<void()> task;
 
-        ~Awaitable() {}
-
-        void Start()
+        while (!stop_)
         {
-            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-            run_flag_ = true;
-        }
-
-        void Stop()
-        {
+            bool wait_result = task_queue_.WaitAndPop(task);
+            if (!wait_result)
             {
-                std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                run_flag_ = false;
-                if (!wait_flag_)
-                {
-                    return;
-                }
-                wait_flag_ = false;
+                continue;
             }
-            handle_.resume();
+            task();
         }
 
-        bool await_ready() const
+        // 处理掉剩余的任务
+        while (task_queue_.TryPop(task))
+        {
+            task();
+        }
+    }
+
+private:
+    class SwitchAwaitable
+    {
+    public:
+        SwitchAwaitable(ThreadsExec* simple_thread_exec)
+            : simple_thread_exec_(simple_thread_exec)
+        {
+        }
+        ~SwitchAwaitable() {}
+
+        bool await_ready()
         {
             return false;
         }
-
         bool await_suspend(std::coroutine_handle<> co_handle)
         {
             handle_ = co_handle;
 
-            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-            if (!run_flag_)
-            {
-                return false;
-            }
-            assert(!wait_flag_);
-            wait_flag_ = true;
+            std::function<void(void)> callback = std::bind(&SwitchAwaitable::TaskCallback, this);
+            simple_thread_exec_->task_queue_.Push(callback);
 
             return true;
         }
-
         void await_resume() const
         {
             return;
         }
-
-        void Notify()
+        void TaskCallback()
         {
-            {
-                std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                if (!wait_flag_)
-                {
-                    return;
-                }
-                wait_flag_ = false;
-            }
-
             handle_.resume();
         }
 
     private:
+        ThreadsExec* simple_thread_exec_;
         std::coroutine_handle<> handle_;
-
-        std::mutex wait_flag_mutex_;
-        bool run_flag_  = false;
-        bool wait_flag_ = false;
     };
 
 private:
-    Awaitable awaitable_;
-
-    bool wait_flag_ = false;
+    bool stop_ = false;
+    ConcurrentQueue<std::function<void(void)>> task_queue_;
 };
 
 } // namespace jaf
