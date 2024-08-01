@@ -61,27 +61,46 @@ public:
     virtual void StopTask(STimerTask* task);
 
 private:
+    struct STimerKey
+    {
+        uint64_t time    = 0; // 执行时间
+        uint64_t task_id = 0; // 定时任务ID
+
+        bool operator==(const STimerKey& other) const
+        {
+            return this->time == other.time && this->task_id == other.task_id;
+        }
+
+        bool operator<(const STimerKey& other) const
+        {
+            if (this->time != other.time)
+            {
+                return this->time < other.time;
+            }
+            return this->task_id < other.task_id;
+        }
+    };
+
+    // 内部使用的定时任务
+    struct STimerParaInter
+    {
+        STimerTask* timer_task = nullptr;
+        std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // 定时执行函数
+        STimerKey key;
+    };
+
     // 停止一个定时任务
     // task_id 要移除的定时任务的Id
-    virtual void StopTask(uint64_t task_id);
+    virtual void StopTask(STimerKey key);
 
 public:
     // 定时器工作线程执行函数
     virtual void Work();
 
-    // 内部使用的定时任务
-    struct STimerParaInter
-    {
-        STimerTask* m_timerTask = nullptr;
-        std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // 定时执行函数
-        uint64_t time    = 0;                                                    // 执行时间
-        uint64_t task_id = 0;
-    };
-
 private:
     // 执行达到时间的任务
-    virtual void GainNeedExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks);
-    virtual void ExecuteTasks(std::list<std::map<uint64_t, std::shared_ptr<STimerParaInter>>>& need_execute_tasks, ETimerResultType result_type);
+    virtual void GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks);
+    virtual void ExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks, ETimerResultType result_type);
 
 private:
     std::shared_ptr<IThreadPool> thread_pool_;
@@ -94,10 +113,9 @@ private:
     std::atomic<uint64_t> lead_time_ = 5; // 执行任务的提前量，每个任务可以提前lead_time_毫秒执行
 
     Latch work_threads_latch_{1};
-    std::condition_variable_any m_workCondition;                                               // 定时用条件变量，用其超时特性来定时，在定时的过程中也能随时唤醒
-    std::mutex tasks_mutex_;                                                                   // 定时任务锁
-    std::map<uint64_t, std::shared_ptr<STimerParaInter>> tasks_time_id_;                       // 作为索引的定时任务集合 key为定时任务ID
-    std::map<uint64_t, std::map<uint64_t, std::shared_ptr<STimerParaInter>>> tasks_time_time_; // 定时任务集合 第一层key为执行时间，第二层Key为定时任务ID
+    std::condition_variable_any m_workCondition;                       // 定时用条件变量，用其超时特性来定时，在定时的过程中也能随时唤醒
+    std::mutex tasks_mutex_;                                           // 定时任务锁
+    std::map<STimerKey, std::shared_ptr<STimerParaInter>> tasks_time_; // 定时任务集合
 };
 
 } // namespace time
