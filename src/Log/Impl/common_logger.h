@@ -24,6 +24,7 @@
 #include "define_log_export.h"
 #include "interface/log/i_logger.h"
 #include <memory>
+#include <string>
 
 namespace jaf
 {

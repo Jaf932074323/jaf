@@ -22,6 +22,7 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include "Interface/log/i_event.h"
+#include <string>
 
 namespace jaf
 {

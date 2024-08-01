@@ -59,6 +59,7 @@ public:
     // 停止一个定时任务
     // task 定时任务信息
     virtual void StopTask(STimerTask* task);
+
 private:
     // 停止一个定时任务
     // task_id 要移除的定时任务的Id
@@ -73,7 +74,7 @@ public:
     {
         STimerTask* m_timerTask = nullptr;
         std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // 定时执行函数
-        uint64_t time = 0; // 执行时间
+        uint64_t time    = 0;                                                    // 执行时间
         uint64_t task_id = 0;
     };
 
@@ -87,7 +88,6 @@ private:
     std::shared_ptr<IGetTime> get_time_;
 
     std::atomic<bool> run_flag_ = false; // 工作线程运行标志
-
 
     uint64_t next_task_id_ = 1; // 下一个定时任务ID
 
