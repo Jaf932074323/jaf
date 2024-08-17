@@ -1,0 +1,29 @@
+PROJECT(red_black_tree_test_efficiency)
+
+file(GLOB_RECURSE UTIL_FILES ${CMAKE_SOURCE_DIR}/src/util/*.h)
+file(GLOB_RECURSE PROJECT_ROOT_FILES ${PROJECT_SOURCE_DIR}/*.h ${PROJECT_SOURCE_DIR}/*.c ${PROJECT_SOURCE_DIR}/*.cpp)
+
+set(
+    ALL_FILES 
+    ${UTIL_FILES}
+    ${PROJECT_ROOT_FILES}
+)
+
+file(GLOB_RECURSE UTIL_FILES ${CMAKE_SOURCE_DIR}/src/util/*.h)
+source_group(TREE ${CMAKE_SOURCE_DIR}/src FILES ${ALL_FILES})
+
+ADD_EXECUTABLE(
+    ${PROJECT_NAME}
+    ${ALL_FILES}
+)
+
+target_link_libraries(${PROJECT_NAME}
+    Log
+)
+
+INCLUDE_DIRECTORIES("./")
+INCLUDE_DIRECTORIES("../")
+INCLUDE_DIRECTORIES("../../include")
+INCLUDE_DIRECTORIES("../../3rdparty")
+INCLUDE_DIRECTORIES("../../3rdparty")
+INCLUDE_DIRECTORIES("../Log")
