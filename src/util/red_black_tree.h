@@ -3,11 +3,18 @@
 #include <stddef.h>
 #include <utility>
 
+namespace jaf
+{
+
 // 红黑树
 // 键可以重复
 template <typename Key, typename Value>
 class RedBlackTree
 {
+#ifdef TEST_RED_BLACK_TREE
+    friend class TestRedBlackTree;
+#endif
+
 public:
     enum Color
     {
@@ -31,7 +38,7 @@ public:
     RedBlackTree(const RedBlackTree&)            = delete; // 拷贝较为复杂，目前先禁止
     RedBlackTree& operator=(const RedBlackTree&) = delete; // 拷贝较为复杂，目前先禁止
 public:
-    void Insert(const Key& key, const Value& value);
+    Node* Insert(const Key& key, const Value& value);
     void Erase(const Key& key);
     inline size_t Size()
     {
@@ -42,13 +49,13 @@ public:
         return size_ == 0;
     }
 
-public:
+private:
     Node* GetRoot()
     {
         return root_;
     }
 
-public:
+private:
     void AdjustAfterInsert(Node* node);      // 插入元素后调整
     void AdjusBeforeDelete(Node* dele_node); // 删除元素之前调整
     inline void LeftRotate(Node* node);      // 左旋
@@ -81,8 +88,7 @@ public:
         return node == nullptr || node->color_ == Color::COLOR_BLACK;
     }
 
-public:
-    inline void SwitchNode(Node* node_1, Node* node_2);
+private:
     inline static Node* GetBrother(Node* node);
 
 public:
@@ -136,7 +142,7 @@ private:
 };
 
 template <typename Key, typename Value>
-void RedBlackTree<Key, Value>::Insert(const Key& key, const Value& value)
+struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::Insert(const Key& key, const Value& value)
 {
     if (root_ == nullptr)
     {
@@ -144,7 +150,7 @@ void RedBlackTree<Key, Value>::Insert(const Key& key, const Value& value)
         ++size_;
         min_ = root_;
         max_ = root_;
-        return;
+        return root_;
     }
 
     Node* new_node = nullptr;
@@ -186,6 +192,7 @@ void RedBlackTree<Key, Value>::Insert(const Key& key, const Value& value)
     // 再调整
     AdjustAfterInsert(new_node);
     ++size_;
+    return new_node;
 }
 
 template <typename Key, typename Value>
@@ -369,7 +376,7 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
             std::swap(replace_node->parent_, dele_node->parent_);
             std::swap(replace_node->left_child_, dele_node->left_child_);
             replace_node->right_child_ = dele_node->right_child_;
-            dele_node->right_child_ = nullptr;
+            dele_node->right_child_    = nullptr;
         }
     }
 
@@ -851,85 +858,6 @@ struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::Max(Node* node)
 }
 
 template <typename Key, typename Value>
-void RedBlackTree<Key, Value>::SwitchNode(Node* node_1, Node* node_2)
-{
-    bool is_left_1 = node_1->parent_ != nullptr && IsLeftChild(node_1);
-    bool is_left_2 = node_2->parent_ != nullptr && IsLeftChild(node_2);
-
-    std::swap(node_1->parent_, node_2->parent_);
-    std::swap(node_1->left_child_, node_2->left_child_);
-    std::swap(node_1->right_child_, node_2->right_child_);
-    std::swap(node_1->color_, node_2->color_);
-
-    if (node_1->left_child_ == node_1)
-    {
-        node_1->left_child_ = node_2;
-    }
-    else if (node_1->right_child_ == node_1)
-    {
-        node_1->right_child_ = node_2;
-    }
-    else if (node_2->left_child_ == node_2)
-    {
-        node_2->left_child_ = node_1;
-    }
-    else if (node_2->right_child_ == node_2)
-    {
-        node_2->right_child_ = node_1;
-    }
-
-    if (node_1->parent_ == nullptr)
-    {
-        root_ = node_1;
-    }
-    else if (node_1->parent_ == node_1)
-    {
-        node_1->parent_ = node_2;
-    }
-    else if (is_left_2)
-    {
-        node_1->parent_->left_child_ = node_1;
-    }
-    else
-    {
-        node_1->parent_->right_child_ = node_1;
-    }
-    if (node_1->left_child_ != nullptr)
-    {
-        node_1->left_child_->parent_ = node_1;
-    }
-    if (node_1->right_child_ != nullptr)
-    {
-        node_1->right_child_->parent_ = node_1;
-    }
-
-    if (node_2->parent_ == nullptr)
-    {
-        root_ = node_2;
-    }
-    else if (node_2->parent_ == node_2)
-    {
-        node_2->parent_ = node_1;
-    }
-    else if (is_left_1)
-    {
-        node_2->parent_->left_child_ = node_2;
-    }
-    else
-    {
-        node_2->parent_->right_child_ = node_2;
-    }
-    if (node_2->left_child_ != nullptr)
-    {
-        node_2->left_child_->parent_ = node_2;
-    }
-    if (node_2->right_child_ != nullptr)
-    {
-        node_2->right_child_->parent_ = node_2;
-    }
-}
-
-template <typename Key, typename Value>
 struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::GetBrother(Node* node)
 {
     assert(node->parent_ != nullptr);
@@ -987,3 +915,6 @@ class RedBlackTree<Key, Value>::Iterator& RedBlackTree<Key, Value>::Iterator::op
     cur_ = parent_node;
     return *this;
 }
+
+
+} // namespace jaf

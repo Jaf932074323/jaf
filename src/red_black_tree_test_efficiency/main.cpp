@@ -27,23 +27,39 @@
 #include <iostream>
 #include <format>
 
+void shuffle(std::vector<int> &nums)
+{
+    srand((unsigned)time(NULL)); // 需要重设随机数种子
+    int n = nums.size();
+    for (int i = n - 1; i > 0; i--)
+    {
+        // 最后一个元素不需要交换了
+        int randIdx = rand() % i;
+        // cout << "randIdx" << randIdx << endl;
+        std::swap(nums[i], nums[randIdx]);
+    }
+}
+
+
 int main()
 {
     std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
     std::shared_ptr<jaf::log::ILogger> logger           = std::make_shared<jaf::log::Logger>(appender);
     jaf::log::CommonLogger::SetDefaultLogger(logger);
 
-    size_t amount = 10000000;
+    size_t amount = 100000000;
     srand(time(0));
     std::vector<int> arr;
     arr.resize(amount);
     for (size_t i = 0; i < amount; ++i)
     {
-        arr[i] = rand();
+        //arr[i] = rand();
+        arr[i] = i;
     }
+    shuffle(arr);
     const int* ptr_arr = arr.data();
 
-    using Tree = RedBlackTree<int, int>;
+    using Tree = jaf::RedBlackTree<int, int>;
     Tree my_tree;
     std::multimap<int, int> std_map;
     jaf::Stopwatch stopwatch;
@@ -54,6 +70,7 @@ int main()
         my_tree.Insert(ptr_arr[i], ptr_arr[i]);
     }
     std::chrono::nanoseconds my_tree_insert = stopwatch.Time();
+    std::cout << std::format("my_tree_insert = {}", std::chrono::duration_cast<std::chrono::milliseconds>(my_tree_insert).count()) << std::endl;
 
     stopwatch.Reset();
     for (size_t i = 0; i < amount; ++i)
@@ -62,7 +79,6 @@ int main()
     }
     std::chrono::nanoseconds std_map_insert = stopwatch.Time();
 
-    std::cout << std::format("my_tree_insert = {}", std::chrono::duration_cast<std::chrono::milliseconds>(my_tree_insert).count()) << std::endl;
     std::cout << std::format("std_map_insert = {}", std::chrono::duration_cast<std::chrono::milliseconds>(std_map_insert).count()) << std::endl;
 
     stopwatch.Reset();
@@ -71,6 +87,7 @@ int main()
         my_tree.Erase(ptr_arr[i]);
     }
     std::chrono::nanoseconds my_tree_erase = stopwatch.Time();
+    std::cout << std::format("my_tree_erase = {}", std::chrono::duration_cast<std::chrono::milliseconds>(my_tree_erase).count()) << std::endl;
 
     stopwatch.Reset();
     for (size_t i = 0; i < amount; ++i)
@@ -79,7 +96,6 @@ int main()
     }
     std::chrono::nanoseconds std_map_erase = stopwatch.Time();
 
-    std::cout << std::format("my_tree_erase = {}", std::chrono::duration_cast<std::chrono::milliseconds>(my_tree_erase).count()) << std::endl;
     std::cout << std::format("std_map_erase = {}", std::chrono::duration_cast<std::chrono::milliseconds>(std_map_erase).count()) << std::endl;
 
     return 0;

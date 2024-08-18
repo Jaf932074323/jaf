@@ -97,3 +97,5 @@ cmake-build-*/
 Jaf.sln.lnk
 setenv.gitignore.bat
 build
+
+bin/
