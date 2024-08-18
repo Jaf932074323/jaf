@@ -309,13 +309,68 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         // 删除节点有2个子节点时
 
         // 查找前一个节点作为替代节点
-        Node* replace_node = SeekFormer(dele_node);
-        assert(replace_node != nullptr);
-        assert(replace_node->left_child_ == nullptr || replace_node->right_child_ == nullptr);
+        Node* replace_node = dele_node->left_child_;
+        if (replace_node->right_child_ == nullptr)
+        {
+            std::swap(dele_node->color_, replace_node->color_);
 
-        // 交换位置
-        // 因为node必然会被删除，因此交换位置后，只会临时的导致节点大小顺序不一致，等node删除后恢复正常
-        SwitchNode(replace_node, dele_node);
+            if (dele_node->parent_ == nullptr)
+            {
+                root_ = replace_node;
+            }
+            else if (IsLeftChild(dele_node))
+            {
+                dele_node->parent_->left_child_ = replace_node;
+            }
+            else
+            {
+                dele_node->parent_->right_child_ = replace_node;
+            }
+            dele_node->right_child_->parent_ = replace_node;
+
+            replace_node->parent_ = dele_node->parent_;
+            dele_node->parent_    = replace_node;
+
+            dele_node->left_child_    = replace_node->left_child_;
+            replace_node->left_child_ = dele_node;
+
+            replace_node->right_child_ = dele_node->right_child_;
+            dele_node->right_child_    = nullptr;
+        }
+        else
+        {
+            while (replace_node->right_child_ != nullptr)
+            {
+                replace_node = replace_node->right_child_;
+            }
+            std::swap(dele_node->color_, replace_node->color_);
+
+            if (dele_node->parent_ == nullptr)
+            {
+                root_ = replace_node;
+            }
+            else if (IsLeftChild(dele_node))
+            {
+                dele_node->parent_->left_child_ = replace_node;
+            }
+            else
+            {
+                dele_node->parent_->right_child_ = replace_node;
+            }
+            dele_node->right_child_->parent_ = replace_node;
+            dele_node->left_child_->parent_  = replace_node;
+
+            replace_node->parent_->right_child_ = dele_node;
+            if (replace_node->left_child_ != nullptr)
+            {
+                replace_node->left_child_->parent_ = dele_node;
+            }
+
+            std::swap(replace_node->parent_, dele_node->parent_);
+            std::swap(replace_node->left_child_, dele_node->left_child_);
+            replace_node->right_child_ = dele_node->right_child_;
+            dele_node->right_child_ = nullptr;
+        }
     }
 
     // 这时候要删除的节点最多只有一个子节点

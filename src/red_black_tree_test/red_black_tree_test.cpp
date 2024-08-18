@@ -233,12 +233,12 @@ void TestTree(int* arr, size_t len)
 
 TEST(red_black_tree, normal)
 {
-    //int arr1[] = {33, 13, 95, 1, 55, 47, 19, 23, 11, 18, 20, 123};
-    //int arr2[] = {16, 3, 7, 11, 9, 26, 18, 14, 15};
-    //int arr3[] = {24, 25, 13, 35, 23, 26, 67, 47, 38, 98, 20, 19, 17, 49, 12, 21, 9, 18, 14, 15};
-    //TestTree(arr1, sizeof(arr1) / sizeof(int));
-    //TestTree(arr2, sizeof(arr2) / sizeof(int));
-    //TestTree(arr3, sizeof(arr3) / sizeof(int));
+    int arr1[] = {33, 13, 95, 1, 55, 47, 19, 23, 11, 18, 20, 123};
+    int arr2[] = {16, 3, 7, 11, 9, 26, 18, 14, 15};
+    int arr3[] = {24, 25, 13, 35, 23, 26, 67, 47, 38, 98, 20, 19, 17, 49, 12, 21, 9, 18, 14, 15};
+    TestTree(arr1, sizeof(arr1) / sizeof(int));
+    TestTree(arr2, sizeof(arr2) / sizeof(int));
+    TestTree(arr3, sizeof(arr3) / sizeof(int));
 
     //int arr[] =
     //{
@@ -267,7 +267,7 @@ void Show(int* arr, size_t len)
 
 TEST(red_black_tree, random)
 {
-    size_t amount = 100000;
+    size_t amount = 100;
     srand(time(0));
     std::vector<int> arr;
     arr.resize(amount);

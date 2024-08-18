@@ -33,7 +33,7 @@ int main()
     std::shared_ptr<jaf::log::ILogger> logger           = std::make_shared<jaf::log::Logger>(appender);
     jaf::log::CommonLogger::SetDefaultLogger(logger);
 
-    size_t amount = 10;
+    size_t amount = 10000000;
     srand(time(0));
     std::vector<int> arr;
     arr.resize(amount);
