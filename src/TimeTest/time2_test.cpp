@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-8-19 ½ª°²¸»
-#include "impl/timer.h"
+#include "impl/timer2.h"
 #include "util/stopwatch.h"
 #include <condition_variable>
 #include <format>
@@ -29,9 +29,9 @@
 #include <mutex>
 #include <atomic>
 
-TEST(time_test, timer)
+TEST(time2_test, timer)
 {
-    jaf::time::Timer timer;
+    jaf::time::Timer2 timer;
     timer.Start();
 
     jaf::Stopwatch stopwatch;
@@ -62,9 +62,9 @@ TEST(time_test, timer)
     timer.Stop();
 }
 
-TEST(time_test, stop_timer_task)
+TEST(time2_test, stop_timer_task)
 {
-    jaf::time::Timer timer;
+    jaf::time::Timer2 timer;
     timer.Start();
 
     jaf::Stopwatch stopwatch;
@@ -95,9 +95,9 @@ TEST(time_test, stop_timer_task)
     timer.Stop();
 }
 
-TEST(time_test, stop_timer)
+TEST(time2_test, stop_timer)
 {
-    jaf::time::Timer timer;
+    jaf::time::Timer2 timer;
     timer.Start();
 
     jaf::Stopwatch stopwatch;
@@ -117,9 +117,9 @@ TEST(time_test, stop_timer)
     EXPECT_TRUE(elapsed_time < task.interval + 50);
 }
 
-TEST(time_test, mixture)
+TEST(time2_test, mixture)
 {
-    jaf::time::Timer timer;
+    jaf::time::Timer2 timer;
     timer.Start();
 
     std::atomic<size_t> task_counter = 0;
@@ -128,6 +128,7 @@ TEST(time_test, mixture)
         EXPECT_EQ(result_type, expect_result_type);
         ++task_counter;
     };
+
 
     constexpr size_t task_mount = 100;
     jaf::time::STimerTask tasks[task_mount];

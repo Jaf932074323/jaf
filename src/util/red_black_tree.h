@@ -175,6 +175,14 @@ public:
         return Iterator(this, nullptr);
     }
 
+    // 可选：提供一个成员函数来调用上面定义的友元函数
+    void Swap(RedBlackTree& other) noexcept
+    {
+        std::swap(root_, other.root_);
+        std::swap(min_, other.min_);
+        std::swap(max_, other.max_);
+        std::swap(size_, other.size_);
+    }
 private:
     Node* root_  = nullptr; // 根节点
     Node* min_   = nullptr; // 最小节点

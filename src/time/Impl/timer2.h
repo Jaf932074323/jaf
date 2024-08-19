@@ -20,12 +20,11 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-8-19 姜安富
+// 2024-6-16 姜安富
 #include "interface/i_get_time.h"
 #include "interface/i_timer.h"
 #include "util/i_thread_pool.h"
 #include "util/latch.h"
-#include "util/red_black_tree.h"
 #include <condition_variable>
 #include <list>
 #include <map>
@@ -38,12 +37,12 @@ namespace time
 {
 
 // 定时器
-// 使用自定义红黑树存储每个定时任务
-class Timer : public ITimer
+// 使用std::map存储每个定时任务
+class Timer2 : public ITimer
 {
 public:
-    Timer(std::shared_ptr<IThreadPool> thread_pool = nullptr, std::shared_ptr<IGetTime> get_time = nullptr);
-    virtual ~Timer();
+    Timer2(std::shared_ptr<IThreadPool> thread_pool = nullptr, std::shared_ptr<IGetTime> get_time = nullptr);
+    virtual ~Timer2();
 
 public:
     // 获取执行任务的提前量，每个任务可以提前执行的时间(毫秒)
@@ -56,7 +55,6 @@ public:
     {
         lead_time_ = lead_time;
     }
-
 public:
     // 启动定时
     virtual void Start() override;
@@ -73,21 +71,37 @@ public:
     virtual void StopTask(STimerTask* task);
 
 private:
-    struct STimerParaInter;
-    using TimerTree = jaf::RedBlackTree<uint64_t, std::shared_ptr<STimerParaInter>>;
+    struct STimerKey
+    {
+        uint64_t time    = 0; // 执行时间
+        uint64_t task_id = 0; // 定时任务ID
 
-    // 内部使用的定时任务参数
+        bool operator==(const STimerKey& other) const
+        {
+            return this->time == other.time && this->task_id == other.task_id;
+        }
+
+        bool operator<(const STimerKey& other) const
+        {
+            if (this->time != other.time)
+            {
+                return this->time < other.time;
+            }
+            return this->task_id < other.task_id;
+        }
+    };
+
+    // 内部使用的定时任务
     struct STimerParaInter
     {
         STimerTask* timer_task = nullptr;
         std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // 定时执行函数
-        uint64_t time;                                                           // 定时任务的执行时间点
-        TimerTree::Node* timer_node = nullptr;                                   // 定时器任务的树节点
+        STimerKey key;
     };
 
     // 停止一个定时任务
     // task_id 要移除的定时任务的Id
-    virtual void StopTask(TimerTree::Node* timer_node);
+    virtual void StopTask(STimerKey key);
 
 public:
     // 定时器工作线程执行函数
@@ -109,9 +123,9 @@ private:
     std::atomic<uint64_t> lead_time_ = 5; // 执行任务的提前量，每个任务可以提前lead_time_毫秒执行
 
     Latch work_threads_latch_{1};
-    std::condition_variable_any m_workCondition; // 定时用条件变量，用其超时特性来定时，在定时的过程中也能随时唤醒
-    std::mutex tasks_mutex_;                     // 定时任务锁
-    TimerTree tasks_time_;                       // 定时任务集合 key为定时任务的执行时间点
+    std::condition_variable_any m_workCondition;                       // 定时用条件变量，用其超时特性来定时，在定时的过程中也能随时唤醒
+    std::mutex tasks_mutex_;                                           // 定时任务锁
+    std::map<STimerKey, std::shared_ptr<STimerParaInter>> tasks_time_; // 定时任务集合
 };
 
 } // namespace time
