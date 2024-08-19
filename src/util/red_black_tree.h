@@ -74,18 +74,24 @@ public:
             return !(*this == that);
         }
 
-        inline Key& operator*() const noexcept
+        Node* GetNode() noexcept
+        {
+            return cur_;
+        }
+        const Node* GetNode() const noexcept
+        {
+            return cur_;
+        }
+
+        inline Key& GetKey() const noexcept
         {
             assert(cur_ != nullptr);
             return cur_->key_;
         }
-        Node* GetNode()
+        inline Value& GetValue() const noexcept
         {
-            return cur_;
-        }
-        const Node* GetNode() const
-        {
-            return cur_;
+            assert(cur_ != nullptr);
+            return cur_->value_;
         }
 
     private:

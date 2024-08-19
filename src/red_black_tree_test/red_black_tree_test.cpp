@@ -143,11 +143,11 @@ public:
     {
         size_t count = 0;
         auto it      = tree.begin();
-        int last     = *it;
+        int last     = it.GetKey();
         for (; it != tree.end(); ++it)
         {
-            EXPECT_TRUE(last <= *it);
-            last = *it;
+            EXPECT_TRUE(last <= it.GetKey());
+            last = it.GetKey();
             ++count;
             if (count > tree.Size())
             {
@@ -164,8 +164,8 @@ public:
         {
             return;
         }
-        EXPECT_EQ(tree.Min(tree.GetRoot())->key_, tree.begin().operator*());
-        EXPECT_EQ(tree.Max(tree.GetRoot())->key_, (--tree.end()).operator*());
+        EXPECT_EQ(tree.Min(tree.GetRoot())->key_, tree.begin().GetKey());
+        EXPECT_EQ(tree.Max(tree.GetRoot())->key_, (--tree.end()).GetKey());
     }
 
     // 获取一条支路的黑色节点数量
