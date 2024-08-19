@@ -36,15 +36,24 @@ namespace jaf
 namespace time
 {
 
-
 // 定时器
 class Timer : public ITimer
 {
 public:
-    // min_level通过的最低日志等级
     Timer(std::shared_ptr<IThreadPool> thread_pool = nullptr, std::shared_ptr<IGetTime> get_time = nullptr);
     virtual ~Timer();
 
+public:
+    // 获取执行任务的提前量，每个任务可以提前执行的时间(毫秒)
+    uint64_t GetLeadTime()
+    {
+        return lead_time_;
+    }
+    // 设置执行任务的提前量，每个任务可以提前执行的时间(毫秒)
+    void SetLeadTime(uint64_t lead_time)
+    {
+        lead_time_ = lead_time;
+    }
 public:
     // 启动定时
     virtual void Start() override;

@@ -23,6 +23,7 @@
 #include "impl/co_await_time.h"
 #include "log_head.h"
 #include "time_head.h"
+#include "gtest/gtest.h"
 #include <chrono>
 #include <format>
 #include <iostream>
@@ -97,24 +98,26 @@ jaf::Coroutine<void> TestTimer()
     timer.Stop();
 }
 
-
-int main()
+int main(int argc, char** argv)
 {
-    std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
-    jaf::log::CommonLogger::SetDefaultLogger(std::make_shared<jaf::log::Logger>(appender));
-    LOG_INFO() << "定时测试启动";
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 
-    std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
-    timer->Start();
-    jaf::time::CommonTimer::SetTimer(timer);
+    //std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
+    //jaf::log::CommonLogger::SetDefaultLogger(std::make_shared<jaf::log::Logger>(appender));
+    //LOG_INFO() << "定时测试启动";
 
-    //TestWait();
-    //TestCoTimer();
-    TestTimer();
+    //std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
+    //timer->Start();
+    //jaf::time::CommonTimer::SetTimer(timer);
 
-    getchar();
+    ////TestWait();
+    ////TestCoTimer();
+    //TestTimer();
 
-    timer->Stop();
+    //getchar();
 
-    return 0;
+    //timer->Stop();
+
+    //return 0;
 }
