@@ -182,6 +182,14 @@ public:
         return branch_black_amount;
     }
 
+    void CheckErase(jaf::RedBlackTree<int, int>& rb_tree)
+    {
+        auto it = rb_tree.Insert(1, 1);
+        Check(rb_tree);
+        rb_tree.Erase(it);
+        Check(rb_tree);
+    }
+
     void Check(jaf::RedBlackTree<int, int>& rb_tree)
     {
         Tree::Node* root = rb_tree.GetRoot();
@@ -212,6 +220,8 @@ public:
             CheckNodeRelation(rb_tree.GetRoot(), total_count);
             Check(rb_tree);
         }
+
+        CheckErase(rb_tree);
 
         //Tree::Node* node_1 = rb_tree.GetRoot();
         //Tree::Node* node_2 = node_1->left_child_;
@@ -250,12 +260,6 @@ TEST(red_black_tree, normal)
     test_red_black_tree.TestTree(arr1, sizeof(arr1) / sizeof(int));
     test_red_black_tree.TestTree(arr2, sizeof(arr2) / sizeof(int));
     test_red_black_tree.TestTree(arr3, sizeof(arr3) / sizeof(int));
-
-    //int arr[] =
-    //{
-    //    9254,9254
-    //};
-    //test_red_black_tree.TestTree(arr, sizeof(arr) / sizeof(int));
 }
 
 void Show(int* arr, size_t len)
@@ -296,4 +300,28 @@ TEST(red_black_tree, random)
     {
         Show(arr.data(), amount);
     }
+}
+
+TEST(red_black_tree, LowerBound_UpperBound)
+{
+    jaf::RedBlackTree<int, int> rb_tree;
+    for (size_t i = 0; i < 10; ++i)
+    {
+        rb_tree.Insert(i, i);
+    }
+
+    for (size_t i = 0; i < 10; ++i)
+    {
+        auto it = rb_tree.LowerBound(i);
+        EXPECT_TRUE(it.GetNode() != nullptr); 
+        EXPECT_TRUE(it.GetNode()->key_ == i);
+    }
+    for (size_t i = 0; i < 9; ++i)
+    {
+        auto it = rb_tree.UpperBound(i);
+        EXPECT_TRUE(it.GetNode() != nullptr); 
+        EXPECT_TRUE(it.GetNode()->key_ == i + 1);
+    }
+    auto it = rb_tree.UpperBound(9);
+    EXPECT_TRUE(it.GetNode() == nullptr);
 }
