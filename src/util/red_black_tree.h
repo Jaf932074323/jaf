@@ -8,6 +8,8 @@ namespace jaf
 
 // 红黑树
 // 键可以重复
+// 对于其中的每个节点，在插入之后，删除之前，都保持节点地址有效不变
+// TODO:有很多细节还需要以后完善
 template <typename Key, typename Value>
 class RedBlackTree
 {
@@ -33,13 +35,49 @@ public:
     };
 
 public:
+    class Iterator
+    {
+    public:
+        Iterator(RedBlackTree* tree, Node* cur);
+        inline Iterator& operator++();
+        inline Iterator& operator--();
+        //重载==运算符
+        inline bool operator==(const Iterator& other) const
+        {
+            return other.cur_ == cur_;
+        }
+        //重载!=运算符
+        inline bool operator!=(const Iterator& that) const
+        {
+            return !(*this == that);
+        }
+
+        inline Key& operator*() const noexcept
+        {
+            assert(cur_ != nullptr);
+            return cur_->key_;
+        }
+        Node* GetNode()
+        {
+            return cur_;
+        }
+        const Node* GetNode() const
+        {
+            return cur_;
+        }
+
+    private:
+        Node* cur_; // 当前节点
+        RedBlackTree* tree_;
+    };
+
+
+public:
     RedBlackTree()                               = default;
     ~RedBlackTree()                              = default;
     RedBlackTree(const RedBlackTree&)            = delete; // 拷贝较为复杂，目前先禁止
     RedBlackTree& operator=(const RedBlackTree&) = delete; // 拷贝较为复杂，目前先禁止
 public:
-    Node* Insert(const Key& key, const Value& value);
-    void Erase(const Key& key);
     inline size_t Size()
     {
         return size_;
@@ -48,6 +86,14 @@ public:
     {
         return size_ == 0;
     }
+    Iterator Insert(const Key& key, const Value& value);
+    void Erase(const Key& key);
+    Iterator Erase(Node* node);
+    Iterator Erase(Iterator& it);
+
+    Iterator Find(const Key& key);
+    Iterator LowerBound(const Key& key); // 获取第一个大于等于key节点的迭代器,不存在时返回end()
+    Iterator UpperBound(const Key& key); // 获取第一个大于key节点的迭代器,不存在时返回end()
 
 private:
     Node* GetRoot()
@@ -92,39 +138,6 @@ private:
     inline static Node* GetBrother(Node* node);
 
 public:
-    class Iterator
-    {
-    public:
-        Iterator(RedBlackTree* tree, Node* cur);
-        inline Iterator& operator++();
-        inline Iterator& operator--();
-        //重载==运算符
-        inline bool operator==(const Iterator& other) const
-        {
-            return other.cur_ == cur_;
-        }
-        //重载!=运算符
-        inline bool operator!=(const Iterator& that) const
-        {
-            return !(*this == that);
-        }
-
-        inline Key& operator*() const noexcept
-        {
-            assert(cur_ != nullptr);
-            return cur_->key_;
-        }
-        Node* GetNode()
-        {
-            return cur_;
-        }
-
-    private:
-        Node* cur_; // 当前节点
-        RedBlackTree* tree_;
-    };
-
-public:
     inline Iterator begin()
     {
         return Iterator(this, min_);
@@ -142,7 +155,7 @@ private:
 };
 
 template <typename Key, typename Value>
-struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::Insert(const Key& key, const Value& value)
+class RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::Insert(const Key& key, const Value& value)
 {
     if (root_ == nullptr)
     {
@@ -150,7 +163,7 @@ struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::Insert(const Ke
         ++size_;
         min_ = root_;
         max_ = root_;
-        return root_;
+        return Iterator(this, root_);
     }
 
     Node* new_node = nullptr;
@@ -192,14 +205,12 @@ struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::Insert(const Ke
     // 再调整
     AdjustAfterInsert(new_node);
     ++size_;
-    return new_node;
+    return Iterator(this, new_node);
 }
 
 template <typename Key, typename Value>
 void RedBlackTree<Key, Value>::Erase(const Key& key)
 {
-    // TODO: 先考虑键不重复的情况
-
     if (root_ == nullptr)
     {
         return;
@@ -231,8 +242,113 @@ void RedBlackTree<Key, Value>::Erase(const Key& key)
     }
 
     AdjusBeforeDelete(del_node);
+    delete del_node;
     --size_;
     return;
+}
+
+template <typename Key, typename Value>
+RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::Erase(Node* node)
+{
+    if (node == nullptr)
+    {
+        return Iterator(this, nullptr);
+    }
+    Iterator it(this, node);
+    ++it;
+    AdjusBeforeDelete(node);
+    delete node;
+    --size_;
+    return it;
+}
+
+template <typename Key, typename Value>
+RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::Erase(RedBlackTree<Key, Value>::Iterator& it)
+{
+    return Erase(it.GetNode());
+}
+
+template <typename Key, typename Value>
+RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::Find(const Key& key)
+{
+    if (root_ == nullptr)
+    {
+        return Iterator(this, nullptr);
+    }
+
+    Node* node = root_;
+    while (true)
+    {
+        if (node->key_ == key)
+        {
+            return Iterator(this, node);
+        }
+
+        if (key < node->key_)
+        {
+            node = node->left_child_;
+        }
+        else
+        {
+            node = node->right_child_;
+        }
+
+        // 不存在对应键的节点
+        if (node == nullptr)
+        {
+            return Iterator(this, nullptr);
+        }
+    }
+}
+template <typename Key, typename Value>
+RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::LowerBound(const Key& key)
+{
+    if (root_ == nullptr)
+    {
+        return Iterator(this, nullptr);
+    }
+
+    Node* aim_node = nullptr;
+    Node* node     = root_;
+    while (node != nullptr)
+    {
+        if (node->key_ < key)
+        {
+            node = node->right_child_;
+        }
+        else
+        {
+            aim_node = node;
+            node     = node->left_child_;
+        }
+    }
+
+    return Iterator(this, aim_node);
+}
+template <typename Key, typename Value>
+RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::UpperBound(const Key& key)
+{
+    if (root_ == nullptr)
+    {
+        return Iterator(this, nullptr);
+    }
+
+    Node* aim_node = nullptr;
+    Node* node     = root_;
+    while (node != nullptr)
+    {
+        if (key < node->key_)
+        {
+            aim_node = node;
+            node     = node->left_child_;
+        }
+        else
+        {
+            node = node->right_child_;
+        }
+    }
+
+    return Iterator(this, aim_node);
 }
 
 template <typename Key, typename Value>
@@ -404,7 +520,6 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
                 max_ = dele_node->parent_;
             }
         }
-        delete dele_node;
         return;
     }
 
@@ -443,7 +558,6 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         child->parent_ = dele_node->parent_;
         child->color_  = Color::COLOR_BLACK;
 
-        delete dele_node;
         return;
     }
     else if (dele_node->right_child_ != nullptr)
@@ -479,7 +593,6 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         }
         child->parent_ = dele_node->parent_;
         child->color_  = Color::COLOR_BLACK;
-        delete dele_node;
         return;
     }
 
@@ -494,7 +607,6 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         root_ = nullptr;
         min_  = nullptr;
         max_  = nullptr;
-        delete dele_node;
         return;
     }
 
@@ -540,7 +652,6 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
                 min_ = parent;
             }
             parent->left_child_ = nullptr;
-            delete dele_node;
             return;
         }
         else
@@ -555,7 +666,6 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
             {
                 max_ = parent;
             }
-            delete dele_node;
             return;
         }
     }
@@ -570,7 +680,6 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
             brother->right_child_->color_ = Color::COLOR_BLACK;
 
             parent->left_child_ = nullptr;
-            delete dele_node;
             if (min_ == dele_node)
             {
                 min_ = parent;
@@ -589,7 +698,6 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
             {
                 max_ = parent;
             }
-            delete dele_node;
             return;
         }
     }
@@ -615,7 +723,6 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
                 max_ = parent;
             }
         }
-        delete dele_node;
         return;
     }
 
@@ -637,7 +744,6 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
             max_ = parent;
         }
     }
-    delete dele_node;
 
     // 这时，这个分支的每条子分支的黑色节点的数量比其它分支少1，需要调整
     Node* need_adjust_node = parent;
