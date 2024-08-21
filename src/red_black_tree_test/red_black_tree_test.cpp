@@ -1,4 +1,3 @@
-#pragma once
 // MIT License
 //
 // Copyright(c) 2021 Jaf932074323
@@ -26,6 +25,7 @@
 #include <format>
 #include <gtest/gtest.h>
 #include <time.h>
+#include <stdint.h>
 
 namespace jaf
 {

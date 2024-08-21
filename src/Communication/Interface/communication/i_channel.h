@@ -23,6 +23,7 @@
 // 2024-6-16 ½ª°²¸»
 #include "util/co_coroutine.h"
 #include <string>
+#include <stdint.h>
 
 namespace jaf
 {

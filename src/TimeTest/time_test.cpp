@@ -1,4 +1,3 @@
-#pragma once
 // MIT License
 //
 // Copyright(c) 2021 Jaf932074323

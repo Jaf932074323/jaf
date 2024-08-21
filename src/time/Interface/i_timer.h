@@ -22,6 +22,7 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include <functional>
+#include <stdint.h>
 
 namespace jaf
 {
