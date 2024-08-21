@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "tick_timer.h"
+#include "get_time_tick.h"
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
@@ -29,13 +29,13 @@ namespace jaf
 namespace time
 {
 
-CTickTimer::CTickTimer()
+GetTimeTick::GetTimeTick()
 {
 }
 
-CTickTimer::~CTickTimer() {}
+GetTimeTick::~GetTimeTick() {}
 
-uint64_t CTickTimer::GetNowTime()
+uint64_t GetTimeTick::GetNowTime()
 {
     return GetTickCount64();
 }

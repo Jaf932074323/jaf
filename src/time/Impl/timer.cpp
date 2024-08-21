@@ -21,7 +21,7 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include "timer.h"
-#include "tick_timer.h"
+#include "get_time_tick.h"
 #include "util/finally.h"
 #include "util/red_black_tree.h"
 #include "util/simple_thread_pool.h"
@@ -35,7 +35,7 @@ namespace time
 
 Timer::Timer(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<IGetTime> get_time)
     : thread_pool_(thread_pool == nullptr ? std::make_shared<SimpleThreadPool>(5) : thread_pool)
-    , get_time_(get_time == nullptr ? std::make_shared<CTickTimer>() : get_time)
+    , get_time_(get_time == nullptr ? std::make_shared<GetTimeTick>() : get_time)
 {
 }
 
