@@ -21,7 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
-#include "common_timer.h"
 #include "interface/i_timer.h"
 #include "util/co_coroutine.h"
 #include <assert.h>
@@ -31,58 +30,11 @@ namespace jaf
 namespace time
 {
 
-inline jaf::Coroutine<void> CoSleep(uint64_t millisecond)
-{
-    assert(CommonTimer::Timer() != nullptr);
-
-    struct SleepAwaitable
-    {
-        STimerTask timer_task_;
-        std::coroutine_handle<> handle_;
-
-        SleepAwaitable(uint64_t sleep_time)
-        {
-            timer_task_.interval = sleep_time;
-            timer_task_.fun      = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(); };
-        }
-
-        ~SleepAwaitable() {}
-
-        bool await_ready()
-        {
-            if (timer_task_.interval == 0)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        bool await_suspend(std::coroutine_handle<> co_handle)
-        {
-            handle_ = co_handle;
-            CommonTimer::Timer()->StartTask(&timer_task_);
-            return true;
-        }
-
-        void await_resume()
-        {
-            return;
-        }
-
-        void TimerCallback()
-        {
-            handle_.resume();
-        }
-    };
-    co_await SleepAwaitable(millisecond);
-}
-
 class CoTimer
 {
 public:
-    CoTimer(std::shared_ptr<ITimer> timer = nullptr)
-        : timer_(timer == nullptr ? CommonTimer::Timer() : timer)
+    CoTimer(std::shared_ptr<ITimer> timer)
+        : timer_(timer)
     {
         assert(timer_ != nullptr);
     };

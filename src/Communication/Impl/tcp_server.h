@@ -22,6 +22,7 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include "Interface/communication/i_tcp_server.h"
+#include "Interface/i_timer.h"
 #include "interface/communication/i_deal_pack.h"
 #include "interface/communication/i_unpack.h"
 #include "iocp_head.h"
@@ -42,7 +43,7 @@ namespace comm
 class TcpServer : public ITcpServer
 {
 public:
-    TcpServer(IGetCompletionPort* get_completion_port);
+    TcpServer(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~TcpServer();
 
 public:
@@ -84,9 +85,11 @@ private:
     bool run_flag_ = false;
     CoAwait await_stop_;
 
+    std::shared_ptr<jaf::time::ITimer> timer_;
+
     IGetCompletionPort* get_completion_port_ = nullptr;
-    HANDLE completion_handle_ = nullptr;
-    SOCKET listen_socket_     = 0; // ÕìÌýÌ×½Ó×Ö
+    HANDLE completion_handle_                = nullptr;
+    SOCKET listen_socket_                    = 0; // ÕìÌýÌ×½Ó×Ö
 
     std::string ip_ = "0.0.0.0";
     uint16_t port_  = 0;

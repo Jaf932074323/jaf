@@ -42,7 +42,7 @@ class UdpChannel : public IChannel
     class WriteAwaitable;
 
 public:
-    UdpChannel(HANDLE completion_handle, SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
+    UdpChannel(HANDLE completion_handle, SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~UdpChannel();
 
 public:

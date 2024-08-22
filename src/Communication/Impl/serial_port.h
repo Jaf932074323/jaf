@@ -24,6 +24,7 @@
 #include "Interface/communication/i_channel_user.h"
 #include "Interface/communication/i_serial_port.h"
 #include "Interface/communication/i_unpack.h"
+#include "Interface/i_timer.h"
 #include "iocp_head.h"
 #include <functional>
 #include <map>
@@ -40,7 +41,7 @@ namespace comm
 class SerialPort : public ISerialPort
 {
 public:
-    SerialPort(IGetCompletionPort* get_completion_port);
+    SerialPort(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~SerialPort();
 
 public:
@@ -56,6 +57,8 @@ private:
 
 private:
     bool run_flag_ = false;
+
+    std::shared_ptr<jaf::time::ITimer> timer_;
 
     IGetCompletionPort* get_completion_port_ = nullptr;
     HANDLE completion_handle_                = nullptr;

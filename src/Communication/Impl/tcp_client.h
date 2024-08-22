@@ -41,7 +41,7 @@ namespace comm
 class TcpClient : public ITcpClient
 {
 public:
-    TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
+    TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~TcpClient();
 
 public:

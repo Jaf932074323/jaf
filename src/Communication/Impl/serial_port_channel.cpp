@@ -95,9 +95,11 @@ private:
     bool callback_flag_ = false; // 已经回调标记
 };
 
-SerialPortChannel::SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle)
+SerialPortChannel::SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle, std::shared_ptr<jaf::time::ITimer> timer)
     : completion_handle_(completion_handle)
     , comm_handle_(comm_handle)
+    , read_await_(timer)
+    , write_await_(timer)
 {
 }
 

@@ -34,8 +34,9 @@ namespace comm
 
 std::string GetFormatMessage(DWORD dw);
 
-SerialPort::SerialPort(IGetCompletionPort* get_completion_port)
+SerialPort::SerialPort(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
     : get_completion_port_(get_completion_port)
+    , timer_(timer)
 {
     assert(get_completion_port_ != nullptr);
 }
@@ -69,7 +70,7 @@ jaf::Coroutine<void> SerialPort::Run()
     completion_handle_ = get_completion_port_->Get();
     Init();
 
-    std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(completion_handle_, comm_handle_);
+    std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(completion_handle_, comm_handle_, timer_);
 
     if (co_await channel->Start())
     {

@@ -42,7 +42,7 @@ class TcpChannel : public IChannel
     class WriteAwaitable;
 
 public:
-    TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
+    TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~TcpChannel();
 
 public:

@@ -41,7 +41,7 @@ namespace comm
 class Udp : public IUdp
 {
 public:
-    Udp(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
+    Udp(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~Udp();
 
 public:

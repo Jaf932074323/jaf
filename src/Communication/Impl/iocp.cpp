@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <format>
 #include <functional>
+#include "time/impl/timer.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "Mswsock.lib")
@@ -45,7 +46,7 @@ std::string GetFormatMessage(DWORD dw);
 
 Iocp::Iocp(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<jaf::time::ITimer> timer)
     : thread_pool_(thread_pool == nullptr ? std::make_shared<SimpleThreadPool>() : thread_pool)
-    , timer_(timer == nullptr ? jaf::time::CommonTimer::Timer() : timer)
+    , timer_(timer == nullptr ? std::make_shared<time::Timer>() : timer)
     , get_completion_port_(this)
 {
 }
@@ -98,7 +99,7 @@ void Iocp::Stop()
 
 std::shared_ptr<ITcpServer> Iocp::CreateTcpServer()
 {
-    std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(&get_completion_port_);
+    std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(&get_completion_port_, timer_);
     return std::static_pointer_cast<ITcpServer>(server);
 }
 
@@ -116,7 +117,7 @@ std::shared_ptr<IUdp> Iocp::CreateUdp()
 
 std::shared_ptr<ISerialPort> Iocp::CreateSerialPort()
 {
-    std::shared_ptr<SerialPort> server = std::make_shared<SerialPort>(&get_completion_port_);
+    std::shared_ptr<SerialPort> server = std::make_shared<SerialPort>(&get_completion_port_, timer_);
     return std::static_pointer_cast<ISerialPort>(server);
 }
 

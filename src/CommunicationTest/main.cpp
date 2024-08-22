@@ -37,7 +37,6 @@ int main()
 
     std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
     timer->Start();
-    jaf::time::CommonTimer::SetTimer(timer);
 
     WSAData version;
     WSAStartup(WINSOCK_VERSION, &version);

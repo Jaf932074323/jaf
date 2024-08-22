@@ -22,7 +22,6 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include "Interface/i_timer.h"
-#include "common_timer.h"
 #include "util/co_coroutine.h"
 #include "util/finally.h"
 #include "util/latch.h"
@@ -38,8 +37,8 @@ namespace time
 class CoAwaitTime
 {
 public:
-    CoAwaitTime(std::shared_ptr<ITimer> timer = nullptr)
-        : timer_(timer == nullptr ? CommonTimer::Timer() : timer)
+    CoAwaitTime(std::shared_ptr<ITimer> timer)
+        : timer_(timer)
     {
         assert(timer_ != nullptr);
     };
@@ -194,7 +193,7 @@ private:
         bool run_flag_  = false;
         bool wait_flag_ = false;
 
-        bool timeout_flag_        = true;
+        bool timeout_flag_ = true;
         STimerTask timeout_task_;
         Latch time_latch_{1};
     };

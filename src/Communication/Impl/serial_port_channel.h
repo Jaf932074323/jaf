@@ -41,7 +41,7 @@ class SerialPortChannel : public IChannel
     class WriteAwaitable;
 
 public:
-    SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle);
+    SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~SerialPortChannel();
 
 public:

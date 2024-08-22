@@ -48,8 +48,9 @@ std::string GetFormatMessage(DWORD dw)
     return strText;
 }
 
-TcpServer::TcpServer(IGetCompletionPort* get_completion_port)
-    :get_completion_port_(get_completion_port)
+TcpServer::TcpServer(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
+    : get_completion_port_(get_completion_port)
+    , timer_(timer)
 {
     assert(get_completion_port_ != nullptr);
 }
@@ -221,7 +222,7 @@ jaf::Coroutine<void> TcpServer::RunSocket(SOCKET socket)
         co_return;
     }
 
-    std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(socket, remote_ip, remote_port, local_ip, local_port);
+    std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(socket, remote_ip, remote_port, local_ip, local_port, timer_);
 
     {
         std::unique_lock<std::mutex> ul(channels_mutex_);

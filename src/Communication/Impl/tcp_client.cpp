@@ -88,7 +88,7 @@ private:
 
 TcpClient::TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
     : get_completion_port_(get_completion_port)
-    , timer_(timer == nullptr ? jaf::time::CommonTimer::Timer() : timer)
+    , timer_(timer)
     , await_time_(timer_)
 {
 }

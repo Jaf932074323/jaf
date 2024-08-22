@@ -22,11 +22,11 @@
 // 2024-8-19 ½ª°²¸»
 #include "impl/timer.h"
 #include "util/stopwatch.h"
+#include <atomic>
 #include <condition_variable>
 #include <format>
 #include <gtest/gtest.h>
 #include <mutex>
-#include <atomic>
 
 TEST(time_test, timer)
 {
@@ -55,8 +55,8 @@ TEST(time_test, timer)
         auto wait_result = wait_time_cv.wait_for(lock, std::chrono::milliseconds(task.interval * 2));
     }
 
-    EXPECT_TRUE(elapsed_time >= task.interval - timer.GetLeadTime());
-    EXPECT_TRUE(elapsed_time < task.interval + 50);
+    EXPECT_TRUE(elapsed_time >= task.interval - timer.GetLeadTime()) << std::format("elapsed_time:{}, expect", elapsed_time, task.interval - timer.GetLeadTime());
+    EXPECT_TRUE(elapsed_time < task.interval + 50) << std::format("elapsed_time:{}, expect", elapsed_time, task.interval + 50);
 
     timer.Stop();
 }
