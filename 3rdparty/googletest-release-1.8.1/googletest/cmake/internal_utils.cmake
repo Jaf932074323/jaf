@@ -235,7 +235,6 @@ function(cxx_executable name dir libs)
     ${name} "${cxx_default}" "${libs}" "${dir}/${name}.cc" ${ARGN})
 endfunction()
 
-cmake_policy(SET CMP0148 OLD)
 # Sets PYTHONINTERP_FOUND and PYTHON_EXECUTABLE.
 find_package(PythonInterp)
 

@@ -183,6 +183,7 @@ public:
         std::swap(max_, other.max_);
         std::swap(size_, other.size_);
     }
+
 private:
     Node* root_  = nullptr; // 根节点
     Node* min_   = nullptr; // 最小节点
@@ -191,7 +192,7 @@ private:
 };
 
 template <typename Key, typename Value>
-class RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::Insert(const Key& key, const Value& value)
+auto RedBlackTree<Key, Value>::Insert(const Key& key, const Value& value) -> class RedBlackTree<Key, Value>::Iterator
 {
     if (root_ == nullptr)
     {
@@ -940,7 +941,7 @@ void RedBlackTree<Key, Value>::RightRotate(Node* node)
 }
 
 template <typename Key, typename Value>
-struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::SeekFormer(Node* node)
+auto RedBlackTree<Key, Value>::SeekFormer(Node* node) -> struct RedBlackTree<Key, Value>::Node*
 {
     assert(node != nullptr);
 
@@ -959,7 +960,7 @@ struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::SeekFormer(Node
 }
 
 template <typename Key, typename Value>
-struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::SeekLater(Node* node)
+auto RedBlackTree<Key, Value>::SeekLater(Node* node) -> struct RedBlackTree<Key, Value>::Node*
 {
     assert(node != nullptr);
 
@@ -978,7 +979,7 @@ struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::SeekLater(Node*
 }
 
 template <typename Key, typename Value>
-struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::Min(Node* node)
+auto RedBlackTree<Key, Value>::Min(Node* node) -> struct RedBlackTree<Key, Value>::Node*
 {
     assert(node != nullptr);
     while (node->left_child_ != nullptr)
@@ -989,7 +990,7 @@ struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::Min(Node* node)
 }
 
 template <typename Key, typename Value>
-struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::Max(Node* node)
+auto RedBlackTree<Key, Value>::Max(Node* node) -> struct RedBlackTree<Key, Value>::Node*
 {
     assert(node != nullptr);
     while (node->right_child_ != nullptr)
@@ -1000,7 +1001,7 @@ struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::Max(Node* node)
 }
 
 template <typename Key, typename Value>
-struct RedBlackTree<Key, Value>::Node* RedBlackTree<Key, Value>::GetBrother(Node* node)
+auto RedBlackTree<Key, Value>::GetBrother(Node* node) -> struct RedBlackTree<Key, Value>::Node*
 {
     assert(node->parent_ != nullptr);
     return IsLeftChild(node) ? node->parent_->right_child_ : node->parent_->left_child_;
@@ -1013,7 +1014,7 @@ RedBlackTree<Key, Value>::Iterator::Iterator(RedBlackTree* tree, Node* cur)
 }
 
 template <typename Key, typename Value>
-class RedBlackTree<Key, Value>::Iterator& RedBlackTree<Key, Value>::Iterator::operator++()
+auto RedBlackTree<Key, Value>::Iterator::operator++() -> class RedBlackTree<Key, Value>::Iterator&
 {
     assert(cur_ != nullptr); // end迭代器不可以在增加
 
@@ -1034,7 +1035,7 @@ class RedBlackTree<Key, Value>::Iterator& RedBlackTree<Key, Value>::Iterator::op
 }
 
 template <typename Key, typename Value>
-class RedBlackTree<Key, Value>::Iterator& RedBlackTree<Key, Value>::Iterator::operator--()
+auto RedBlackTree<Key, Value>::Iterator::operator--() -> class RedBlackTree<Key, Value>::Iterator&
 {
     if (cur_ == nullptr)
     {
