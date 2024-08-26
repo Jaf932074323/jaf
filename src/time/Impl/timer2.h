@@ -23,13 +23,12 @@
 // 2024-6-16 姜安富
 #include "interface/i_get_time.h"
 #include "interface/i_timer.h"
-#include "util/i_thread_pool.h"
-#include "util/latch.h"
 #include <condition_variable>
 #include <list>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <thread>
 
 namespace jaf
 {
@@ -41,7 +40,7 @@ namespace time
 class Timer2 : public ITimer
 {
 public:
-    Timer2(std::shared_ptr<IThreadPool> thread_pool = nullptr, std::shared_ptr<IGetTime> get_time = nullptr);
+    Timer2(std::shared_ptr<IGetTime> get_time = nullptr);
     virtual ~Timer2();
 
 public:
@@ -55,6 +54,7 @@ public:
     {
         lead_time_ = lead_time;
     }
+
 public:
     // 启动定时
     virtual void Start() override;
@@ -113,7 +113,6 @@ private:
     virtual void ExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks, ETimerResultType result_type);
 
 private:
-    std::shared_ptr<IThreadPool> thread_pool_;
     std::shared_ptr<IGetTime> get_time_;
 
     std::atomic<bool> run_flag_ = false; // 工作线程运行标志
@@ -121,8 +120,8 @@ private:
     uint64_t next_task_id_ = 1; // 下一个定时任务ID
 
     std::atomic<uint64_t> lead_time_ = 5; // 执行任务的提前量，每个任务可以提前lead_time_毫秒执行
-
-    Latch work_threads_latch_{1};
+    
+    std::thread run_thread_;
     std::condition_variable_any m_workCondition;                       // 定时用条件变量，用其超时特性来定时，在定时的过程中也能随时唤醒
     std::mutex tasks_mutex_;                                           // 定时任务锁
     std::map<STimerKey, std::shared_ptr<STimerParaInter>> tasks_time_; // 定时任务集合

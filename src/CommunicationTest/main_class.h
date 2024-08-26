@@ -29,6 +29,7 @@
 #include "Interface/communication/i_serial_port.h"
 #include "util/co_await.h"
 #include "util/co_coroutine.h"
+#include "util/latch.h"
 #include <memory>
 
 // 处理通信通道通信通道 负责从通道读写数据

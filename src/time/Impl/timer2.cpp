@@ -22,8 +22,6 @@
 // 2024-6-16 姜安富
 #include "timer2.h"
 #include "get_time_tick.h"
-#include "util/finally.h"
-#include "util/simple_thread_pool.h"
 #include <assert.h>
 #include <list>
 
@@ -32,9 +30,8 @@ namespace jaf
 namespace time
 {
 
-Timer2::Timer2(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<IGetTime> get_time)
-    : thread_pool_(thread_pool == nullptr ? std::make_shared<SimpleThreadPool>(5) : thread_pool)
-    , get_time_(get_time == nullptr ? std::make_shared<GetTimeTick>() : get_time)
+Timer2::Timer2(std::shared_ptr<IGetTime> get_time)
+    : get_time_(get_time == nullptr ? std::make_shared<GetTimeTick>() : get_time)
 {
 }
 
@@ -52,9 +49,8 @@ void Timer2::Start()
         }
         run_flag_ = true;
     }
-
-    work_threads_latch_.Reset();
-    thread_pool_->Post([this]() { Work(); });
+        
+    run_thread_ = std::thread([this]() { Work(); });
 }
 
 void Timer2::Stop()
@@ -70,7 +66,7 @@ void Timer2::Stop()
         m_workCondition.notify_all();
     }
 
-    work_threads_latch_.Wait();
+    run_thread_.join();
 }
 
 bool Timer2::StartTask(STimerTask* task)
@@ -129,14 +125,12 @@ void Timer2::StopTask(STimerKey key)
         STimerTask* timerTask                                                    = timer_task->timer_task;
         timerTask->timer_data_                                                   = nullptr;
         timer_task->timer_task                                                   = nullptr;
-        thread_pool_->Post([fun, timerTask]() { fun(ETimerResultType::TRT_TASK_STOP, timerTask); });
+        fun(ETimerResultType::TRT_TASK_STOP, timerTask); 
     }
 }
 
 void Timer2::Work()
 {
-    FINALLY(work_threads_latch_.CountDown(););
-
     std::list<std::shared_ptr<STimerParaInter>> need_execute_tasks;
     uint64_t min_wait_time = 0xffffffffffffffff; // 所有任务中最小的等待时间，用于计算下一次执行需要多久
 
@@ -186,8 +180,8 @@ void Timer2::Work()
         std::function<void(ETimerResultType result_type, STimerTask * task)> fun = it.second->fun;
         STimerTask* timerTask                                                    = it.second->timer_task;
         timerTask->timer_data_                                                   = nullptr;
-        it.second->timer_task                                                  = nullptr;
-        thread_pool_->Post([fun, timerTask]() { fun(ETimerResultType::TRT_TIMER_STOP, timerTask); });
+        it.second->timer_task                                                    = nullptr;
+        fun(ETimerResultType::TRT_TIMER_STOP, timerTask);
     }
 }
 
@@ -213,8 +207,7 @@ void Timer2::ExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_exec
         STimerTask* timerTask                                                    = it->timer_task;
         timerTask->timer_data_                                                   = nullptr;
         it->timer_task                                                           = nullptr;
-
-        thread_pool_->Post([fun, result_type, timerTask]() { fun(result_type, timerTask); });
+        fun(result_type, timerTask); 
     }
 }
 
