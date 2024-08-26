@@ -21,11 +21,11 @@
 // SOFTWARE.
 // 2024-8-16 ½ª°²¸»
 #include "util/red_black_tree.h"
+#include "gtest/gtest.h"
 #include <Windows.h>
 #include <format>
-#include <gtest/gtest.h>
-#include <time.h>
 #include <stdint.h>
+#include <time.h>
 
 namespace jaf
 {
@@ -248,7 +248,7 @@ public:
     }
 };
 
-}
+} // namespace jaf
 
 TEST(red_black_tree, normal)
 {
@@ -313,13 +313,13 @@ TEST(red_black_tree, LowerBound_UpperBound)
     for (size_t i = 0; i < 10; ++i)
     {
         auto it = rb_tree.LowerBound(i);
-        EXPECT_TRUE(it.GetNode() != nullptr); 
+        EXPECT_TRUE(it.GetNode() != nullptr);
         EXPECT_TRUE(it.GetNode()->key_ == i);
     }
     for (size_t i = 0; i < 9; ++i)
     {
         auto it = rb_tree.UpperBound(i);
-        EXPECT_TRUE(it.GetNode() != nullptr); 
+        EXPECT_TRUE(it.GetNode() != nullptr);
         EXPECT_TRUE(it.GetNode()->key_ == i + 1);
     }
     auto it = rb_tree.UpperBound(9);

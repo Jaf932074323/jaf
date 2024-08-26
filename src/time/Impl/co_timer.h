@@ -24,6 +24,7 @@
 #include "interface/i_timer.h"
 #include "util/co_coroutine.h"
 #include <assert.h>
+#include <memory>
 
 namespace jaf
 {

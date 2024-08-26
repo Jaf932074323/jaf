@@ -25,7 +25,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <format>
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
 #include <mutex>
 
 TEST(time_test, timer)

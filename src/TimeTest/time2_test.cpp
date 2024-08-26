@@ -22,11 +22,11 @@
 // 2024-8-19 ½ª°²¸»
 #include "impl/timer2.h"
 #include "util/stopwatch.h"
+#include "gtest/gtest.h"
+#include <atomic>
 #include <condition_variable>
 #include <format>
-#include <gtest/gtest.h>
 #include <mutex>
-#include <atomic>
 
 TEST(time2_test, timer)
 {

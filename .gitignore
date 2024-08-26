@@ -99,3 +99,4 @@ setenv.gitignore.bat
 build
 
 bin/
+draft/
