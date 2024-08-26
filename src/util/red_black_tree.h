@@ -118,10 +118,19 @@ public:
     void Erase(const Key& key);
     Iterator Erase(Node* node);
     Iterator Erase(Iterator& it);
+    Iterator Erase(Iterator& first, Iterator& last); // 移除[first,last)
 
     Iterator Find(const Key& key);
     Iterator LowerBound(const Key& key); // 获取第一个大于等于key节点的迭代器,不存在时返回end()
     Iterator UpperBound(const Key& key); // 获取第一个大于key节点的迭代器,不存在时返回end()
+
+private:
+    Node* LowerBoundNode(const Key& key); // 获取第一个大于等于key的节点,不存在时返回end()
+    Node* UpperBoundNode(const Key& key); // 获取第一个大于key的节点,不存在时返回end()
+
+    Node* NestNode(Node* cur_node);
+    Node* LastNode(Node* cur_node);
+
 
 private:
     Node* GetRoot()
@@ -253,39 +262,24 @@ void RedBlackTree<Key, Value>::Erase(const Key& key)
         return;
     }
 
-    // 查找要删除的节点
-    Node* del_node = root_;
-    while (true)
+    auto first = LowerBoundNode(key);
+    auto last  = UpperBoundNode(key);
+
+    while (first != last)
     {
-        if (del_node->key_ == key)
-        {
-            break;
-        }
-
-        if (key < del_node->key_)
-        {
-            del_node = del_node->left_child_;
-        }
-        else
-        {
-            del_node = del_node->right_child_;
-        }
-
-        // 不存在对应键的节点
-        if (del_node == nullptr)
-        {
-            return;
-        }
+        assert(first != nullptr);
+        Node* next = NestNode(first);
+        AdjusBeforeDelete(first);
+        delete first;
+        --size_;
+        first = next;
     }
 
-    AdjusBeforeDelete(del_node);
-    delete del_node;
-    --size_;
     return;
 }
 
 template <typename Key, typename Value>
-RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::Erase(Node* node)
+auto RedBlackTree<Key, Value>::Erase(Node* node) -> class RedBlackTree<Key, Value>::Iterator
 {
     if (node == nullptr)
     {
@@ -300,13 +294,22 @@ RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::Erase(Node* node)
 }
 
 template <typename Key, typename Value>
-RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::Erase(RedBlackTree<Key, Value>::Iterator& it)
+auto RedBlackTree<Key, Value>::Erase(RedBlackTree<Key, Value>::Iterator& it) -> class RedBlackTree<Key, Value>::Iterator
 {
     return Erase(it.GetNode());
 }
 
 template <typename Key, typename Value>
-RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::Find(const Key& key)
+auto RedBlackTree<Key, Value>::Erase(Iterator& first, Iterator& last) -> class RedBlackTree<Key, Value>::Iterator
+{
+    for (Iterator it = first; it != last;)
+    {
+        it = Erase(it);
+    }
+}
+
+template <typename Key, typename Value>
+auto RedBlackTree<Key, Value>::Find(const Key& key) -> class RedBlackTree<Key, Value>::Iterator
 {
     if (root_ == nullptr)
     {
@@ -336,13 +339,22 @@ RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::Find(const Key& key
             return Iterator(this, nullptr);
         }
     }
+} template <typename Key, typename Value>
+auto RedBlackTree<Key, Value>::LowerBound(const Key& key) -> class RedBlackTree<Key, Value>::Iterator
+{
+    return Iterator(this, LowerBoundNode(key));
+} template <typename Key, typename Value>
+auto RedBlackTree<Key, Value>::UpperBound(const Key& key) -> class RedBlackTree<Key, Value>::Iterator
+{
+    return Iterator(this, UpperBoundNode(key));
 }
+
 template <typename Key, typename Value>
-RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::LowerBound(const Key& key)
+auto RedBlackTree<Key, Value>::LowerBoundNode(const Key& key) -> struct RedBlackTree<Key, Value>::Node*
 {
     if (root_ == nullptr)
     {
-        return Iterator(this, nullptr);
+        return nullptr;
     }
 
     Node* aim_node = nullptr;
@@ -360,14 +372,15 @@ RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::LowerBound(const Ke
         }
     }
 
-    return Iterator(this, aim_node);
+    return aim_node;
 }
+
 template <typename Key, typename Value>
-RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::UpperBound(const Key& key)
+auto RedBlackTree<Key, Value>::UpperBoundNode(const Key& key) -> struct RedBlackTree<Key, Value>::Node*
 {
     if (root_ == nullptr)
     {
-        return Iterator(this, nullptr);
+        return nullptr;
     }
 
     Node* aim_node = nullptr;
@@ -385,7 +398,58 @@ RedBlackTree<Key, Value>::Iterator RedBlackTree<Key, Value>::UpperBound(const Ke
         }
     }
 
-    return Iterator(this, aim_node);
+    return aim_node;
+}
+
+template <typename Key, typename Value>
+auto RedBlackTree<Key, Value>::NestNode(Node* cur_node) -> RedBlackTree<Key, Value>::Node*
+{
+    assert(cur_node != nullptr); // end迭代器不可以在增加
+
+    if (cur_node->right_child_ != nullptr)
+    {
+        return RedBlackTree::Min(cur_node->right_child_);
+    }
+
+    while (true)
+    {
+        if (cur_node->parent_ == nullptr)
+        {
+            return nullptr;
+        }
+        if (RedBlackTree::IsLeftChild(cur_node))
+        {
+            return cur_node->parent_;
+        }
+        cur_node = cur_node->parent_;
+    }
+}
+
+template <typename Key, typename Value>
+auto RedBlackTree<Key, Value>::LastNode(Node* cur_node) -> RedBlackTree<Key, Value>::Node*
+{
+    if (cur_node == nullptr)
+    {
+        return max_;
+    }
+
+    if (cur_node->left_child_ != nullptr)
+    {
+        return RedBlackTree::Max(cur_node->right_child_);
+    }
+
+    while (true)
+    {
+        if (cur_node->parent_ == nullptr)
+        {
+            return nullptr;
+        }
+        if (RedBlackTree::IsRightChild(cur_node))
+        {
+            return cur_node->parent_;
+        }
+        cur_node = cur_node->parent_;
+    }
 }
 
 template <typename Key, typename Value>
@@ -1018,44 +1082,14 @@ auto RedBlackTree<Key, Value>::Iterator::operator++() -> class RedBlackTree<Key,
 {
     assert(cur_ != nullptr); // end迭代器不可以在增加
 
-    if (cur_->right_child_ != nullptr)
-    {
-        cur_ = RedBlackTree::Min(cur_->right_child_);
-        return *this;
-    }
-
-    Node* parent_node = cur_->parent_;
-    while (parent_node != nullptr && RedBlackTree::IsRightChild(cur_))
-    {
-        cur_        = parent_node;
-        parent_node = cur_->parent_;
-    }
-    cur_ = parent_node;
+    cur_ = tree_->NestNode(cur_);
     return *this;
 }
 
 template <typename Key, typename Value>
 auto RedBlackTree<Key, Value>::Iterator::operator--() -> class RedBlackTree<Key, Value>::Iterator&
 {
-    if (cur_ == nullptr)
-    {
-        cur_ = tree_->max_;
-        return *this;
-    }
-
-    if (cur_->left_child_ != nullptr)
-    {
-        cur_ = RedBlackTree::Max(cur_->right_child_);
-        return *this;
-    }
-
-    Node* parent_node = cur_->parent_;
-    while (parent_node != nullptr && RedBlackTree::IsLeftChild(cur_))
-    {
-        cur_        = parent_node;
-        parent_node = cur_->parent_;
-    }
-    cur_ = parent_node;
+    cur_ = tree_->LastNode(cur_);
     return *this;
 }
 
