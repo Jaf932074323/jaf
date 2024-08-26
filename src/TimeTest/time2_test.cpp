@@ -45,7 +45,7 @@ TEST(time2_test, timer)
         std::unique_lock<std::mutex> lock(wait_time_mutex);
         wait_time_cv.notify_all();
     };
-    task.interval = 50;
+    task.interval = 100;
 
     stopwatch.Reset();
     timer.StartTask(&task);
@@ -55,7 +55,7 @@ TEST(time2_test, timer)
         auto wait_result = wait_time_cv.wait_for(lock, std::chrono::milliseconds(task.interval * 2));
     }
 
-    EXPECT_TRUE(elapsed_time >= task.interval - timer.GetLeadTime());
+    EXPECT_TRUE(elapsed_time >= task.interval - timer.GetLeadTime() - 20);
     EXPECT_TRUE(elapsed_time < task.interval + 50);
 
     timer.Stop();

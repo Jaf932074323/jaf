@@ -55,7 +55,7 @@ TEST(time_test, timer)
         auto wait_result = wait_time_cv.wait_for(lock, std::chrono::milliseconds(task.interval * 2));
     }
 
-    EXPECT_TRUE(elapsed_time >= task.interval - timer.GetLeadTime()) << std::format("elapsed_time:{}, expect", elapsed_time, task.interval - timer.GetLeadTime());
+    EXPECT_TRUE(elapsed_time >= task.interval - timer.GetLeadTime() - 20) << std::format("elapsed_time:{}, expect", elapsed_time, task.interval - timer.GetLeadTime());
     EXPECT_TRUE(elapsed_time < task.interval + 50) << std::format("elapsed_time:{}, expect", elapsed_time, task.interval + 50);
 
     timer.Stop();

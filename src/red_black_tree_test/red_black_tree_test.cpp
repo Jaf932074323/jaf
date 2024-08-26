@@ -283,7 +283,7 @@ void Show(int* arr, size_t len)
 TEST(red_black_tree, random)
 {
     jaf::TestRedBlackTree test_red_black_tree;
-    size_t amount = 100;
+    size_t amount = 1000;
     srand(time(0));
     std::vector<int> arr;
     arr.resize(amount);
