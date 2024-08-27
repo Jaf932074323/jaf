@@ -20,26 +20,27 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-23 姜安富
+// 2024-8-27 姜安富
 #include <coroutine>
-#include <exception>
+#include <latch>
 
 namespace jaf
 {
 
 template <typename T>
-struct Coroutine;
+struct CoroutineWithWait;
 template <typename T>
-struct PromiseType;
+struct PromiseTypeWithWait;
 
 template <typename T>
-struct PromiseBase
+struct PromiseBaseWithWait
 {
     std::coroutine_handle<> parent_handle;
+    std::latch latch_{1};
 
     auto get_return_object()
     {
-        return Coroutine<T>{std::coroutine_handle<PromiseType<T>>::from_promise(static_cast<PromiseType<T>&>(*this))};
+        return CoroutineWithWait<T>{std::coroutine_handle<PromiseTypeWithWait<T>>::from_promise(static_cast<PromiseTypeWithWait<T>&>(*this))};
     }
 
     auto initial_suspend()
@@ -56,7 +57,7 @@ struct PromiseBase
                 return false;
             }
 
-            auto await_suspend(std::coroutine_handle<PromiseType<T>> co_handle) noexcept
+            auto await_suspend(std::coroutine_handle<PromiseTypeWithWait<T>> co_handle) noexcept
             {
                 auto parent = co_handle.promise().parent_handle;
                 return parent ? parent : std::noop_coroutine();
@@ -74,50 +75,58 @@ struct PromiseBase
     {
         std::terminate();
     }
+
+    // 阻塞等待
+    void Wait()
+    {
+        latch_.wait();
+    }
 };
 
 template <typename T>
-struct PromiseType : public PromiseBase<T>
+struct PromiseTypeWithWait : public PromiseBaseWithWait<T>
 {
-    T value;
-
     void return_value(T v)
     {
         value = std::move(v);
+        PromiseBaseWithWait<T>::latch_.count_down();        
     }
+
+    T value;
 };
 
 template <>
-struct PromiseType<void> : public PromiseBase<void>
+struct PromiseTypeWithWait<void> : public PromiseBaseWithWait<void>
 {
     void return_void()
     {
+        PromiseBaseWithWait<void>::latch_.count_down();
     }
 };
 
 template <typename T>
-struct Coroutine
+struct CoroutineWithWait
 {
-    using promise_type = PromiseType<T>;
+    using promise_type = PromiseTypeWithWait<T>;
 
-    Coroutine(std::coroutine_handle<PromiseType<T>> h)
+    CoroutineWithWait(std::coroutine_handle<PromiseTypeWithWait<T>> h)
         : handle{h}
     {
     }
-    ~Coroutine()
+    ~CoroutineWithWait()
     {
     }
 
-    Coroutine(const Coroutine&)            = delete;
-    Coroutine& operator=(const Coroutine&) = delete;
+    CoroutineWithWait(const CoroutineWithWait&)            = delete;
+    CoroutineWithWait& operator=(const CoroutineWithWait&) = delete;
 
-    Coroutine(Coroutine&& other) noexcept
+    CoroutineWithWait(CoroutineWithWait&& other) noexcept
         : handle{other.handle}
     {
         other.handle = nullptr;
     }
 
-    Coroutine& operator=(Coroutine&& other) noexcept
+    CoroutineWithWait& operator=(CoroutineWithWait&& other) noexcept
     {
         if (this == &other)
         {
@@ -151,7 +160,13 @@ struct Coroutine
         }
     }
 
-    std::coroutine_handle<PromiseType<T>> handle;
+    // 阻塞等待协程执行完成
+    void Wait()
+    {
+        handle.promise().Wait();
+    }
+
+    std::coroutine_handle<PromiseTypeWithWait<T>> handle;
 };
 
 } // namespace jaf
