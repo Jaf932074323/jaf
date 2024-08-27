@@ -34,7 +34,7 @@ namespace time
 class CoTimer
 {
 public:
-    CoTimer(std::shared_ptr<ITimer> timer)
+    CoTimer(ITimer* timer)
         : timer_(timer)
     {
         assert(timer_ != nullptr);
@@ -90,7 +90,7 @@ public:
     }
 
 private:
-    std::shared_ptr<ITimer> timer_;
+    ITimer* timer_;
 };
 
 } // namespace time

@@ -67,6 +67,7 @@ void Timer::Stop()
         m_workCondition.notify_all();
     }
 
+    assert(std::this_thread::get_id() != run_thread_.get_id());
     run_thread_.join();
 }
 
