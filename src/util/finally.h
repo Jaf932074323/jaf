@@ -47,4 +47,4 @@ private:
 
 #define FINALLY_CAT(x, y) FINALLY_CAT_HELPER(x, y)
 #define FINALLY_CAT_HELPER(x, y) x##y
-#define FINALLY(code) Finally FINALLY_CAT(_Finally_, __LINE__)([&]() { code })
+#define FINALLY(code) jaf::Finally FINALLY_CAT(_Finally_, __LINE__)([&]() { code })

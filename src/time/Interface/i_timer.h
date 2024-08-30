@@ -39,7 +39,7 @@ enum class ETimerResultType
 // 定时参数
 struct STimerTask
 {
-    std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // 定时执行函数
+    std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // 定时执行函数 不要在这里执行耗时功能，会导致定时时间不正常
     uint64_t interval = 1000;                              // 定时时间间隔（毫秒）
     void* timer_data_ = nullptr;                           // 定时器维护的数据，由定时器记录其自身需要的数据，只能定时器修改
 };

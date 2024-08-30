@@ -21,35 +21,62 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include <functional>
-#include <winsock2.h>
+#include "global_timer.h"
+#include "util/co_coroutine.h"
+#include "time/impl/co_timer.h"
+#include <assert.h>
 
 namespace jaf
 {
-namespace comm
+namespace time
 {
 
-struct IOCP_DATA
+inline jaf::Coroutine<void> CoSleep(uint64_t millisecond)
 {
-    OVERLAPPED overlapped   = {0};
-    int success_            = 0;
-    DWORD bytesTransferred_ = 0;
-    std::function<void(IOCP_DATA*)> call_;
-};
+    assert(GlobalTimer::Timer() != nullptr);
 
-// 数据
-struct SData
-{
-    unsigned char* buff = nullptr;
-    size_t len          = 0;
-};
+    struct SleepAwaitable
+    {
+        STimerTask timer_task_;
+        std::coroutine_handle<> handle_;
 
-// 已读取数据
-struct SConstData
-{
-    const unsigned char* buff = nullptr;
-    size_t len                = 0;
-};
+        SleepAwaitable(uint64_t sleep_time)
+        {
+            timer_task_.interval = sleep_time;
+            timer_task_.fun      = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(); };
+        }
 
-} // namespace comm
+        ~SleepAwaitable() {}
+
+        bool await_ready()
+        {
+            if (timer_task_.interval == 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        bool await_suspend(std::coroutine_handle<> co_handle)
+        {
+            handle_ = co_handle;
+            GlobalTimer::Timer()->StartTask(&timer_task_);
+            return true;
+        }
+
+        void await_resume()
+        {
+            return;
+        }
+
+        void TimerCallback()
+        {
+            handle_.resume();
+        }
+    };
+    co_await SleepAwaitable(millisecond);
+}
+
+} // namespace time
 } // namespace jaf

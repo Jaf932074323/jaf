@@ -1,4 +1,4 @@
-#pragma once
+Ôªø#pragma once
 // MIT License
 //
 // Copyright(c) 2021 Jaf932074323
@@ -20,36 +20,31 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 Ω™∞≤∏ª
-#include <functional>
-#include <winsock2.h>
+// 2024-6-16 ÂßúÂÆâÂØå
+#include "define_global_timer_export.h"
+#include "time/interface/i_timer.h"
+#include <memory>
 
 namespace jaf
 {
-namespace comm
+namespace time
 {
 
-struct IOCP_DATA
+// ÂÖ¨Áî®ÂÆöÊó∂Âô®ÁÆ°ÁêÜ
+class API_GLOBAL_TIMER_EXPORT GlobalTimer
 {
-    OVERLAPPED overlapped   = {0};
-    int success_            = 0;
-    DWORD bytesTransferred_ = 0;
-    std::function<void(IOCP_DATA*)> call_;
+private:
+    GlobalTimer() {}
+public:
+    virtual ~GlobalTimer() {}
+
+public:
+    static std::shared_ptr<ITimer> Timer();
+    static void SetTimer(std::shared_ptr<ITimer> timer);
+
+private:
+    static std::shared_ptr<ITimer>& TimerInstance();
 };
 
-//  ˝æ›
-struct SData
-{
-    unsigned char* buff = nullptr;
-    size_t len          = 0;
-};
-
-// “—∂¡»° ˝æ›
-struct SConstData
-{
-    const unsigned char* buff = nullptr;
-    size_t len                = 0;
-};
-
-} // namespace comm
+} // namespace time
 } // namespace jaf

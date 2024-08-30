@@ -20,34 +20,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-8-59 ½ª°²¸»
+#include "global_timer/co_sleep.h"
+#include "global_timer/global_timer.h"
 #include "impl/co_timer.h"
 #include "impl/timer.h"
 #include "util/co_coroutine_with_wait.h"
 #include "util/stopwatch.h"
 #include "gtest/gtest.h"
+#include <memory>
 
-jaf::CoroutineWithWait<void> TestSleep(jaf::time::Timer& timer)
+TEST(co_timer_test, sleep)
 {
-    jaf::time::CoTimer co_timer(&timer);
-    jaf::Stopwatch stopwatch;
+    auto co_fun = []()->jaf::CoroutineWithWait<void>
+        {
+            jaf::Stopwatch stopwatch;
+            uint64_t sleep_time = 200;
 
-    uint64_t sleep_time = 200;
+            stopwatch.Reset();
+            co_await jaf::time::CoSleep(sleep_time);
+            uint64_t elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(stopwatch.Time()).count();
+            EXPECT_TRUE(elapsed_time >= sleep_time - 20) << std::format("elapsed_time:{}, sleep_time {}", elapsed_time, sleep_time);
+        };
 
-    stopwatch.Reset();
-    co_await co_timer.Sleep(sleep_time);
-    uint64_t elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(stopwatch.Time()).count();
-
-    EXPECT_TRUE(elapsed_time >= sleep_time - 20) << std::format("elapsed_time:{}, sleep_time {}", elapsed_time, sleep_time);
-
+    auto co_test_sleep = co_fun();
+    co_test_sleep.Wait();
 }
 
 TEST(co_timer_test, co_timer)
 {
-    jaf::time::Timer timer;
-    timer.Start();
+    auto co_fun = [](std::shared_ptr<jaf::time::Timer> timer)->jaf::CoroutineWithWait<void>
+        {
+            jaf::Stopwatch stopwatch;
+            uint64_t sleep_time = 200;
 
-    auto co_test_sleep = TestSleep(timer);
-    co_test_sleep.Wait();
+            jaf::time::CoTimer co_timer(timer);
+            stopwatch.Reset();
+            co_await co_timer.Sleep(sleep_time);
+            uint64_t elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(stopwatch.Time()).count();
+            EXPECT_TRUE(elapsed_time >= sleep_time - 20) << std::format("elapsed_time:{}, sleep_time {}", elapsed_time, sleep_time);
+        };
 
-    timer.Stop();
+    std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
+    timer->Start();
+
+    auto co_test_co_timer = co_fun(timer);
+    co_test_co_timer.Wait();
+
+    timer->Stop();
 }
