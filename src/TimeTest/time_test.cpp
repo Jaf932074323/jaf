@@ -22,10 +22,10 @@
 // 2024-8-19 ½ª°²¸»
 #include "impl/timer.h"
 #include "util/stopwatch.h"
+#include "gtest/gtest.h"
 #include <atomic>
 #include <condition_variable>
 #include <format>
-#include "gtest/gtest.h"
 #include <mutex>
 
 TEST(time_test, timer)
@@ -69,6 +69,7 @@ TEST(time_test, stop_timer_task)
     jaf::Stopwatch stopwatch;
     std::mutex wait_time_mutex;
     std::condition_variable wait_time_cv;
+    bool task_finish_flag = false;
     uint64_t elapsed_time = 0;
 
     jaf::time::STimerTask task;
@@ -76,6 +77,7 @@ TEST(time_test, stop_timer_task)
         EXPECT_EQ(result_type, jaf::time::ETimerResultType::TRT_TASK_STOP);
         elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(stopwatch.Time()).count();
         std::unique_lock<std::mutex> lock(wait_time_mutex);
+        task_finish_flag = true;
         wait_time_cv.notify_all();
     };
     task.interval = 1000;
@@ -86,7 +88,7 @@ TEST(time_test, stop_timer_task)
 
     {
         std::unique_lock<std::mutex> lock(wait_time_mutex);
-        auto wait_result = wait_time_cv.wait_for(lock, std::chrono::milliseconds(task.interval * 2));
+        auto wait_result = wait_time_cv.wait_for(lock, std::chrono::milliseconds(task.interval * 2), [&task_finish_flag]{ return task_finish_flag; });
     }
 
     EXPECT_TRUE(elapsed_time < task.interval + 50);

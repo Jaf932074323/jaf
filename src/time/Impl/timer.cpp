@@ -83,7 +83,7 @@ bool Timer::StartTask(STimerTask* task)
 
     uint64_t task_id = next_task_id_++;
 
-    std::shared_ptr<STimerParaInter> inter_task = std::make_shared<STimerParaInter>(task, task->fun, time);
+    std::shared_ptr<STimerParaInter> inter_task = std::make_shared<STimerParaInter>(task, task->fun, time, this);
     task->timer_data_                           = inter_task.get();
     auto it                                     = tasks_time_.Insert(time, inter_task);
     inter_task->timer_node                      = it.GetNode();
@@ -100,44 +100,35 @@ void Timer::StopTask(STimerTask* task)
         return;
     }
     STimerParaInter* inter_task = (STimerParaInter*) task->timer_data_;
+    assert(inter_task->timer_ == this);
     assert(inter_task->timer_task == task);
     StopTask(inter_task->timer_node);
 }
 
 void Timer::StopTask(TimerTree::Node* timer_node)
 {
-    std::shared_ptr<STimerParaInter> timer_task = nullptr;
-    {
-        std::unique_lock<std::mutex> ul(tasks_mutex_);
-        timer_task = timer_node->value_;
-        tasks_time_.Erase(timer_node);
-    }
-
-    if (timer_task != nullptr)
-    {
-        assert(timer_task->fun);
-        std::function<void(ETimerResultType result_type, STimerTask * task)> fun = timer_task->fun;
-        STimerTask* timerTask                                                    = timer_task->timer_task;
-        timerTask->timer_data_                                                   = nullptr;
-        timer_task->timer_task                                                   = nullptr;
-        fun(ETimerResultType::TRT_TASK_STOP, timerTask);
-    }
+    std::unique_lock<std::mutex> ul(tasks_mutex_);
+    tasks_stop_.push_back(timer_node->value_);
+    tasks_time_.Erase(timer_node);
 }
 
 void Timer::Work()
 {
     std::list<std::shared_ptr<STimerParaInter>> need_execute_tasks;
+    std::list<std::shared_ptr<STimerParaInter>> need_stop_tasks;
     uint64_t min_wait_time = 0xffffffffffffffff; // 所有任务中最小的等待时间，用于计算下一次执行需要多久
 
     {
         std::unique_lock<std::mutex> ul(tasks_mutex_);
-        GainNeedExecuteTasks(need_execute_tasks);
+        GainNeedExecuteTasks(need_execute_tasks, need_stop_tasks);
     }
 
     while (true)
     {
         ExecuteTasks(need_execute_tasks, ETimerResultType::TRT_SUCCESS);
+        ExecuteTasks(need_stop_tasks, ETimerResultType::TRT_TASK_STOP);
         need_execute_tasks.clear();
+        need_stop_tasks.clear();
 
         std::unique_lock<std::mutex> ul(tasks_mutex_);
         if (!run_flag_)
@@ -159,7 +150,7 @@ void Timer::Work()
             break;
         }
 
-        GainNeedExecuteTasks(need_execute_tasks);
+        GainNeedExecuteTasks(need_execute_tasks, need_stop_tasks);
     }
 
     // 处理剩余的所有定时任务
@@ -167,7 +158,10 @@ void Timer::Work()
     {
         std::unique_lock<std::mutex> ul(tasks_mutex_);
         residue_tasks_time_time.Swap(tasks_time_);
+        std::swap(need_stop_tasks, tasks_stop_);
     }
+
+    ExecuteTasks(need_stop_tasks, ETimerResultType::TRT_TASK_STOP);
 
     for (auto it = residue_tasks_time_time.begin(); it != residue_tasks_time_time.end(); ++it)
     {
@@ -180,7 +174,7 @@ void Timer::Work()
     }
 }
 
-void Timer::GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks)
+void Timer::GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks, std::list<std::shared_ptr<STimerParaInter>>& need_stop_tasks)
 {
     uint64_t now_time      = get_time_->GetNowTime();
     uint64_t deadline_time = now_time + (int64_t) lead_time_.load();
@@ -194,6 +188,8 @@ void Timer::GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& ne
     {
         it = tasks_time_.Erase(it);
     }
+
+    std::swap(need_stop_tasks, tasks_stop_);
 }
 
 void Timer::ExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks, ETimerResultType result_type)

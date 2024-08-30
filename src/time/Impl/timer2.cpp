@@ -49,7 +49,7 @@ void Timer2::Start()
         }
         run_flag_ = true;
     }
-        
+
     run_thread_ = std::thread([this]() { Work(); });
 }
 
@@ -84,7 +84,7 @@ bool Timer2::StartTask(STimerTask* task)
 
     STimerKey timer_key{time, task_id};
 
-    std::shared_ptr<STimerParaInter> inter_task = std::make_shared<STimerParaInter>(task, task->fun, timer_key);
+    std::shared_ptr<STimerParaInter> inter_task = std::make_shared<STimerParaInter>(task, task->fun, timer_key, this);
     task->timer_data_                           = inter_task.get();
     tasks_time_.insert(std::make_pair(timer_key, inter_task));
 
@@ -100,50 +100,43 @@ void Timer2::StopTask(STimerTask* task)
         return;
     }
     STimerParaInter* inter_task = (STimerParaInter*) task->timer_data_;
+    assert(inter_task->timer_ == this);
     assert(inter_task->timer_task == task);
     StopTask(inter_task->key);
 }
 
 void Timer2::StopTask(STimerKey key)
 {
-    std::shared_ptr<STimerParaInter> timer_task = nullptr;
-    {
-        std::unique_lock<std::mutex> ul(tasks_mutex_);
-        auto it = tasks_time_.find(key);
-        if (it == tasks_time_.end())
-        {
-            return;
-        }
 
-        timer_task = it->second;
-        tasks_time_.erase(it);
+    std::unique_lock<std::mutex> ul(tasks_mutex_);
+    auto it = tasks_time_.find(key);
+    if (it == tasks_time_.end())
+    {
+        return;
     }
 
-    if (timer_task != nullptr)
-    {
-        assert(timer_task->fun);
-        std::function<void(ETimerResultType result_type, STimerTask * task)> fun = timer_task->fun;
-        STimerTask* timerTask                                                    = timer_task->timer_task;
-        timerTask->timer_data_                                                   = nullptr;
-        timer_task->timer_task                                                   = nullptr;
-        fun(ETimerResultType::TRT_TASK_STOP, timerTask); 
-    }
+    tasks_stop_.push_back(it->second);
+    tasks_time_.erase(it);
+    m_workCondition.notify_all();
 }
 
 void Timer2::Work()
 {
     std::list<std::shared_ptr<STimerParaInter>> need_execute_tasks;
+    std::list<std::shared_ptr<STimerParaInter>> need_stop_tasks;
     uint64_t min_wait_time = 0xffffffffffffffff; // 所有任务中最小的等待时间，用于计算下一次执行需要多久
 
     {
         std::unique_lock<std::mutex> ul(tasks_mutex_);
-        GainNeedExecuteTasks(need_execute_tasks);
+        GainNeedExecuteTasks(need_execute_tasks, need_stop_tasks);
     }
 
     while (true)
     {
         ExecuteTasks(need_execute_tasks, ETimerResultType::TRT_SUCCESS);
+        ExecuteTasks(need_stop_tasks, ETimerResultType::TRT_TASK_STOP);
         need_execute_tasks.clear();
+        need_stop_tasks.clear();
 
         std::unique_lock<std::mutex> ul(tasks_mutex_);
         if (!run_flag_)
@@ -165,7 +158,7 @@ void Timer2::Work()
             break;
         }
 
-        GainNeedExecuteTasks(need_execute_tasks);
+        GainNeedExecuteTasks(need_execute_tasks, need_stop_tasks);
     }
 
     // 处理剩余的所有定时任务
@@ -173,8 +166,10 @@ void Timer2::Work()
     {
         std::unique_lock<std::mutex> ul(tasks_mutex_);
         std::swap(residue_tasks_time_time, tasks_time_);
+        std::swap(need_stop_tasks, tasks_stop_);
     }
 
+    ExecuteTasks(need_stop_tasks, ETimerResultType::TRT_TASK_STOP);
     for (auto it : residue_tasks_time_time)
     {
         assert(it.second->fun);
@@ -186,7 +181,7 @@ void Timer2::Work()
     }
 }
 
-void Timer2::GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks)
+void Timer2::GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks, std::list<std::shared_ptr<STimerParaInter>>& need_stop_tasks)
 {
     uint64_t now_time      = get_time_->GetNowTime();
     uint64_t deadline_time = now_time + (int64_t) lead_time_.load();
@@ -197,6 +192,8 @@ void Timer2::GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& n
         need_execute_tasks.emplace_back(std::move(it->second));
     }
     tasks_time_.erase(tasks_time_.begin(), end_it);
+
+    std::swap(need_stop_tasks, tasks_stop_);
 }
 
 void Timer2::ExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks, ETimerResultType result_type)
@@ -208,7 +205,7 @@ void Timer2::ExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_exec
         STimerTask* timerTask                                                    = it->timer_task;
         timerTask->timer_data_                                                   = nullptr;
         it->timer_task                                                           = nullptr;
-        fun(result_type, timerTask); 
+        fun(result_type, timerTask);
     }
 }
 

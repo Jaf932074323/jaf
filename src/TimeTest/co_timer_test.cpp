@@ -50,6 +50,4 @@ TEST(co_timer_test, co_timer)
     co_test_sleep.Wait();
 
     timer.Stop();
-
-    std::this_thread::sleep_for(std::chrono::seconds(5));
 }

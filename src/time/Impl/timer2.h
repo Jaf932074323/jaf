@@ -42,6 +42,8 @@ class Timer2 : public ITimer
 public:
     Timer2(std::shared_ptr<IGetTime> get_time = nullptr);
     virtual ~Timer2();
+    Timer2(const Timer2&)            = delete; // 拷贝较为复杂，目前先禁止
+    Timer2& operator=(const Timer2&) = delete; // 拷贝较为复杂，目前先禁止
 
 public:
     // 获取执行任务的提前量，每个任务可以提前执行的时间(毫秒)
@@ -97,6 +99,7 @@ private:
         STimerTask* timer_task = nullptr;
         std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // 定时执行函数
         STimerKey key;
+        Timer2* timer_ = nullptr; // 所属定时器
     };
 
     // 停止一个定时任务
@@ -109,7 +112,7 @@ public:
 
 private:
     // 执行达到时间的任务
-    virtual void GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks);
+    virtual void GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks, std::list<std::shared_ptr<STimerParaInter>>& need_stop_tasks);
     virtual void ExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks, ETimerResultType result_type);
 
 private:
@@ -125,6 +128,7 @@ private:
     std::condition_variable_any m_workCondition;                       // 定时用条件变量，用其超时特性来定时，在定时的过程中也能随时唤醒
     std::mutex tasks_mutex_;                                           // 定时任务锁
     std::map<STimerKey, std::shared_ptr<STimerParaInter>> tasks_time_; // 定时任务集合
+    std::list<std::shared_ptr<STimerParaInter>> tasks_stop_; // 主动停止的定时任务集合
 };
 
 } // namespace time
