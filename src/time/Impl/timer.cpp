@@ -83,11 +83,10 @@ bool Timer::StartTask(STimerTask* task)
 
     uint64_t task_id = next_task_id_++;
 
-    std::shared_ptr<STimerParaInter> inter_task = std::make_shared<STimerParaInter>(task, task->fun, time, this);
+    std::shared_ptr<STimerParaInter> inter_task = std::make_shared<STimerParaInter>(task, task->fun, time, this, true);
     task->timer_data_                           = inter_task.get();
     auto it                                     = tasks_time_.Insert(time, inter_task);
     inter_task->timer_node                      = it.GetNode();
-
     m_workCondition.notify_all();
 
     return true;
@@ -102,14 +101,17 @@ void Timer::StopTask(STimerTask* task)
     STimerParaInter* inter_task = (STimerParaInter*) task->timer_data_;
     assert(inter_task->timer_ == this);
     assert(inter_task->timer_task == task);
-    StopTask(inter_task->timer_node);
-}
 
-void Timer::StopTask(TimerTree::Node* timer_node)
-{
     std::unique_lock<std::mutex> ul(tasks_mutex_);
+    if (!inter_task->timing_flag_)
+    {
+        return;
+    }
+    inter_task->timing_flag_ = false;
+    TimerTree::Node* timer_node = inter_task->timer_node;
     tasks_stop_.push_back(timer_node->value_);
     tasks_time_.Erase(timer_node);
+    m_workCondition.notify_all();
 }
 
 void Timer::Work()
@@ -134,6 +136,12 @@ void Timer::Work()
         if (!run_flag_)
         {
             break;
+        }
+
+        if (!tasks_stop_.empty())
+        {
+            GainNeedExecuteTasks(need_execute_tasks, need_stop_tasks);
+            continue;
         }
 
         if (tasks_time_.Empty())
@@ -166,11 +174,13 @@ void Timer::Work()
     for (auto it = residue_tasks_time_time.begin(); it != residue_tasks_time_time.end(); ++it)
     {
         assert(it.GetValue()->fun);
+        assert(it.GetValue()->timer_task != nullptr);
+        assert(it.GetValue()->timer_task->timer_data_ != nullptr);
         std::function<void(ETimerResultType result_type, STimerTask * task)> fun = it.GetValue()->fun;
-        STimerTask* timerTask                                                    = it.GetValue()->timer_task;
-        timerTask->timer_data_                                                   = nullptr;
+        STimerTask* timer_task                                                   = it.GetValue()->timer_task;
+        timer_task->timer_data_                                                  = nullptr;
         it.GetValue()->timer_task                                                = nullptr;
-        fun(ETimerResultType::TRT_TIMER_STOP, timerTask);
+        fun(ETimerResultType::TRT_TIMER_STOP, timer_task);
     }
 }
 
@@ -182,6 +192,8 @@ void Timer::GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& ne
     auto end_it = tasks_time_.UpperBound(deadline_time);
     for (auto it = tasks_time_.begin(); it != end_it; ++it)
     {
+        assert(it.GetValue()->timing_flag_);
+        it.GetValue()->timing_flag_ = false;
         need_execute_tasks.emplace_back(std::move(it.GetValue()));
     }
     for (auto it = tasks_time_.begin(); it != end_it;)
@@ -197,11 +209,13 @@ void Timer::ExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execu
     for (auto it : need_execute_tasks)
     {
         assert(it->fun);
+        assert(it->timer_task != nullptr);
+        assert(it->timer_task->timer_data_ != nullptr);
         std::function<void(ETimerResultType result_type, STimerTask * task)> fun = it->fun;
-        STimerTask* timerTask                                                    = it->timer_task;
-        timerTask->timer_data_                                                   = nullptr;
+        STimerTask* timer_task                                                   = it->timer_task;
+        timer_task->timer_data_                                                  = nullptr;
         it->timer_task                                                           = nullptr;
-        fun(result_type, timerTask);
+        fun(result_type, timer_task);
     }
 }
 

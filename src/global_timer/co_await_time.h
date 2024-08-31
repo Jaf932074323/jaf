@@ -21,13 +21,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "Interface/i_timer.h"
+#include "global_timer.h"
+#include "time/interface/i_timer.h"
 #include "util/co_coroutine.h"
 #include "util/finally.h"
-#include "util/latch.h"
 #include <assert.h>
 #include <memory>
 #include <mutex>
+#include <iostream>
 
 namespace jaf
 {
@@ -37,12 +38,14 @@ namespace time
 class CoAwaitTime
 {
 public:
-    CoAwaitTime(std::shared_ptr<ITimer> timer)
-        : timer_(timer)
+    CoAwaitTime(std::shared_ptr<ITimer> timer = nullptr)
+        : timer_(timer == nullptr ? GlobalTimer::Timer() : timer)
     {
         assert(timer_ != nullptr);
     };
-    virtual ~CoAwaitTime(){};
+    virtual ~CoAwaitTime()
+    {
+    };
 
 public:
     void Start()
@@ -57,10 +60,6 @@ public:
 
     jaf::Coroutine<bool> Wait(uint64_t millisecond)
     {
-        if (wait_flag_)
-        {
-            awaitable_.Notify();
-        }
         assert(!wait_flag_); // 同时只能等待一个
         wait_flag_ = true;
 
@@ -86,7 +85,10 @@ private:
             timeout_task_.fun = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(result_type); };
         }
 
-        ~Awaitable() {}
+        ~Awaitable()
+        {
+            assert(!wait_flag_); // 当wait_flag_为ture，说明后续还会有定时器回调过来，会导致崩溃
+        }
 
         void SetTimeout(uint64_t timeout)
         {
@@ -101,19 +103,13 @@ private:
 
         void Stop()
         {
+            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+            run_flag_     = false;
+            if (!wait_flag_)
             {
-                std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                run_flag_ = false;
-                if (!wait_flag_)
-                {
-                    return;
-                }
-                wait_flag_    = false;
-                timeout_flag_ = false;
-                co_await_time_->timer_->StopTask(&timeout_task_);
+                return;
             }
-            time_latch_.Wait();
-            handle_.resume();
+            co_await_time_->timer_->StopTask(&timeout_task_);
         }
 
         bool await_ready() const
@@ -128,40 +124,29 @@ private:
             std::unique_lock<std::mutex> lock(wait_flag_mutex_);
             if (!run_flag_)
             {
-                timeout_flag_ = false;
+                wait_result_flag_ = false;
+                std::cout << "1 bool await_suspend(std::coroutine_handle<> co_handle)" << std::endl;
                 return false;
             }
             wait_flag_ = true;
 
-            time_latch_.Reset();
             co_await_time_->timer_->StartTask(&timeout_task_);
+            std::cout << "2 bool await_suspend(std::coroutine_handle<> co_handle)" << std::endl;
             return true;
         }
 
         bool await_resume() const
         {
-            return !timeout_flag_;
+            return wait_result_flag_;
         }
 
         void TimerCallback(ETimerResultType result_type)
         {
             {
-                FINALLY(time_latch_.CountDown(););
-
-                if (result_type != ETimerResultType::TRT_SUCCESS)
-                {
-                    return;
-                }
-
-                {
-                    std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                    if (!wait_flag_)
-                    {
-                        return;
-                    }
-                    wait_flag_    = false;
-                    timeout_flag_ = true;
-                }
+                std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+                assert(wait_flag_);
+                wait_flag_ = false;
+                wait_result_flag_ = run_flag_ && result_type == ETimerResultType::TRT_TASK_STOP;
             }
 
             handle_.resume();
@@ -169,19 +154,12 @@ private:
 
         void Notify()
         {
+            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+            if (!wait_flag_)
             {
-                std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                if (!wait_flag_)
-                {
-                    return;
-                }
-                wait_flag_    = false;
-                timeout_flag_ = false;
-                co_await_time_->timer_->StopTask(&timeout_task_);
+                return;
             }
-
-            time_latch_.Wait();
-            handle_.resume();
+            co_await_time_->timer_->StopTask(&timeout_task_);
         }
 
     private:
@@ -193,9 +171,8 @@ private:
         bool run_flag_  = false;
         bool wait_flag_ = false;
 
-        bool timeout_flag_ = true;
+        bool wait_result_flag_ = false;
         STimerTask timeout_task_;
-        Latch time_latch_{1};
     };
 
 private:

@@ -21,7 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
-#include "interface/i_timer.h"
+#include "global_timer.h"
+#include "time/interface/i_timer.h"
 #include "util/co_coroutine.h"
 #include <assert.h>
 #include <memory>
@@ -34,8 +35,8 @@ namespace time
 class CoTimer
 {
 public:
-    CoTimer(std::shared_ptr<ITimer> timer)
-        : timer_(timer)
+    CoTimer(std::shared_ptr<ITimer> timer = nullptr)
+        : timer_(timer == nullptr ? GlobalTimer::Timer() : timer)
     {
         assert(timer_ != nullptr);
     };
@@ -54,7 +55,7 @@ public:
                 : co_timer_(co_timer)
             {
                 timer_task_.interval = sleep_time;
-                timer_task_.fun = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(); };
+                timer_task_.fun      = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(); };
             }
 
             ~SleepAwaitable() {}

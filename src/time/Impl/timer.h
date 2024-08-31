@@ -80,13 +80,10 @@ private:
         STimerTask* timer_task = nullptr;
         std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // 定时执行函数
         uint64_t time;                                                           // 定时任务的执行时间点
-        Timer* timer_ = nullptr; // 所属定时器
+        Timer* timer_               = nullptr;                                   // 所属定时器
+        bool timing_flag_           = false;                                     // 当前是否处于正在定时状态
         TimerTree::Node* timer_node = nullptr;                                   // 定时器任务的树节点
     };
-
-    // 停止一个定时任务
-    // task_id 要移除的定时任务的Id
-    virtual void StopTask(TimerTree::Node* timer_node);
 
 public:
     // 定时器工作线程执行函数
@@ -107,9 +104,9 @@ private:
     std::atomic<uint64_t> lead_time_ = 5; // 执行任务的提前量，每个任务可以提前lead_time_毫秒执行
 
     std::thread run_thread_;
-    std::condition_variable_any m_workCondition; // 定时用条件变量，用其超时特性来定时，在定时的过程中也能随时唤醒
-    std::mutex tasks_mutex_;                     // 定时任务锁
-    TimerTree tasks_time_;                       // 定时任务集合 key为定时任务的执行时间点
+    std::condition_variable_any m_workCondition;             // 定时用条件变量，用其超时特性来定时，在定时的过程中也能随时唤醒
+    std::mutex tasks_mutex_;                                 // 定时任务锁
+    TimerTree tasks_time_;                                   // 定时任务集合 key为定时任务的执行时间点
     std::list<std::shared_ptr<STimerParaInter>> tasks_stop_; // 主动停止的定时任务集合
 };
 

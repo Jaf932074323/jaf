@@ -57,7 +57,7 @@ struct PromiseBaseWithWait
                 return false;
             }
 
-            auto await_suspend(std::coroutine_handle<PromiseTypeWithWait<T>> co_handle) noexcept
+            std::coroutine_handle<> await_suspend(std::coroutine_handle<PromiseTypeWithWait<T>> co_handle) noexcept
             {
                 auto parent = co_handle.promise().parent_handle;
                 return parent ? parent : std::noop_coroutine();

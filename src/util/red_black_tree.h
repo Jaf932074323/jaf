@@ -48,6 +48,9 @@ public:
 
     struct Node
     {
+        ~Node()
+        {
+        }
         Key key_;
         Value value_;
         Color color_;

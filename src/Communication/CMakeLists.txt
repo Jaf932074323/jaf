@@ -16,6 +16,7 @@ add_library(
 
 target_link_libraries(${PROJECT_NAME}
     Log
+    global_timer
 )
 
 INCLUDE_DIRECTORIES("./")

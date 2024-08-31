@@ -56,7 +56,7 @@ struct PromiseBase
                 return false;
             }
 
-            auto await_suspend(std::coroutine_handle<PromiseType<T>> co_handle) noexcept
+            std::coroutine_handle<> await_suspend(std::coroutine_handle<PromiseType<T>> co_handle) noexcept
             {
                 auto parent = co_handle.promise().parent_handle;
                 return parent ? parent : std::noop_coroutine();
@@ -136,7 +136,8 @@ struct Coroutine
 
     void await_suspend(std::coroutine_handle<> co_handle)
     {
-        handle.promise().parent_handle = co_handle;
+        promise_type& promise = handle.promise();
+        promise.parent_handle = co_handle;
     }
 
     decltype(auto) await_resume()

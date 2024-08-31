@@ -144,6 +144,12 @@ void Timer2::Work()
             break;
         }
 
+        if (!tasks_stop_.empty())
+        {
+            GainNeedExecuteTasks(need_execute_tasks, need_stop_tasks);
+            continue;
+        }
+
         if (tasks_time_.empty())
         {
             m_workCondition.wait(ul);

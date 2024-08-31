@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
-#include "impl/co_await_time.h"
+#include "global_timer/co_await_time.h"
 #include "interface/communication/comm_struct.h"
 #include "interface/communication/i_channel.h"
 #include <functional>
