@@ -28,7 +28,6 @@
 #include <assert.h>
 #include <memory>
 #include <mutex>
-#include <iostream>
 
 namespace jaf
 {
@@ -43,9 +42,7 @@ public:
     {
         assert(timer_ != nullptr);
     };
-    virtual ~CoAwaitTime()
-    {
-    };
+    virtual ~CoAwaitTime(){};
 
 public:
     void Start()
@@ -104,7 +101,7 @@ private:
         void Stop()
         {
             std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-            run_flag_     = false;
+            run_flag_ = false;
             if (!wait_flag_)
             {
                 return;
@@ -119,19 +116,17 @@ private:
 
         bool await_suspend(std::coroutine_handle<> co_handle)
         {
-            handle_ = co_handle;
-
             std::unique_lock<std::mutex> lock(wait_flag_mutex_);
             if (!run_flag_)
             {
                 wait_result_flag_ = false;
-                std::cout << "1 bool await_suspend(std::coroutine_handle<> co_handle)" << std::endl;
                 return false;
             }
             wait_flag_ = true;
 
+            handle_ = co_handle;
+
             co_await_time_->timer_->StartTask(&timeout_task_);
-            std::cout << "2 bool await_suspend(std::coroutine_handle<> co_handle)" << std::endl;
             return true;
         }
 
@@ -145,7 +140,7 @@ private:
             {
                 std::unique_lock<std::mutex> lock(wait_flag_mutex_);
                 assert(wait_flag_);
-                wait_flag_ = false;
+                wait_flag_        = false;
                 wait_result_flag_ = run_flag_ && result_type == ETimerResultType::TRT_TASK_STOP;
             }
 

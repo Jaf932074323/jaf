@@ -23,6 +23,7 @@
 // 2024-6-23 ½ª°²¸»
 #include <coroutine>
 #include <exception>
+#include <mutex>
 
 namespace jaf
 {
@@ -36,6 +37,8 @@ template <typename T>
 struct PromiseBase
 {
     std::coroutine_handle<> parent_handle;
+    bool final_flag_ = false;
+    std::mutex parent_handle_mutex;
 
     auto get_return_object()
     {
@@ -58,8 +61,10 @@ struct PromiseBase
 
             std::coroutine_handle<> await_suspend(std::coroutine_handle<PromiseType<T>> co_handle) noexcept
             {
-                auto parent = co_handle.promise().parent_handle;
-                return parent ? parent : std::noop_coroutine();
+                PromiseType<T>& promise = co_handle.promise();
+                std::unique_lock<std::mutex> lock(promise.parent_handle_mutex);
+                promise.final_flag_             = true;
+                return promise.parent_handle ? promise.parent_handle : std::noop_coroutine();
             }
 
             void await_resume() noexcept
@@ -131,13 +136,19 @@ struct Coroutine
 
     bool await_ready()
     {
-        return handle.done();
+        return false;
     }
 
-    void await_suspend(std::coroutine_handle<> co_handle)
+    bool await_suspend(std::coroutine_handle<> co_handle)
     {
         promise_type& promise = handle.promise();
+        std::unique_lock<std::mutex> lock(promise.parent_handle_mutex);
+        if (promise.final_flag_)
+        {
+            return false;
+        }
         promise.parent_handle = co_handle;
+        return true;
     }
 
     decltype(auto) await_resume()
