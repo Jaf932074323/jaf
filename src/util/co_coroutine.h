@@ -29,12 +29,29 @@ namespace jaf
 {
 
 template <typename T>
-struct Coroutine;
-template <typename T>
-struct PromiseType;
+struct PromiseReturn
+{
+    T value;
+
+    void return_value(T v)
+    {
+        value = std::move(v);
+    }
+};
+
+template <>
+struct PromiseReturn<void>
+{
+    void return_void()
+    {
+    }
+};
 
 template <typename T>
-struct PromiseBase
+struct Coroutine;
+
+template <typename T>
+struct PromiseType: public PromiseReturn<T>
 {
     std::coroutine_handle<> parent_handle;
     bool final_flag_ = false;
@@ -78,27 +95,6 @@ struct PromiseBase
     void unhandled_exception()
     {
         std::terminate();
-    }
-
-
-};
-
-template <typename T>
-struct PromiseType : public PromiseBase<T>
-{
-    T value;
-
-    void return_value(T v)
-    {
-        value = std::move(v);
-    }
-};
-
-template <>
-struct PromiseType<void> : public PromiseBase<void>
-{
-    void return_void()
-    {
     }
 };
 

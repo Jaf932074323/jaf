@@ -91,7 +91,7 @@ private:
     }
 
 private:
-    const int64_t deal_time = 1000;
+    const int64_t deal_time = 10000;
     jaf::MultiThreadsExec multi_thread_exec_{10};
     std::vector<int64_t> test_numbers_; // 测试数组，用于检查是否有重复和遗漏
     std::thread::id main_thread_id_;    // 主线程id，用于检查是否真的切换到子线程执行

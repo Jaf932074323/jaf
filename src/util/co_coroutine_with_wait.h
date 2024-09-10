@@ -30,16 +30,37 @@ namespace jaf
 
 template <typename T>
 struct CoroutineWithWait;
-template <typename T>
-struct PromiseTypeWithWait;
 
 template <typename T>
-struct PromiseBaseWithWait
+struct PromiseReturnWithWait
+{
+    void return_value(T v)
+    {
+        value = std::move(v);
+        latch_.count_down();
+    }
+
+    T value;
+    std::latch latch_{1};
+};
+
+template <>
+struct PromiseReturnWithWait<void>
+{
+    void return_void()
+    {
+        latch_.count_down();
+    }
+
+    std::latch latch_{1};
+};
+
+template <typename T>
+struct PromiseTypeWithWait : public PromiseReturnWithWait<T>
 {
     std::coroutine_handle<> parent_handle;
     bool final_flag_ = false;
     std::mutex parent_handle_mutex;
-    std::latch latch_{1};
 
     auto get_return_object()
     {
@@ -64,7 +85,7 @@ struct PromiseBaseWithWait
             {
                 PromiseTypeWithWait<T>& promise = co_handle.promise();
                 std::unique_lock<std::mutex> lock(promise.parent_handle_mutex);
-                promise.final_flag_             = true;
+                promise.final_flag_ = true;
                 return promise.parent_handle ? promise.parent_handle : std::noop_coroutine();
             }
 
@@ -84,28 +105,7 @@ struct PromiseBaseWithWait
     // ×èÈûµÈ´ý
     void Wait()
     {
-        latch_.wait();
-    }
-};
-
-template <typename T>
-struct PromiseTypeWithWait : public PromiseBaseWithWait<T>
-{
-    void return_value(T v)
-    {
-        value = std::move(v);
-        PromiseBaseWithWait<T>::latch_.count_down();
-    }
-
-    T value;
-};
-
-template <>
-struct PromiseTypeWithWait<void> : public PromiseBaseWithWait<void>
-{
-    void return_void()
-    {
-        PromiseBaseWithWait<void>::latch_.count_down();
+        PromiseReturnWithWait<T>::latch_.wait();
     }
 };
 
