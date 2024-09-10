@@ -20,22 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
-#include "log_head.h"
 #include <chrono>
 #include <iostream>
 #include <string>
 #include <thread>
-#include "test_single_thread_exec.h"
-#include "test_multi_threads_exec.h"
+#include "gtest/gtest.h"
 
-int main()
+int main(int argc, char** argv)
 {
-    std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
-    std::shared_ptr<jaf::log::ILogger> logger           = std::make_shared<jaf::log::Logger>(appender);
-    jaf::log::CommonLogger::SetDefaultLogger(logger);
-
-    //test_single_thread_exec();
-    test_multi_threads_exec();
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 
     return 0;
 }

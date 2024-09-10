@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-23 姜安富
+#include "co_await.h"
 #include "threads_exec.h"
 #include <thread>
 #include <vector>
-#include "co_await.h"
 
 namespace jaf
 {
@@ -41,55 +41,56 @@ public:
     {
     }
 
-    jaf::Coroutine<void> Run()
+    void Start()
     {
-        assert(!runing_); // 不能重复调用run
+        if (runing_)
+        {
+            return;
+        }
         runing_ = true;
-        wait_stop_.Start();
+
         threads_exec_.Start();
 
-        std::vector<std::thread> threads;
-        threads.reserve(thread_count_);
+        threads_.reserve(thread_count_);
 
         auto fun_thread_run = [this]() {
             threads_exec_.Run();
         };
         for (size_t i = 0; i < thread_count_; ++i)
         {
-            threads.push_back(std::thread(fun_thread_run));
+            threads_.push_back(std::thread(fun_thread_run));
         }
-
-        co_await wait_stop_.Wait();
-
-        threads_exec_.Stop();
-        for (auto& thread : threads)
-        {
-            thread.join();
-        }
-
-        co_return;
     }
 
     void Stop()
     {
-        wait_stop_.Stop();
+        if (!runing_)
+        {
+            return;
+        }
+        runing_ = false;
+
+        threads_exec_.Stop();
+        for (auto& thread : threads_)
+        {
+            thread.join();
+        }
     }
 
-public:
-    // 切换线程
-    jaf::Coroutine<void> Switch()
+    // 获取切换线程的等待对象
+    auto Switch()
     {
         assert(runing_);
-        co_await threads_exec_.Switch();
+        return threads_exec_.Switch();
     }
 
 private:
     bool runing_ = false;
-    CoAwait wait_stop_;
 
     ThreadsExec threads_exec_;
 
     size_t thread_count_;
+    std::vector<std::thread> threads_;
 };
 
 } // namespace jaf

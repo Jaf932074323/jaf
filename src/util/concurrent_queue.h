@@ -33,7 +33,7 @@ public:
 	void Push(const Data& data)
 	{
 		{
-			std::lock_guard<std::mutex> lg(data_queue_mutex_);
+			std::unique_lock<std::mutex> lg(data_queue_mutex_);
 			data_queue_.push(data);
 		}
 		data_queue_cv_.notify_one();
@@ -41,13 +41,13 @@ public:
 
 	bool Empty() const
 	{
-		std::lock_guard<std::mutex> lg(data_queue_mutex_);
+		std::unique_lock<std::mutex> lg(data_queue_mutex_);
 		return data_queue_.empty();
 	}
 
 	bool TryPop(Data& data)
 	{
-		std::lock_guard<std::mutex> lg(data_queue_mutex_);
+		std::unique_lock<std::mutex> lg(data_queue_mutex_);
 		if (data_queue_.empty())
 		{
 			return false;
@@ -80,7 +80,7 @@ public:
 	void QuitAllWait()
 	{
 		{
-			std::lock_guard<std::mutex> lg(data_queue_mutex_);
+			std::unique_lock<std::mutex> lg(data_queue_mutex_);
 			quit_wait_ = true;
 		}
 		data_queue_cv_.notify_all();
@@ -88,13 +88,13 @@ public:
 
 	void Reset()
 	{
-		std::lock_guard<std::mutex> lg(data_queue_mutex_);
+		std::unique_lock<std::mutex> lg(data_queue_mutex_);
 		quit_wait_ = false;
 	}
 
 	void Clear()
 	{
-		std::lock_guard<std::mutex> lg(data_queue_mutex_);
+		std::unique_lock<std::mutex> lg(data_queue_mutex_);
 		quit_wait_ = false;
 		swap(std::queue<Data>(), data_queue_); // Çå¿Õ
 	}

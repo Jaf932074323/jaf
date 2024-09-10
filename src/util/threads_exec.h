@@ -59,12 +59,56 @@ public:
         task_queue_.QuitAllWait();
     }
 
+
 public:
-    // 切换线程
-    jaf::Coroutine<void> Switch()
+    // 切换线程的等待对象
+    class SwitchAwaitable
+    {
+        friend ThreadsExec;
+        SwitchAwaitable(ThreadsExec* simple_thread_exec)
+            : simple_thread_exec_(simple_thread_exec)
+        {
+            assert(simple_thread_exec != nullptr);
+        }
+    public:
+        ~SwitchAwaitable() {}
+
+        // 禁止拷贝
+        SwitchAwaitable(const SwitchAwaitable &) = delete;
+        SwitchAwaitable &operator=(const SwitchAwaitable &) = delete;
+
+    public:
+        bool await_ready()
+        {
+            return false;
+        }
+        void await_suspend(std::coroutine_handle<> co_handle)
+        {
+            handle_ = co_handle;
+
+            std::function<void(void)> callback = std::bind(&SwitchAwaitable::TaskCallback, this);
+            simple_thread_exec_->task_queue_.Push(callback);
+        }
+        void await_resume() const
+        {
+            return;
+        }
+        void TaskCallback()
+        {
+            handle_.resume();
+        }
+
+    private:
+        ThreadsExec* simple_thread_exec_;
+        std::coroutine_handle<> handle_;
+    };
+
+public:
+    // 获取切换线程的等待对象
+    SwitchAwaitable Switch()
     {
         assert(!stop_);
-        co_await SwitchAwaitable(this);
+        return SwitchAwaitable(this);
     }
 
 private:
@@ -88,43 +132,6 @@ private:
             task();
         }
     }
-
-private:
-    class SwitchAwaitable
-    {
-    public:
-        SwitchAwaitable(ThreadsExec* simple_thread_exec)
-            : simple_thread_exec_(simple_thread_exec)
-        {
-        }
-        ~SwitchAwaitable() {}
-
-        bool await_ready()
-        {
-            return false;
-        }
-        bool await_suspend(std::coroutine_handle<> co_handle)
-        {
-            handle_ = co_handle;
-
-            std::function<void(void)> callback = std::bind(&SwitchAwaitable::TaskCallback, this);
-            simple_thread_exec_->task_queue_.Push(callback);
-
-            return true;
-        }
-        void await_resume() const
-        {
-            return;
-        }
-        void TaskCallback()
-        {
-            handle_.resume();
-        }
-
-    private:
-        ThreadsExec* simple_thread_exec_;
-        std::coroutine_handle<> handle_;
-    };
 
 private:
     bool stop_ = false;

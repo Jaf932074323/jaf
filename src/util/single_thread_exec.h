@@ -21,9 +21,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-23 姜安富
+#include "co_await.h"
 #include "threads_exec.h"
 #include <thread>
-#include "co_await.h"
 
 namespace jaf
 {
@@ -39,45 +39,56 @@ public:
     {
     }
 
-    jaf::Coroutine<void> Run()
+    // 测试时使用，用于获取执行线程的线程id
+    std::thread::id GetThreadId()
     {
-        assert(!runing_); // 不能重复调用run
-        runing_ = true;
-        wait_stop_.Start();
-        threads_exec_.Start();
+        return thread_exec_id_;
+    }
 
+    void Start()
+    {
+        if (runing_)
+        {
+            return;
+        }
+        runing_ = true;
+
+        threads_exec_.Start();
 
         auto fun_thread_run = [this]() {
             threads_exec_.Run();
             };
-        std::thread work_thread(fun_thread_run);
-
-        co_await wait_stop_.Wait();
-
-        threads_exec_.Stop();
-        work_thread.join();
-
-        co_return;
+        work_thread_ = std::thread(fun_thread_run);
+        thread_exec_id_ = work_thread_.get_id();
     }
-
     void Stop()
     {
-        wait_stop_.Stop();
+        if (!runing_)
+        {
+            return;
+        }
+        runing_ = false;
+
+        threads_exec_.Stop();
+        work_thread_.join();
     }
 
 public:
-    // 切换线程
-    jaf::Coroutine<void> Switch()
+    // 获取切换线程的等待对象
+    auto Switch()
     {
         assert(runing_);
-        co_await threads_exec_.Switch();
+        return threads_exec_.Switch();
     }
 
 private:
     bool runing_ = false;
-    CoAwait wait_stop_;
 
     ThreadsExec threads_exec_;
+
+    std::thread work_thread_;
+    std::thread::id thread_exec_id_;
+
 };
 
 } // namespace jaf

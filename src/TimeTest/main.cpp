@@ -21,16 +21,16 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include "global_timer/co_await_time.h"
+#include "global_timer/global_timer.h"
 #include "log_head.h"
 #include "time_head.h"
+#include "util/finally.h"
 #include "gtest/gtest.h"
 #include <chrono>
 #include <format>
 #include <iostream>
 #include <string>
 #include <thread>
-#include "global_timer/global_timer.h"
-#include "util/finally.h"
 
 int main(int argc, char** argv)
 {

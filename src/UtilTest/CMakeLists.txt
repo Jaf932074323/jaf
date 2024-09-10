@@ -13,12 +13,10 @@ ADD_EXECUTABLE(
 )
 
 target_link_libraries(${PROJECT_NAME}
-    Log
+    gtest
 )
 
 INCLUDE_DIRECTORIES("./")
 INCLUDE_DIRECTORIES("../")
 INCLUDE_DIRECTORIES("../../include")
 INCLUDE_DIRECTORIES("../../3rdparty")
-INCLUDE_DIRECTORIES("../../3rdparty")
-INCLUDE_DIRECTORIES("../Log")

@@ -20,75 +20,90 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-20 姜安富
-#include "test_single_thread_exec.h"
-#include "log_head.h"
 #include "util/co_coroutine.h"
+#include "util/co_coroutine_with_wait.h"
 #include "util/single_thread_exec.h"
-#include <format>
-#include <iostream>
-#include <thread>
+#include "gtest/gtest.h"
+#include <list>
 
 class TestSingleThreadExec
 {
 public:
-    void Test()
+    TestSingleThreadExec()
+    {
+        simple_thread_exec_.Start();
+    }
+    ~TestSingleThreadExec()
+    {
+        simple_thread_exec_.Stop();
+
+    }
+public:
+    jaf::CoroutineWithWait<void> Test()
     {
         // 准备
-        std::thread simple_thread_exec_thread(
-            [this]() {
-                simple_thread_exec_.Run();
-            });
         latch.Reset();
+        number_                = 0;
+        simple_thread_exec_id_ = simple_thread_exec_.GetThreadId();
 
         // 启动多个线程
-        number_ = 0;
         for (int64_t i = 0; i < thread_number_; ++i)
         {
-            std::thread run_thread([this]() { ThreadRun(); });
-            run_thread.detach();
+            std::thread run_thread([this, i]() { ThreadRun(i); });
+            run_thread.join();
         }
 
         // 等待多线程执行结束
         latch.Wait();
 
-        // 收尾
-        simple_thread_exec_.Stop();
-        simple_thread_exec_thread.join();
-
-        LOG_INFO() << std::format("预期: {}, 结果: {}, 符合预期 = {}", thread_number_ * thread_add_time, number_, number_ == thread_number_ * thread_add_time);
-    }
-
-private:
-    jaf::Coroutine<void> ThreadRun()
-    {
-        co_await Add();
-        latch.CountDown();
-    }
-
-    jaf::Coroutine<void> Add()
-    {
-        co_await simple_thread_exec_.Switch(); // 切换到单线程执行
-
-        for (int64_t i = 0; i < thread_add_time; ++i)
-        {
-            number_ = number_ + 1; // 已经切换到单个线程了，不需要加锁
-        }
+        EXPECT_EQ(number_, thread_number_ * thread_add_time_);
 
         co_return;
     }
 
 private:
-    const int64_t thread_number_  = 100;
-    const int64_t thread_add_time = 1000000;
+    jaf::Coroutine<void> ThreadRun(int64_t thread_number)
+    {
+        std::vector<jaf::Coroutine<void>> vec_add;
+        vec_add.reserve(thread_add_time_);
+
+        for (int64_t i = 0; i < thread_add_time_; ++i)
+        {
+            vec_add.push_back(Add(thread_number, i));
+        }
+
+        for (int64_t i = 0; i < thread_add_time_; ++i)
+        {
+            co_await vec_add[i];
+        }
+
+        latch.CountDown();
+    }
+
+    jaf::Coroutine<void> Add(int64_t thread_number, int64_t thread_add_time)
+    {
+        auto co_switch = simple_thread_exec_.Switch();
+        co_await co_switch; // 切换到单线程执行
+
+        EXPECT_EQ(simple_thread_exec_id_, std::this_thread::get_id());
+
+        number_ = number_ + 1; // 已经切换到单个线程了，不需要加锁
+    }
+
+private:
+    const int64_t thread_number_  = 10;
+    const int64_t thread_add_time_ = 10000;
 
     int64_t number_ = 0;
     jaf::Latch latch{thread_number_};
     jaf::SimpleThreadExec simple_thread_exec_;
+
+    std::thread::id simple_thread_exec_id_;
 };
 
-void test_single_thread_exec()
+TEST(single_thread_exec, usual)
 {
     TestSingleThreadExec test;
-    test.Test();
-    return;
+    auto co_test = test.Test();
+    co_test.Wait();
 }
