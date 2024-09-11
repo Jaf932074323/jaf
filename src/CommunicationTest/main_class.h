@@ -27,7 +27,7 @@
 #include "Interface/communication/i_tcp_client.h"
 #include "Interface/communication/i_udp.h"
 #include "Interface/communication/i_serial_port.h"
-#include "util/co_await.h"
+#include "util/co_wait_notice.h"
 #include "util/co_coroutine.h"
 #include "util/latch.h"
 #include <memory>
@@ -56,5 +56,5 @@ private:
 
     jaf::Latch wait_finish_latch_{1};
 
-    jaf::CoAwait await_stop_;
+    jaf::CoWaitNotice wait_stop_;
 };

@@ -41,7 +41,7 @@ jaf::Coroutine<void> Main::Run()
 
     Init();
 
-    await_stop_.Start();
+    wait_stop_.Start();
 
     jaf::Coroutine<void> iocp_run = iocp_->Run();
     coroutines.push_back(server_->Run());
@@ -49,7 +49,7 @@ jaf::Coroutine<void> Main::Run()
     coroutines.push_back(udp_->Run());
     coroutines.push_back(serial_port_->Run());
 
-    co_await await_stop_.Wait();
+    co_await wait_stop_.Wait();
 
     server_->Stop();
     client_->Stop();
@@ -67,7 +67,7 @@ jaf::Coroutine<void> Main::Run()
 
 void Main::Stop()
 {
-    await_stop_.Stop();
+    wait_stop_.Stop();
 }
 
 void Main::WaitFinish()

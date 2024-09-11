@@ -53,7 +53,7 @@ Iocp::Iocp(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<jaf::time::
 
 Iocp::~Iocp()
 {
-    await_work_thread_finish_.Stop();
+    wait_work_thread_finish_.Stop();
 }
 
 jaf::Coroutine<void> Iocp::Init()
@@ -69,14 +69,14 @@ jaf::Coroutine<void> Iocp::Run()
     }
     run_flag_ = true;
 
-    await_stop_.Start();
-    await_work_thread_finish_.Start(work_thread_count_);
+    wait_stop_.Start();
+    wait_work_thread_finish_.Start(work_thread_count_);
 
     m_completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 
     CreateWorkThread();
 
-    co_await await_stop_.Wait();
+    co_await wait_stop_.Wait();
 
     run_flag_ = false;
 
@@ -84,7 +84,7 @@ jaf::Coroutine<void> Iocp::Run()
     {
         PostQueuedCompletionStatus(m_completionPort, 0, (DWORD) NULL, NULL);
     }
-    co_await await_work_thread_finish_.Wait();
+    co_await wait_work_thread_finish_.Wait();
 
     CloseHandle(m_completionPort);
     m_completionPort = nullptr;
@@ -94,7 +94,7 @@ jaf::Coroutine<void> Iocp::Run()
 
 void Iocp::Stop()
 {
-    await_stop_.Stop();
+    wait_stop_.Stop();
 }
 
 std::shared_ptr<ITcpServer> Iocp::CreateTcpServer()
@@ -135,7 +135,7 @@ void Iocp::CreateWorkThread()
 
 void Iocp::WorkThreadRun()
 {
-    FINALLY(await_work_thread_finish_.Notify(););
+    FINALLY(wait_work_thread_finish_.Notify(););
 
     ULONG_PTR completionKey = 0;
     IOCP_DATA* pPerIoData   = nullptr;

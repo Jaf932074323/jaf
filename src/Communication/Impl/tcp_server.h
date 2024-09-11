@@ -26,7 +26,7 @@
 #include "interface/communication/i_deal_pack.h"
 #include "interface/communication/i_unpack.h"
 #include "iocp_head.h"
-#include "util/co_await.h"
+#include "util/co_wait_notice.h"
 #include "util/co_coroutine.h"
 #include <functional>
 #include <map>
@@ -83,7 +83,7 @@ private:
 
 private:
     bool run_flag_ = false;
-    CoAwait await_stop_;
+    CoWaitNotice wait_stop_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 

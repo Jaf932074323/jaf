@@ -124,7 +124,7 @@ jaf::Coroutine<void> TcpClient::Run()
     }
     run_flag_ = true;
 
-    await_stop_.Start();
+    wait_stop_.Start();
     completion_handle_ = get_completion_port_->Get();
     await_time_.Start();
 
@@ -132,7 +132,7 @@ jaf::Coroutine<void> TcpClient::Run()
 
     jaf::Coroutine<void> execute = Execute();
 
-    co_await await_stop_.Wait();
+    co_await wait_stop_.Wait();
 
     run_flag_ = false;
 
@@ -153,7 +153,7 @@ jaf::Coroutine<void> TcpClient::Run()
 
 void TcpClient::Stop()
 {
-    await_stop_.Stop();
+    wait_stop_.Stop();
 }
 
 void TcpClient::Init(void)

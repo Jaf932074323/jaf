@@ -28,8 +28,8 @@
 #include "interface/communication/comm_struct.h"
 #include "iocp_head.h"
 #include "time_head.h"
-#include "util/co_await.h"
-#include "util/co_await_times.h"
+#include "util/co_wait_notice.h"
+#include "util/co_wait_notices.h"
 #include "util/co_coroutine.h"
 #include "util/i_thread_pool.h"
 #include <list>
@@ -99,9 +99,9 @@ private:
     std::shared_ptr<IThreadPool> thread_pool_;
     std::shared_ptr<jaf::time::ITimer> timer_;
 
-    CoAwaitTimes await_work_thread_finish_; // 等待工作线程结束
+    CoWaitNotices wait_work_thread_finish_; // 等待工作线程结束
 
-    CoAwait await_stop_;
+    CoWaitNotice wait_stop_;
 };
 
 } // namespace comm

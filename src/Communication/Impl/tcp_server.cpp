@@ -90,7 +90,7 @@ jaf::Coroutine<void> TcpServer::Run()
     }
     run_flag_ = true;
 
-    await_stop_.Start();
+    wait_stop_.Start();
 
     completion_handle_ = get_completion_port_->Get();
     Init();
@@ -99,7 +99,7 @@ jaf::Coroutine<void> TcpServer::Run()
         Accept();
     }
 
-    co_await await_stop_.Wait();
+    co_await wait_stop_.Wait();
 
     run_flag_ = false;
 
@@ -120,7 +120,7 @@ jaf::Coroutine<void> TcpServer::Run()
 
 void TcpServer::Stop()
 {
-    await_stop_.Stop();
+    wait_stop_.Stop();
 }
 
 void TcpServer::Init(void)
