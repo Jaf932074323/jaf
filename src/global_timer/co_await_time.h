@@ -26,8 +26,10 @@
 #include "util/co_coroutine.h"
 #include "util/finally.h"
 #include <assert.h>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <set>
 
 namespace jaf
 {
@@ -42,60 +44,76 @@ public:
     {
         assert(timer_ != nullptr);
     };
-    virtual ~CoAwaitTime(){};
+    virtual ~CoAwaitTime()
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        cond_var_.wait(lock, [this] { return awaitables_.empty(); });
+    };
 
 public:
     void Start()
     {
-        awaitable_.Start();
+        std::unique_lock<std::mutex> lock(mutex_);
+        run_flag_ = true;
     }
 
     void Stop()
     {
-        awaitable_.Stop();
+        std::unique_lock<std::mutex> lock(mutex_);
+        run_flag_ = false;
+
+        for (Awaitable* awaitable : awaitables_)
+        {
+            awaitable->Stop();
+        }
     }
 
     jaf::Coroutine<bool> Wait(uint64_t millisecond)
     {
-        assert(!wait_flag_); // 同时只能等待一个
-        wait_flag_ = true;
+        Awaitable awaitable(this, millisecond);
 
-        awaitable_.SetTimeout(millisecond);
-        bool result = co_await awaitable_;
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+            if (!run_flag_)
+            {
+                co_return false;
+            }
 
-        wait_flag_ = false;
+            awaitables_.insert(&awaitable);
+        }
+
+        bool result = co_await awaitable;
+
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+            awaitables_.erase(&awaitable);
+            cond_var_.notify_one();
+        }
 
         co_return result;
     }
 
     void Notify()
     {
-        awaitable_.Notify();
+        std::unique_lock<std::mutex> lock(mutex_);
+        for (Awaitable* awaitable : awaitables_)
+        {
+            awaitable->Notify();
+        }
     }
 
 private:
     struct Awaitable
     {
-        Awaitable(CoAwaitTime* co_await_time)
+        Awaitable(CoAwaitTime* co_await_time, uint64_t millisecond)
             : co_await_time_(co_await_time)
+            , timeout_task_{.fun = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(result_type); }, .interval = millisecond}
         {
-            timeout_task_.fun = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(result_type); };
         }
 
         ~Awaitable()
         {
             assert(!wait_flag_); // 当wait_flag_为ture，说明后续还会有定时器回调过来，会导致崩溃
-        }
-
-        void SetTimeout(uint64_t timeout)
-        {
-            timeout_task_.interval = timeout;
-        }
-
-        void Start()
-        {
-            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-            run_flag_ = true;
         }
 
         void Stop()
@@ -161,9 +179,8 @@ private:
         CoAwaitTime* co_await_time_;
         std::coroutine_handle<> handle_;
 
-
         std::mutex wait_flag_mutex_;
-        bool run_flag_  = false;
+        bool run_flag_  = true;
         bool wait_flag_ = false;
 
         bool wait_result_flag_ = false;
@@ -172,9 +189,11 @@ private:
 
 private:
     std::shared_ptr<ITimer> timer_;
-    Awaitable awaitable_{this};
 
-    bool wait_flag_ = false;
+    std::mutex mutex_;
+    std::condition_variable cond_var_;
+    std::set<Awaitable*> awaitables_;
+    bool run_flag_ = false;
 };
 
 } // namespace time
