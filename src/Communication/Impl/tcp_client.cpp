@@ -190,7 +190,8 @@ jaf::Coroutine<void> TcpClient::Execute()
                 remote_ip_, remote_port_,
                 result.error_info_);
 
-            co_await await_time_.Wait(reconnect_wait_time_);
+            jaf::time::CoAwaitTime::WaitHandle wait_handle;
+            co_await await_time_.Wait(wait_handle, reconnect_wait_time_);
             continue;
         }
 

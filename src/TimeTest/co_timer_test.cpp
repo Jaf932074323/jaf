@@ -79,7 +79,8 @@ TEST(co_timer_test, co_await_time_wait)
 
         uint64_t sleep_time = 100;
         stopwatch.Reset();
-        bool success          = co_await await_time.Wait(sleep_time);
+        jaf::time::CoAwaitTime::WaitHandle wait_handle;
+        bool success          = co_await await_time.Wait(wait_handle, sleep_time);
         uint64_t elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(stopwatch.Time()).count();
         EXPECT_FALSE(success);
         EXPECT_TRUE(elapsed_time >= sleep_time - 20) << std::format("elapsed_time:{}, sleep_time {}", elapsed_time, sleep_time);
@@ -101,15 +102,17 @@ TEST(co_timer_test, co_await_time_notify)
 
         uint64_t sleep_time = 100;
 
+        jaf::time::CoAwaitTime::WaitHandle wait_handle;
+
         jaf::time::STimerTask task;
         task.fun = [&](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) {
-            await_time.Notify();
+            await_time.Notify(wait_handle);
         };
         task.interval = sleep_time;
         stopwatch.Reset();
 
         jaf::time::GlobalTimer::Timer()->StartTask(&task);
-        bool success          = co_await await_time.Wait(1000);
+        bool success          = co_await await_time.Wait(wait_handle, 1000);
         uint64_t elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(stopwatch.Time()).count();
 
         EXPECT_TRUE(success);
@@ -131,6 +134,8 @@ TEST(co_timer_test, co_await_time_stop)
 
         uint64_t sleep_time = 100;
 
+        jaf::time::CoAwaitTime::WaitHandle wait_handle;
+
         jaf::time::STimerTask task;
         task.fun = [&](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) {
             await_time.Stop();
@@ -140,7 +145,7 @@ TEST(co_timer_test, co_await_time_stop)
 
         await_time.Start();
         jaf::time::GlobalTimer::Timer()->StartTask(&task);
-        bool success          = co_await await_time.Wait(500);
+        bool success          = co_await await_time.Wait(wait_handle, 500);
         uint64_t elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(stopwatch.Time()).count();
 
         EXPECT_FALSE(success);

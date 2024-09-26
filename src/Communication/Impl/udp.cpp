@@ -96,8 +96,20 @@ void Udp::Stop()
     if (channel_ != nullptr)
     {
         channel_->Stop();
-        channel_ = nullptr;
+        channel_ = std::make_shared<EmptyChannel>();
     }
+}
+
+std::shared_ptr<IChannel> Udp::GetChannel()
+{
+    std::unique_lock lock(channel_mutex_);
+    return channel_;
+}
+
+Coroutine<SChannelResult> Udp::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
+{
+    std::shared_ptr<IChannel> channel = GetChannel();
+    co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
 void Udp::Init(void)

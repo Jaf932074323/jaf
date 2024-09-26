@@ -60,24 +60,26 @@ public:
 public:
     Coroutine<void> Run()
     {
-        Coroutine<void> run_wait_obj = RunAwaitObj();
-        Coroutine<void> wait_timeout = WaitTimeout();
+        jaf::time::CoAwaitTime::WaitHandle wait_handle;
+
+        Coroutine<void> run_wait_obj = RunAwaitObj(wait_handle);
+        Coroutine<void> wait_timeout = WaitTimeout(wait_handle);
 
         co_await run_wait_obj;
         co_await wait_timeout;
     }
 
 private:
-    Coroutine<void> RunAwaitObj()
+    Coroutine<void> RunAwaitObj(jaf::time::CoAwaitTime::WaitHandle& wait_handle)
     {
         await_obj_result_ = co_await await_obj_;
-        await_time_.Notify();
+        await_time_.Notify(wait_handle);
         co_return;
     };
 
-    Coroutine<void> WaitTimeout()
+    Coroutine<void> WaitTimeout(jaf::time::CoAwaitTime::WaitHandle& wait_handle)
     {
-        timeout_flag_ = !co_await await_time_.Wait(timeout_);
+        timeout_flag_ = !co_await await_time_.Wait(wait_handle, timeout_);
         await_obj_.Stop();
         co_return;
     };

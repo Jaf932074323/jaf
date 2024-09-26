@@ -20,6 +20,7 @@ target_link_libraries(${PROJECT_NAME}
     Time
     Mswsock
     ws2_32
+    gtest
 )
 
 INCLUDE_DIRECTORIES("./")

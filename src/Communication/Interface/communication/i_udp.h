@@ -39,8 +39,10 @@ public:
 public:
     virtual void SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port) = 0;
     virtual void SetChannelUser(std::shared_ptr<IChannelUser> user)                                                            = 0;
-    virtual Coroutine<void> Run()                                                                                         = 0;
+    virtual Coroutine<void> Run()                                                                                              = 0;
     virtual void Stop()                                                                                                        = 0;
+    virtual std::shared_ptr<IChannel> GetChannel()                                                                             = 0;
+    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)                     = 0;
 };
 
 } // namespace comm

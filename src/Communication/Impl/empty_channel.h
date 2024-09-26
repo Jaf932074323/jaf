@@ -1,3 +1,4 @@
+#pragma once
 // MIT License
 //
 // Copyright(c) 2021 Jaf932074323
@@ -20,44 +21,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "define_constant.h"
-#include "log_head.h"
-#include "main_class.h"
-#include "time_head.h"
-#include <iostream>
-#include <thread>
-#include <winsock2.h>
-#include "gtest/gtest.h"
+#include "interface/communication/i_channel.h"
 
-int main(int argc, char** argv)
+namespace jaf
 {
-    std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
-    jaf::log::CommonLogger::SetDefaultLogger(std::make_shared<jaf::log::Logger>(appender));
-    jaf::log::CommonLogger::SetLogger(jaf::comm::LOG_NAME, std::make_shared<jaf::log::Logger>(appender));
-    LOG_INFO() << "日志初始化完成";
+namespace comm
+{
 
-    std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
-    timer->Start();
+// 空的通信通道
+// 在通讯接口获取通道时，若没有连接时返回，避免判空
+class EmptyChannel: public IChannel
+{
+public:
+    EmptyChannel() {}
+    virtual ~EmptyChannel(){};
 
-    WSAData version;
-    WSAStartup(WINSOCK_VERSION, &version);
+public:
+    virtual Coroutine<bool> Start() { co_return false; };
+    virtual void Stop() { return; };
+    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
+    {
+        SChannelResult result;
+        result.state = SChannelResult::EState::CRS_UNKNOWN;
+        co_return result;
+    }
+    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
+    {
+        SChannelResult result;
+        result.state = SChannelResult::EState::CRS_UNKNOWN;
+        co_return result;
+    }
+};
 
-    Main main;
-    main.Run();
-
-    getchar();
-
-    main.Stop();
-    main.WaitFinish();
-
-    WSACleanup();
-
-    timer->Stop();
-
-    LOG_INFO() << "程序结束";
-
-    testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-
-    return 0;
-}
+} // namespace comm
+} // namespace jaf

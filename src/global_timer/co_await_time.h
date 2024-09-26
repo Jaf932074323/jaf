@@ -26,7 +26,6 @@
 #include "util/co_coroutine.h"
 #include "util/finally.h"
 #include <assert.h>
-#include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -45,9 +44,16 @@ public:
         assert(timer_ != nullptr);
     };
     virtual ~CoAwaitTime()
+    {};
+
+private:
+    struct Awaitable;
+public:
+    struct WaitHandle
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        cond_var_.wait(lock, [this] { return awaitables_.empty(); });
+    private:
+        friend CoAwaitTime;
+        Awaitable* awaitable_ = nullptr;
     };
 
 public:
@@ -68,9 +74,12 @@ public:
         }
     }
 
-    jaf::Coroutine<bool> Wait(uint64_t millisecond)
+    jaf::Coroutine<bool> Wait(WaitHandle& handle, uint64_t millisecond)
     {
-        Awaitable awaitable(this, millisecond);
+        Awaitable awaitable(timer_, millisecond);
+
+        assert(handle.awaitable_ == nullptr);
+        handle.awaitable_ = &awaitable;
 
         {
             std::unique_lock<std::mutex> lock(mutex_);
@@ -87,26 +96,22 @@ public:
         {
             std::unique_lock<std::mutex> lock(mutex_);
             awaitables_.erase(&awaitable);
-            cond_var_.notify_one();
         }
 
         co_return result;
     }
 
-    void Notify()
+    void Notify(WaitHandle& handle)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        for (Awaitable* awaitable : awaitables_)
-        {
-            awaitable->Notify();
-        }
+        assert(handle.awaitable_ != nullptr);
+        handle.awaitable_->Notify();
     }
 
 private:
     struct Awaitable
     {
-        Awaitable(CoAwaitTime* co_await_time, uint64_t millisecond)
-            : co_await_time_(co_await_time)
+        Awaitable(std::shared_ptr<ITimer> timer, uint64_t millisecond)
+            : timer_(timer)
             , timeout_task_{.fun = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(result_type); }, .interval = millisecond}
         {
         }
@@ -124,7 +129,7 @@ private:
             {
                 return;
             }
-            co_await_time_->timer_->StopTask(&timeout_task_);
+            timer_->StopTask(&timeout_task_);
         }
 
         bool await_ready() const
@@ -144,7 +149,7 @@ private:
 
             handle_ = co_handle;
 
-            co_await_time_->timer_->StartTask(&timeout_task_);
+            timer_->StartTask(&timeout_task_);
             return true;
         }
 
@@ -172,11 +177,11 @@ private:
             {
                 return;
             }
-            co_await_time_->timer_->StopTask(&timeout_task_);
+            timer_->StopTask(&timeout_task_);
         }
 
     private:
-        CoAwaitTime* co_await_time_;
+        std::shared_ptr<ITimer> timer_;
         std::coroutine_handle<> handle_;
 
         std::mutex wait_flag_mutex_;
@@ -191,7 +196,6 @@ private:
     std::shared_ptr<ITimer> timer_;
 
     std::mutex mutex_;
-    std::condition_variable cond_var_;
     std::set<Awaitable*> awaitables_;
     bool run_flag_ = false;
 };
