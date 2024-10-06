@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
-#include "Interface/communication/i_channel_user.h"
+#include "Interface/communication/i_unpack.h"
 #include "util/co_coroutine.h"
 #include <memory>
 #include <string>
@@ -35,13 +35,13 @@ namespace comm
 class ISerialPort
 {
 public:
-    virtual ~ISerialPort() {};
+    virtual ~ISerialPort(){};
 
 public:
     virtual void SetAddr(uint8_t comm, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity) = 0;
-    virtual void SetChannelUser(std::shared_ptr<IChannelUser> user) = 0;
-    virtual jaf::Coroutine<void> Run() = 0;
-    virtual void Stop() = 0;
+    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack)                                                    = 0;
+    virtual jaf::Coroutine<void> Run()                                                                         = 0;
+    virtual void Stop()                                                                                        = 0;
 };
 
 } // namespace comm

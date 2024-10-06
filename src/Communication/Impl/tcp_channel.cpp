@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <format>
 #include <mswsock.h>
+#include "util/finally.h"
 
 namespace jaf
 {
@@ -97,35 +98,41 @@ TcpChannel::TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_por
     , remote_port_(remote_port)
     , local_ip_(local_ip)
     , local_port_(local_port)
-    , read_await_(timer)
-    , write_await_(timer)
+    , timer_(timer)
 {
 }
 
 TcpChannel::~TcpChannel() {}
 
-Coroutine<bool> TcpChannel::Start()
+Coroutine<void> TcpChannel::Run()
 {
     stop_flag_ = false;
-    read_await_.Start();
-    write_await_.Start();
-    co_return true;
+
+    co_await jaf::CoWaitStop(control_start_stop_);
+    co_await wait_all_tasks_done_;
 }
 
 void TcpChannel::Stop()
 {
     stop_flag_ = true;
-    write_await_.Stop();
-    read_await_.Stop();
+    control_start_stop_.Stop();
 }
 
 Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
-    ReadAwaitable read_awaitable(this, socket_, buff, buff_size);
-    RunWithTimeout run_with_timeout(read_await_, read_awaitable, timeout);
-    co_await run_with_timeout.Run();
+    wait_all_tasks_done_.CountUp();
+    FINALLY(wait_all_tasks_done_.CountDown(););
 
     SChannelResult result;
+    if (stop_flag_)
+    {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
+        co_return result;
+    }
+
+    ReadAwaitable read_awaitable(this, socket_, buff, buff_size);
+    RunWithTimeout run_with_timeout(control_start_stop_, read_awaitable, timeout, timer_);
+    co_await run_with_timeout.Run();
 
     const AwaitableResult& read_result = run_with_timeout.Result();
     if (run_with_timeout.IsTimeout())
@@ -169,11 +176,20 @@ Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size
 
 Coroutine<SChannelResult> TcpChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
-    WriteAwaitable write_awaitable(this, socket_, buff, buff_size);
-    RunWithTimeout run_with_timeout(write_await_, write_awaitable, timeout);
-    co_await run_with_timeout.Run();
+    wait_all_tasks_done_.CountUp();
+    FINALLY(wait_all_tasks_done_.CountDown(););
 
     SChannelResult result;
+    if (stop_flag_)
+    {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
+        co_return result;
+    }
+
+    WriteAwaitable write_awaitable(this, socket_, buff, buff_size);
+    RunWithTimeout run_with_timeout(control_start_stop_, write_awaitable, timeout, timer_);
+    co_await run_with_timeout.Run();
+
     const AwaitableResult& write_result = run_with_timeout.Result();
     if (run_with_timeout.IsTimeout())
     {

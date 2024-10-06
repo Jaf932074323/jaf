@@ -97,6 +97,7 @@ private:
 
     size_t work_thread_count_ = 1;
     std::shared_ptr<IThreadPool> thread_pool_;
+
     std::shared_ptr<jaf::time::ITimer> timer_;
 
     CoWaitNotices wait_work_thread_finish_; // 等待工作线程结束

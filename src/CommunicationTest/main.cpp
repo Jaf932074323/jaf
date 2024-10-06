@@ -37,27 +37,26 @@ int main(int argc, char** argv)
     LOG_INFO() << "日志初始化完成";
 
     std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
-    timer->Start();
+    jaf::time::GlobalTimer::SetTimer(timer);
 
     WSAData version;
     WSAStartup(WINSOCK_VERSION, &version);
 
-    Main main;
-    main.Run();
+    //Main main;
+    //main.Run();
 
-    getchar();
+    //getchar();
 
-    main.Stop();
-    main.WaitFinish();
+    //main.Stop();
+    //main.WaitFinish();
 
-    WSACleanup();
 
-    timer->Stop();
-
-    LOG_INFO() << "程序结束";
+    //LOG_INFO() << "程序结束";
 
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
+
+    WSACleanup();
 
     return 0;
 }

@@ -23,16 +23,17 @@
 // 2024-6-16 姜安富
 #include "Interface/communication/i_tcp_server.h"
 #include "Interface/i_timer.h"
-#include "interface/communication/i_deal_pack.h"
 #include "interface/communication/i_unpack.h"
 #include "iocp_head.h"
-#include "util/co_wait_notice.h"
 #include "util/co_coroutine.h"
+#include "util/co_wait_all_tasks_done.h"
+#include "util/control_start_stop.h"
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <winsock2.h>
 
 namespace jaf
 {
@@ -48,11 +49,12 @@ public:
 
 public:
     virtual void SetAddr(const std::string& ip, uint16_t port) override;
-    virtual void SetChannelUser(std::shared_ptr<IChannelUser> user) override;
+    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack) override;
     virtual void SetAcceptCount(size_t accept_count) override;
     virtual void SetMaxClientCount(size_t max_client_count) override;
     virtual Coroutine<void> Run() override;
     virtual void Stop() override;
+    virtual void SetDealNewChannel(std::function<void(std::shared_ptr<IChannel>)> fun) override;
 
 private:
     void Init(void);
@@ -60,30 +62,14 @@ private:
     Coroutine<void> RunSocket(SOCKET socket);
 
 private:
-    class AcceptAwaitable
-    {
-    public:
-        AcceptAwaitable(TcpServer* server, SOCKET listen_socket);
-        ~AcceptAwaitable();
-        bool await_ready();
-        bool await_suspend(std::coroutine_handle<> co_handle);
-        SOCKET await_resume();
-        void IoCallback(IOCP_DATA* pData);
-
-    private:
-        TcpServer* server     = nullptr;
-        SOCKET listen_socket_ = 0; // 侦听套接字
-        IOCP_DATA iocp_data_;
-        std::coroutine_handle<> handle_;
-
-        SOCKET sock_{INVALID_SOCKET};
-        char buf_[1]   = {0};
-        DWORD dwBytes_ = 0;
-    };
+    struct AcceptAwaitableResult;
+    class AcceptAwaitable;
 
 private:
-    bool run_flag_ = false;
-    CoWaitNotice wait_stop_;
+    std::atomic<bool> run_flag_ = false;
+
+    jaf::ControlStartStop control_start_stop_;
+    CoWaitAllTasksDone wait_all_tasks_done_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
@@ -94,9 +80,11 @@ private:
     std::string ip_ = "0.0.0.0";
     uint16_t port_  = 0;
 
-    std::shared_ptr<IChannelUser> user_ = nullptr; // 通道使用者
-    size_t accept_count_                = 5;
-    size_t max_client_count_            = SOMAXCONN; // 最大客户端连接数量
+    std::shared_ptr<IUnpack> unpack_ = nullptr; // 解包对象
+    size_t accept_count_             = 5;
+    size_t max_client_count_         = SOMAXCONN; // 最大客户端连接数量
+
+    std::function<void(std::shared_ptr<IChannel>)> fun_deal_new_channel_ = [](std::shared_ptr<IChannel>) {};
 
     std::mutex channels_mutex_;                                 // 所有通道的同步锁
     std::map<std::string, std::shared_ptr<IChannel>> channels_; // 当前连接的所有通道 key由IP和端口

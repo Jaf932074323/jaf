@@ -24,6 +24,8 @@
 #include "global_timer/co_await_time.h"
 #include "interface/communication/comm_struct.h"
 #include "interface/communication/i_channel.h"
+#include "util/co_wait_all_tasks_done.h"
+#include "util/control_start_stop.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -45,7 +47,7 @@ public:
     virtual ~SerialPortChannel();
 
 public:
-    virtual Coroutine<bool> Start();
+    virtual Coroutine<void> Run();
     virtual void Stop() override;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
@@ -53,11 +55,13 @@ public:
 private:
     bool stop_flag_ = false;
 
+    std::shared_ptr<jaf::time::ITimer> timer_;
+
     HANDLE completion_handle_ = nullptr;
     HANDLE comm_handle_;
 
-    jaf::time::CoAwaitTime read_await_;
-    jaf::time::CoAwaitTime write_await_;
+    jaf::ControlStartStop control_start_stop_;
+    jaf::CoWaitAllTasksDone wait_all_tasks_done_;
 };
 
 

@@ -28,7 +28,7 @@
 namespace jaf
 {
 
-// 等待多次通知
+// 等待通知
 class CoWaitNotice
 {
 public:

@@ -24,13 +24,12 @@
 #include "Interface/communication/i_tcp_client.h"
 #include "global_timer/co_await_time.h"
 #include "interface/communication/i_channel.h"
-#include "interface/communication/i_channel_user.h"
-#include "interface/communication/i_unpack.h"
 #include "iocp_head.h"
 #include "time_head.h"
-#include "util/co_wait_notice.h"
 #include "util/co_coroutine.h"
+#include "util/co_wait_notice.h"
 #include <string>
+#include <winsock2.h>
 
 namespace jaf
 {
@@ -50,7 +49,7 @@ public:
     // connect_timeout 连接超时时间
     // reconnect_wait_time 重连等待时间
     virtual void SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time) override;
-    void SetChannelUser(std::shared_ptr<IChannelUser> user) override;
+    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack) override;
     virtual jaf::Coroutine<void> Run() override;
     virtual void Stop() override;
 
@@ -69,7 +68,7 @@ private:
     CoWaitNotice wait_stop_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
-    jaf::time::CoAwaitTime await_time_;
+    jaf::ControlStartStop control_start_stop_;
 
     IGetCompletionPort* get_completion_port_ = nullptr;
     HANDLE completion_handle_                = nullptr;
@@ -83,7 +82,7 @@ private:
 
     std::string error_info_;
 
-    std::shared_ptr<IChannelUser> user_ = nullptr; // 通道使用者
+    std::shared_ptr<IUnpack> unpack_ = nullptr; // 解包对象
 
     std::mutex channel_mutex_;
     std::shared_ptr<IChannel> channel_ = nullptr;

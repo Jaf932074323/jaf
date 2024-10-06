@@ -22,8 +22,15 @@
 // 2024-6-16 姜安富
 #include "unpack.h"
 #include "log_head.h"
+#include <assert.h>
 
-jaf::Coroutine<void> Unpack::Run(std::shared_ptr<jaf::comm::IChannel> channel, std::shared_ptr<jaf::comm::IDealPack> deal_pack)
+Unpack::Unpack(std::function<void(std::shared_ptr<jaf::comm::IPack>pack)> fun_deal_pack)
+    : fun_deal_pack_(fun_deal_pack)
+{
+    assert(fun_deal_pack.operator bool());
+}
+
+jaf::Coroutine<void> Unpack::Run(std::shared_ptr<jaf::comm::IChannel> channel)
 {
     jaf::comm::RecvBuffer recv_buffer(channel); // 接收数据缓存
     recv_buffer.Init();
@@ -53,7 +60,7 @@ jaf::Coroutine<void> Unpack::Run(std::shared_ptr<jaf::comm::IChannel> channel, s
 
         recv_buffer.RemoveFront(result.len);
 
-        deal_pack->Deal(pack);
+        fun_deal_pack_(pack);
     }
 
     co_return;

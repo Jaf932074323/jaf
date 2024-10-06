@@ -51,10 +51,6 @@ public:
     virtual ~ITimer(){};
 
 public:
-    // 启动定时器
-    virtual void Start() = 0;
-    // 停止定时器
-    virtual void Stop() = 0;
     // 启动一个定时任务
     // task 定时任务信息，在定时任务结束之前，需要保证task有效，否则在定时回调时，可能会因为task无效而崩溃
     // 返回是否成功

@@ -21,7 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "Interface/communication/i_channel_user.h"
 #include "Interface/communication/i_serial_port.h"
 #include "Interface/communication/i_unpack.h"
 #include "Interface/i_timer.h"
@@ -46,7 +45,7 @@ public:
 
 public:
     virtual void SetAddr(uint8_t comm, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity) override;
-    virtual void SetChannelUser(std::shared_ptr<IChannelUser> user) override;
+    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack) override;
     virtual jaf::Coroutine<void> Run() override;
     virtual void Stop() override;
 
@@ -71,7 +70,7 @@ private:
 
     HANDLE comm_handle_;
 
-    std::shared_ptr<IChannelUser> user_ = nullptr; // 通道使用者
+    std::shared_ptr<IUnpack> unpack_ = nullptr; // 解包对象
 };
 
 } // namespace comm

@@ -58,11 +58,6 @@ public:
     }
 
 public:
-    // 启动定时
-    virtual void Start() override;
-    // 停止定时
-    virtual void Stop() override;
-
     // 启动一个定时任务
     // task 定时任务信息，在定时任务结束之前，需要保证task有效，否则在定时回调时，可能会因为task无效而崩溃
     // 返回是否成功
@@ -118,7 +113,7 @@ private:
 private:
     std::shared_ptr<IGetTime> get_time_;
 
-    std::atomic<bool> run_flag_ = false; // 工作线程运行标志
+    std::atomic<bool> run_flag_ = true; // 工作线程运行标志
 
     uint64_t next_task_id_ = 1; // 下一个定时任务ID
 

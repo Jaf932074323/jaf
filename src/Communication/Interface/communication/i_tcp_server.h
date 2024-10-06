@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
-#include "Interface/communication/i_channel_user.h"
+#include "Interface/communication/i_unpack.h"
 #include "util/co_coroutine.h"
 #include <memory>
 #include <string>
@@ -38,12 +38,13 @@ public:
     virtual ~ITcpServer(){};
 
 public:
-    virtual void SetAddr(const std::string& ip, uint16_t port)      = 0;
-    virtual void SetChannelUser(std::shared_ptr<IChannelUser> user) = 0;
-    virtual void SetAcceptCount(size_t accept_count)                = 0;
-    virtual void SetMaxClientCount(size_t max_client_count)         = 0;
-    virtual Coroutine<void> Run()                                   = 0;
-    virtual void Stop()                                             = 0;
+    virtual void SetAddr(const std::string& ip, uint16_t port)                             = 0;
+    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack)                                = 0;
+    virtual void SetAcceptCount(size_t accept_count)                                       = 0;
+    virtual void SetMaxClientCount(size_t max_client_count)                                = 0;
+    virtual Coroutine<void> Run()                                                          = 0;
+    virtual void Stop()                                                                    = 0;
+    virtual void SetDealNewChannel(std::function<void(std::shared_ptr<IChannel>)> fun) = 0;
 };
 
 } // namespace comm

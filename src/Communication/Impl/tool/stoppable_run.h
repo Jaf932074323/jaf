@@ -32,29 +32,21 @@ namespace jaf
 namespace comm
 {
 
-// 运行直到超时
+// 附带停止功能的运行运行
 // AwaitObj 是一个协程相关的可等待对象，并且要拥有停止函数Stop()
 template <typename AwaitObj>
-struct RunWithTimeout
+struct StoppableRun
 {
     using AwaitObjResult = std::invoke_result_t<decltype(&AwaitObj::await_resume), AwaitObj*>;
 
 public:
-    RunWithTimeout(jaf::ControlStartStop& control_start_stop, AwaitObj& await_obj, uint64_t timeout, std::shared_ptr<jaf::time::ITimer> timer)
+    StoppableRun(jaf::ControlStartStop& control_start_stop, AwaitObj& await_obj)
         : control_start_stop_(control_start_stop)
         , await_obj_(await_obj)
-        , timeout_(timeout)
-        , timer_(timer)
     {
-        assert(timer_ != nullptr);
     }
 
 public:
-    // 是否超时true超时,false未超时
-    bool IsTimeout()
-    {
-        return timeout_flag_;
-    }
     // 获取等待结果
     decltype(auto) Result()
     {
@@ -64,26 +56,26 @@ public:
 public:
     Coroutine<void> Run()
     {
-        jaf::time::CoAwaitTime await_time(timeout_, control_start_stop_, timer_);
+        jaf::CoWaitStop wait_stop(control_start_stop_);
 
-        Coroutine<void> run_wait_obj = RunAwaitObj(await_time);
-        Coroutine<void> wait_timeout = WaitTimeout(await_time);
+        Coroutine<void> run_wait_obj = RunAwaitObj(wait_stop);
+        Coroutine<void> wait_timeout = WaitTimeout(wait_stop);
 
         co_await run_wait_obj;
         co_await wait_timeout;
     }
 
 private:
-    Coroutine<void> RunAwaitObj(jaf::time::CoAwaitTime& await_time)
+    Coroutine<void> RunAwaitObj(jaf::CoWaitStop& wait_stop)
     {
         await_obj_result_ = co_await await_obj_;
-        await_time.Notify();
+        wait_stop.Notify();
         co_return;
     };
 
-    Coroutine<void> WaitTimeout(jaf::time::CoAwaitTime& await_time)
+    Coroutine<void> WaitTimeout(jaf::CoWaitStop& wait_stop)
     {
-        timeout_flag_ = !co_await await_time;
+        co_await wait_stop;
         await_obj_.Stop();
         co_return;
     };
@@ -91,10 +83,7 @@ private:
 private:
     jaf::ControlStartStop& control_start_stop_;
     AwaitObj& await_obj_; // 协程相关的可等待的对象
-    uint64_t timeout_;    // 超时时间 毫秒
-    std::shared_ptr<jaf::time::ITimer> timer_;
 
-    bool timeout_flag_ = false;       // 是否超时true超时,false未超时
     AwaitObjResult await_obj_result_; // 等待结果
 };
 

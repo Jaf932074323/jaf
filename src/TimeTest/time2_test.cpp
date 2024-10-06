@@ -31,7 +31,6 @@
 TEST(time2_test, timer)
 {
     jaf::time::Timer2 timer;
-    timer.Start();
 
     jaf::Stopwatch stopwatch;
     std::mutex wait_time_mutex;
@@ -57,14 +56,11 @@ TEST(time2_test, timer)
 
     EXPECT_TRUE(elapsed_time >= task.interval - timer.GetLeadTime() - 20) << std::format("elapsed_time:{}, expect", elapsed_time, task.interval - timer.GetLeadTime());
     EXPECT_TRUE(elapsed_time < task.interval + 50) << std::format("elapsed_time:{}, expect", elapsed_time, task.interval + 50);
-
-    timer.Stop();
 }
 
 TEST(time2_test, stop_timer_task)
 {
     jaf::time::Timer2 timer;
-    timer.Start();
 
     jaf::Stopwatch stopwatch;
     std::mutex wait_time_mutex;
@@ -90,18 +86,15 @@ TEST(time2_test, stop_timer_task)
 
     {
         std::unique_lock<std::mutex> lock(wait_time_mutex2);
-        wait_time_cv.wait_for(lock, std::chrono::milliseconds(task.interval * 2), [&task_finish_flag]{ return task_finish_flag; });
+        wait_time_cv.wait_for(lock, std::chrono::milliseconds(task.interval * 2), [&task_finish_flag] { return task_finish_flag; });
     }
 
     EXPECT_TRUE(elapsed_time < task.interval + 50);
-
-    timer.Stop();
 }
 
 TEST(time2_test, stop_timer)
 {
     jaf::time::Timer2 timer;
-    timer.Start();
 
     jaf::Stopwatch stopwatch;
     uint64_t elapsed_time = 0;
@@ -115,15 +108,13 @@ TEST(time2_test, stop_timer)
 
     stopwatch.Reset();
     timer.StartTask(&task);
-    timer.Stop();
 
     EXPECT_TRUE(elapsed_time < task.interval + 50);
 }
 
 TEST(time2_test, mixture)
 {
-    jaf::time::Timer2 timer;
-    timer.Start();
+    jaf::time::Timer2* timer = new jaf::time::Timer2();
 
     std::atomic<size_t> task_counter = 0;
 
@@ -162,7 +153,7 @@ TEST(time2_test, mixture)
         task.fun      = std::bind(fun, std::placeholders::_1, std::placeholders::_2, expect_result_type);
         task.interval = interval;
 
-        timer.StartTask(&task);
+        timer->StartTask(&task);
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -174,7 +165,7 @@ TEST(time2_test, mixture)
         case 0:
             break;
         case 1:
-            timer.StopTask(&task);
+            timer->StopTask(&task);
             break;
         case 2:
             break;
@@ -184,6 +175,6 @@ TEST(time2_test, mixture)
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    timer.Stop();
+    delete timer;
     EXPECT_EQ(task_counter, task_mount);
 }

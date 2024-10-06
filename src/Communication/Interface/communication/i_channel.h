@@ -57,7 +57,6 @@ public:
     virtual ~IChannel(){};
 
 public:
-    virtual Coroutine<bool> Start()                                                                        = 0;
     virtual void Stop()                                                                                    = 0;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout)        = 0;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) = 0;

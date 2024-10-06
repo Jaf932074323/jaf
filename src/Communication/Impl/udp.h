@@ -21,10 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "Interface/communication/i_channel_user.h"
 #include "Interface/communication/i_udp.h"
 #include "empty_channel.h"
-#include "interface/communication/i_unpack.h"
 #include "iocp_head.h"
 #include "time_head.h"
 #include "util/co_wait_notice.h"
@@ -33,6 +31,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <winsock2.h>
 
 namespace jaf
 {
@@ -47,7 +46,7 @@ public:
 
 public:
     virtual void SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port);
-    virtual void SetChannelUser(std::shared_ptr<IChannelUser> user);
+    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack);
     virtual Coroutine<void> Run();
     virtual void Stop();
     virtual std::shared_ptr<IChannel> GetChannel();
@@ -55,7 +54,6 @@ public:
 
 private:
     void Init(void);
-
 
 private:
     IGetCompletionPort* get_completion_port_ = nullptr;
@@ -69,7 +67,7 @@ private:
     std::string remote_ip_ = "0.0.0.0";
     uint16_t remote_port_  = 0;
 
-    std::shared_ptr<IChannelUser> user_ = nullptr; // 通道使用者
+    std::shared_ptr<IUnpack> unpack_ = nullptr; // 解包对象
     std::mutex channel_mutex_;
     bool run_flag_                     = false;
     std::shared_ptr<IChannel> channel_ = std::make_shared<EmptyChannel>();

@@ -22,8 +22,8 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include "i_channel.h"
-#include "i_deal_pack.h"
 #include "util/co_coroutine.h"
+#include <functional>
 #include <memory>
 
 namespace jaf
@@ -39,7 +39,7 @@ public:
     virtual ~IUnpack(){};
 
 public:
-    virtual Coroutine<void> Run(std::shared_ptr<IChannel> channel, std::shared_ptr<IDealPack> deal_pack) = 0;
+    virtual Coroutine<void> Run(std::shared_ptr<IChannel> channel) = 0;
 };
 
 } // namespace comm

@@ -51,9 +51,9 @@ void Udp::SetAddr(const std::string& local_ip, uint16_t local_port, const std::s
     remote_port_ = remote_port;
 }
 
-void Udp::SetChannelUser(std::shared_ptr<IChannelUser> user)
+void Udp::SetUnpack(std::shared_ptr<IUnpack> unpack)
 {
-    user_ = user;
+    unpack_ = unpack;
 }
 
 jaf::Coroutine<void> Udp::Run()
@@ -74,15 +74,13 @@ jaf::Coroutine<void> Udp::Run()
         channel_ = channel;
     }
 
-    if (co_await channel->Start())
-    {
-        co_await user_->Access(channel);
-        channel->Stop();
-    }
+    jaf::Coroutine<void> channel_run = channel->Run();
+    co_await unpack_->Run(channel);
+    channel->Stop();
+    co_await channel_run;
 
     run_flag_ = false;
 
-    CancelIo((HANDLE) socket_);
     closesocket(socket_);
     socket_ = INVALID_SOCKET;
 
@@ -103,6 +101,7 @@ void Udp::Stop()
 std::shared_ptr<IChannel> Udp::GetChannel()
 {
     std::unique_lock lock(channel_mutex_);
+    assert(channel_ != nullptr);
     return channel_;
 }
 

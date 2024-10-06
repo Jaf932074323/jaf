@@ -21,7 +21,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
-#include "Interface/communication/i_channel_user.h"
 #include "util/co_coroutine.h"
 
 typedef void* HANDLE;

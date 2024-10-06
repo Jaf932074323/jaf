@@ -96,10 +96,9 @@ private:
 };
 
 SerialPortChannel::SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle, std::shared_ptr<jaf::time::ITimer> timer)
-    : completion_handle_(completion_handle)
+    : timer_(timer)
+    , completion_handle_(completion_handle)
     , comm_handle_(comm_handle)
-    , read_await_(timer)
-    , write_await_(timer)
 {
 }
 
@@ -107,35 +106,44 @@ SerialPortChannel::~SerialPortChannel()
 {
 }
 
-Coroutine<bool> SerialPortChannel::Start()
+Coroutine<void> SerialPortChannel::Run()
 {
     stop_flag_ = false;
-    read_await_.Start();
-    write_await_.Start();
     if (CreateIoCompletionPort(comm_handle_, completion_handle_, (ULONG_PTR) comm_handle_, 0) == 0)
     {
         DWORD dw        = GetLastError();
         std::string str = std::format("Iocp code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
         LOG_ERROR() << str;
-        co_return false;
+        co_return;
     }
-    co_return true;
+
+    co_await jaf::CoWaitStop(control_start_stop_);
+    co_await wait_all_tasks_done_;
+
+    co_return;
 }
 
 void SerialPortChannel::Stop()
 {
     stop_flag_ = true;
-    write_await_.Stop();
-    read_await_.Stop();
+    control_start_stop_.Stop();
 }
 
 Coroutine<SChannelResult> SerialPortChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
-    ReadAwaitable read_awaitable(this, buff, buff_size);
-    RunWithTimeout run_with_timeout(read_await_, read_awaitable, timeout);
-    co_await run_with_timeout.Run();
+    wait_all_tasks_done_.CountUp();
+    FINALLY(wait_all_tasks_done_.CountDown(););
 
     SChannelResult result;
+    if (stop_flag_)
+    {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
+        co_return result;
+    }
+
+    ReadAwaitable read_awaitable(this, buff, buff_size);
+    RunWithTimeout run_with_timeout(control_start_stop_, read_awaitable, timeout, timer_);
+    co_await run_with_timeout.Run();
 
     const AwaitableResult& read_result = run_with_timeout.Result();
     if (run_with_timeout.IsTimeout())
@@ -175,11 +183,20 @@ Coroutine<SChannelResult> SerialPortChannel::Read(unsigned char* buff, size_t bu
 
 Coroutine<SChannelResult> SerialPortChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
-    WriteAwaitable write_awaitable(this, buff, buff_size);
-    RunWithTimeout run_with_timeout(write_await_, write_awaitable, timeout);
-    co_await run_with_timeout.Run();
+    wait_all_tasks_done_.CountUp();
+    FINALLY(wait_all_tasks_done_.CountDown(););
 
     SChannelResult result;
+    if (stop_flag_)
+    {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
+        co_return result;
+    }
+
+    WriteAwaitable write_awaitable(this, buff, buff_size);
+    RunWithTimeout run_with_timeout(control_start_stop_, write_awaitable, timeout, timer_);
+    co_await run_with_timeout.Run();
+
     const AwaitableResult& write_result = run_with_timeout.Result();
     if (run_with_timeout.IsTimeout())
     {

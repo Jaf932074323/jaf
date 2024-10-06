@@ -89,7 +89,6 @@ private:
 TcpClient::TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
     : get_completion_port_(get_completion_port)
     , timer_(timer)
-    , await_time_(timer_)
 {
 }
 
@@ -111,9 +110,9 @@ void TcpClient::SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait
     reconnect_wait_time_ = reconnect_wait_time;
 }
 
-void TcpClient::SetChannelUser(std::shared_ptr<IChannelUser> user)
+void TcpClient::SetUnpack(std::shared_ptr<IUnpack> unpack)
 {
-    user_ = user;
+    unpack_ = unpack;
 }
 
 jaf::Coroutine<void> TcpClient::Run()
@@ -126,7 +125,6 @@ jaf::Coroutine<void> TcpClient::Run()
 
     wait_stop_.Start();
     completion_handle_ = get_completion_port_->Get();
-    await_time_.Start();
 
     Init();
 
@@ -144,7 +142,7 @@ jaf::Coroutine<void> TcpClient::Run()
         }
     }
 
-    await_time_.Stop();
+    control_start_stop_.Stop();
 
     co_await execute;
 
@@ -175,7 +173,7 @@ jaf::Coroutine<void> TcpClient::Execute()
         FINALLY(closesocket(connect_socket); connect_socket = INVALID_SOCKET;);
 
         ConnectAwaitable connect_awaitable(this, connect_socket);
-        RunWithTimeout run_with_timeout(await_time_, connect_awaitable, connect_timeout_);
+        RunWithTimeout run_with_timeout(control_start_stop_, connect_awaitable, connect_timeout_, timer_);
         co_await run_with_timeout.Run();
 
         const auto& result = run_with_timeout.Result();
@@ -190,8 +188,8 @@ jaf::Coroutine<void> TcpClient::Execute()
                 remote_ip_, remote_port_,
                 result.error_info_);
 
-            jaf::time::CoAwaitTime::WaitHandle wait_handle;
-            co_await await_time_.Wait(wait_handle, reconnect_wait_time_);
+            jaf::time::CoAwaitTime await_time(reconnect_wait_time_, control_start_stop_, timer_);
+            co_await await_time;
             continue;
         }
 
@@ -203,11 +201,10 @@ jaf::Coroutine<void> TcpClient::Execute()
             channel_ = channel;
         }
 
-        if (co_await channel->Start())
-        {
-            co_await user_->Access(channel);
-            channel->Stop();
-        }
+        jaf::Coroutine<void> channel_run = channel->Run();
+        co_await unpack_->Run(channel);
+        channel->Stop();
+        co_await channel_run;
     }
 
     co_return;

@@ -22,11 +22,14 @@
 // 2024-6-16 姜安富
 #include "tcp_server.h"
 #include "Log/log_head.h"
+#include "impl/tool/stoppable_run.h"
 #include "tcp_channel.h"
+#include "util/finally.h"
 #include <WS2tcpip.h>
 #include <assert.h>
 #include <format>
 #include <mswsock.h>
+
 
 namespace jaf
 {
@@ -48,6 +51,37 @@ std::string GetFormatMessage(DWORD dw)
     return strText;
 }
 
+struct TcpServer::AcceptAwaitableResult
+{
+    SOCKET sock_{INVALID_SOCKET};
+    int err_ = 0; // 错误代码
+};
+
+class TcpServer::AcceptAwaitable
+{
+public:
+    AcceptAwaitable(SOCKET listen_socket);
+    ~AcceptAwaitable();
+    void Reset();
+    bool await_ready();
+    bool await_suspend(std::coroutine_handle<> co_handle);
+    AcceptAwaitableResult await_resume();
+    void IoCallback(IOCP_DATA* pData);
+    void Stop();
+
+private:
+    SOCKET listen_socket_ = 0; // 侦听套接字
+    IOCP_DATA iocp_data_;
+    std::coroutine_handle<> handle_;
+
+    AcceptAwaitableResult reslult_;
+    char buf_[1]   = {0};
+    DWORD dwBytes_ = 0;
+
+    std::mutex mutex_;
+    bool callback_flag_ = false; // 已经回调标记
+};
+
 TcpServer::TcpServer(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
     : get_completion_port_(get_completion_port)
     , timer_(timer)
@@ -65,9 +99,9 @@ void TcpServer::SetAddr(const std::string& ip, uint16_t port)
     port_ = port;
 }
 
-void TcpServer::SetChannelUser(std::shared_ptr<IChannelUser> user)
+void TcpServer::SetUnpack(std::shared_ptr<IUnpack> unpack)
 {
-    user_ = user;
+    unpack_ = unpack;
 }
 
 void TcpServer::SetAcceptCount(size_t accept_count)
@@ -89,19 +123,18 @@ jaf::Coroutine<void> TcpServer::Run()
         co_return;
     }
     run_flag_ = true;
-
-    wait_stop_.Start();
+    control_start_stop_.Start();
 
     completion_handle_ = get_completion_port_->Get();
     Init();
+
     for (size_t i = 0; i < accept_count_; ++i)
     {
+        wait_all_tasks_done_.CountUp();
         Accept();
     }
 
-    co_await wait_stop_.Wait();
-
-    run_flag_ = false;
+    co_await jaf::CoWaitStop(control_start_stop_);
 
     {
         std::unique_lock<std::mutex> ul(channels_mutex_);
@@ -109,8 +142,10 @@ jaf::Coroutine<void> TcpServer::Run()
         {
             channel->Stop();
         }
-        channels_.clear();
     }
+
+    co_await wait_all_tasks_done_;
+    assert(channels_.empty());
 
     closesocket(listen_socket_);
     listen_socket_ = INVALID_SOCKET;
@@ -120,7 +155,13 @@ jaf::Coroutine<void> TcpServer::Run()
 
 void TcpServer::Stop()
 {
-    wait_stop_.Stop();
+    run_flag_ = false;
+    control_start_stop_.Stop();
+}
+
+void TcpServer::SetDealNewChannel(std::function<void(std::shared_ptr<IChannel>)> fun)
+{
+    fun_deal_new_channel_ = fun;
 }
 
 void TcpServer::Init(void)
@@ -172,15 +213,29 @@ void TcpServer::Init(void)
 
 jaf::Coroutine<void> TcpServer::Accept()
 {
+    FINALLY(wait_all_tasks_done_.CountDown(););
+
+    AcceptAwaitable accept_awaitable(listen_socket_);
+
     while (run_flag_)
     {
-        SOCKET socket = co_await AcceptAwaitable(this, listen_socket_);
-        if (socket == INVALID_SOCKET)
+        accept_awaitable.Reset();
+
+        StoppableRun stoopable_run(control_start_stop_, accept_awaitable);
+        co_await stoopable_run.Run();
+
+        AcceptAwaitableResult accept_result = stoopable_run.Result();
+        if (accept_result.sock_ == INVALID_SOCKET)
         {
+            if (WAIT_TIMEOUT != accept_result.err_)
+            {
+                LOG_ERROR() << std::format("TcpServer Accept error,code error: {} error-msg: {}", accept_result.err_, GetFormatMessage(accept_result.err_));
+            }
             continue;
         }
 
-        RunSocket(socket);
+        wait_all_tasks_done_.CountUp();
+        RunSocket(accept_result.sock_);
     }
 
     co_return;
@@ -188,6 +243,8 @@ jaf::Coroutine<void> TcpServer::Accept()
 
 jaf::Coroutine<void> TcpServer::RunSocket(SOCKET socket)
 {
+    FINALLY(wait_all_tasks_done_.CountDown(););
+
     // 获取到远端和本地的端口地址
     if (setsockopt(socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*) &listen_socket_, sizeof(listen_socket_)) == SOCKET_ERROR)
     {
@@ -224,33 +281,47 @@ jaf::Coroutine<void> TcpServer::RunSocket(SOCKET socket)
 
     std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(socket, remote_ip, remote_port, local_ip, local_port, timer_);
 
+    bool run_flag;
     {
         std::unique_lock<std::mutex> ul(channels_mutex_);
-        channels_.insert(std::make_pair(channel_key, channel));
+        run_flag = run_flag_;
+        if (run_flag)
+        {
+            channels_.insert(std::make_pair(channel_key, channel));
+        }
     }
 
-    if (co_await channel->Start())
+    if (run_flag)
     {
-        co_await user_->Access(channel);
+        jaf::Coroutine<void> channel_run = channel->Run();
+        fun_deal_new_channel_(channel);
+        co_await unpack_->Run(channel);
         channel->Stop();
+        co_await channel_run;
+
+        {
+            std::unique_lock<std::mutex> ul(channels_mutex_);
+            channels_.erase(channel_key);
+        }
     }
 
-    {
-        std::unique_lock<std::mutex> ul(channels_mutex_);
-        channels_.erase(channel_key);
-    }
-
-    CancelIo((HANDLE) socket);
     closesocket(socket);
 }
 
-TcpServer::AcceptAwaitable::AcceptAwaitable(TcpServer* server, SOCKET listen_socket)
-    : server{server}, listen_socket_{listen_socket}
+TcpServer::AcceptAwaitable::AcceptAwaitable(SOCKET listen_socket)
+    : listen_socket_{listen_socket}
 {
 }
 
 TcpServer::AcceptAwaitable::~AcceptAwaitable()
 {
+}
+
+void TcpServer::AcceptAwaitable::Reset()
+{
+
+    std::unique_lock<std::mutex> lock(mutex_);
+    callback_flag_ = false;
 }
 
 bool TcpServer::AcceptAwaitable::await_ready()
@@ -264,49 +335,61 @@ bool TcpServer::AcceptAwaitable::await_suspend(std::coroutine_handle<> co_handle
 
     iocp_data_.call_ = std::bind(&AcceptAwaitable::IoCallback, this, std::placeholders::_1);
 
-    sock_ = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-    if (sock_ == INVALID_SOCKET)
+    reslult_.sock_ = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+    if (reslult_.sock_ == INVALID_SOCKET)
     {
         errno = WSAGetLastError();
         return false;
     }
 
-    bool accept_result = AcceptEx(listen_socket_, sock_, buf_, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &dwBytes_, &iocp_data_.overlapped);
-
-    if (!accept_result && WSAGetLastError() != ERROR_IO_PENDING)
+    bool accept_result = AcceptEx(listen_socket_, reslult_.sock_, buf_, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &dwBytes_, &iocp_data_.overlapped);
+    if (!AcceptEx(listen_socket_, reslult_.sock_, buf_, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &dwBytes_, &iocp_data_.overlapped))
     {
-        DWORD dw        = GetLastError();
-        std::string str = std::format("TcpServer code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        OutputDebugString(str.c_str());
-        closesocket(sock_);
-        sock_ = INVALID_SOCKET;
-        return false;
+        int error = WSAGetLastError();
+        if (error != ERROR_IO_PENDING)
+        {
+            reslult_.err_ = error;
+            closesocket(reslult_.sock_);
+            reslult_.sock_ = INVALID_SOCKET;
+            return false;
+        }
     }
 
     return true;
 }
 
-SOCKET TcpServer::AcceptAwaitable::await_resume()
+TcpServer::AcceptAwaitableResult TcpServer::AcceptAwaitable::await_resume()
 {
-    return sock_;
+    return reslult_;
 }
 
 void TcpServer::AcceptAwaitable::IoCallback(IOCP_DATA* pData)
 {
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        callback_flag_ = true;
+    }
+
     if (pData->success_ == 0)
     {
-        DWORD dw = GetLastError();
-        if (WAIT_TIMEOUT != dw)
-        {
-            std::string str = std::format("TcpServer code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-            OutputDebugString(str.c_str());
-        }
+        reslult_.err_ = WSAGetLastError();
 
-        closesocket(sock_);
-        sock_ = INVALID_SOCKET;
+        closesocket(reslult_.sock_);
+        reslult_.sock_ = INVALID_SOCKET;
     }
 
     handle_.resume();
+}
+
+void TcpServer::AcceptAwaitable::Stop()
+{
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (callback_flag_)
+    {
+        return;
+    }
+    callback_flag_ = true;
+    CancelIoEx((HANDLE) listen_socket_, &iocp_data_.overlapped);
 }
 
 } // namespace comm

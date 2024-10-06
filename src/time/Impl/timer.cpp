@@ -34,27 +34,10 @@ namespace time
 Timer::Timer(std::shared_ptr<IGetTime> get_time)
     : get_time_(get_time == nullptr ? std::make_shared<GetTimeTick>() : get_time)
 {
-}
-
-Timer::~Timer()
-{
-}
-
-void Timer::Start()
-{
-    {
-        std::unique_lock<std::mutex> ul(tasks_mutex_);
-        if (run_flag_)
-        {
-            return;
-        }
-        run_flag_ = true;
-    }
-
     run_thread_ = std::thread([this]() { Work(); });
 }
 
-void Timer::Stop()
+Timer::~Timer()
 {
     {
         std::unique_lock<std::mutex> ul(tasks_mutex_);

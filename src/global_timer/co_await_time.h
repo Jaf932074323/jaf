@@ -24,106 +24,46 @@
 #include "global_timer.h"
 #include "time/interface/i_timer.h"
 #include "util/co_coroutine.h"
+#include "util/control_start_stop.h"
 #include "util/finally.h"
 #include <assert.h>
 #include <memory>
 #include <mutex>
-#include <set>
 
 namespace jaf
 {
 namespace time
 {
 
-class CoAwaitTime
+struct CoAwaitTime
 {
-public:
-    CoAwaitTime(std::shared_ptr<ITimer> timer = nullptr)
+    CoAwaitTime(uint64_t millisecond, ControlStartStop& control_start_stop, std::shared_ptr<ITimer> timer = nullptr)
         : timer_(timer == nullptr ? GlobalTimer::Timer() : timer)
+        , control_start_stop_(control_start_stop)
+        , timeout_task_{.fun = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(result_type); }, .interval = millisecond}
     {
-        assert(timer_ != nullptr);
-    };
-    virtual ~CoAwaitTime()
-    {};
+        agent_    = control_start_stop_.Register([this]() { InterStop(); });
+        run_flag_ = agent_ != nullptr;
+    }
 
-private:
-    struct Awaitable;
-public:
-    struct WaitHandle
+    ~CoAwaitTime()
     {
-    private:
-        friend CoAwaitTime;
-        Awaitable* awaitable_ = nullptr;
-    };
-
-public:
-    void Start()
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        run_flag_ = true;
     }
 
     void Stop()
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        run_flag_ = false;
-
-        for (Awaitable* awaitable : awaitables_)
+        if (agent_ == nullptr)
         {
-            awaitable->Stop();
+            return;
         }
+        agent_->Stop();
     }
-
-    jaf::Coroutine<bool> Wait(WaitHandle& handle, uint64_t millisecond)
-    {
-        Awaitable awaitable(timer_, millisecond);
-
-        assert(handle.awaitable_ == nullptr);
-        handle.awaitable_ = &awaitable;
-
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            if (!run_flag_)
-            {
-                co_return false;
-            }
-
-            awaitables_.insert(&awaitable);
-        }
-
-        bool result = co_await awaitable;
-
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            awaitables_.erase(&awaitable);
-        }
-
-        co_return result;
-    }
-
-    void Notify(WaitHandle& handle)
-    {
-        assert(handle.awaitable_ != nullptr);
-        handle.awaitable_->Notify();
-    }
-
 private:
-    struct Awaitable
+    void InterStop()
     {
-        Awaitable(std::shared_ptr<ITimer> timer, uint64_t millisecond)
-            : timer_(timer)
-            , timeout_task_{.fun = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(result_type); }, .interval = millisecond}
-        {
-        }
-
-        ~Awaitable()
-        {
-            assert(!wait_flag_); // 当wait_flag_为ture，说明后续还会有定时器回调过来，会导致崩溃
-        }
-
-        void Stop()
         {
             std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+            assert(run_flag_ ? true : !wait_flag_); // 如果没有运行，则一定也不会等待
             run_flag_ = false;
             if (!wait_flag_)
             {
@@ -131,73 +71,74 @@ private:
             }
             timer_->StopTask(&timeout_task_);
         }
+        agent_ = nullptr;
+    }
 
-        bool await_ready() const
+public:
+    void Notify()
+    {
+        std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+        if (!wait_flag_)
         {
+            return;
+        }
+        timer_->StopTask(&timeout_task_);
+    }
+
+    bool await_ready() const
+    {
+        return false;
+    }
+
+    bool await_suspend(std::coroutine_handle<> co_handle)
+    {
+        std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+        if (!run_flag_)
+        {
+            wait_result_flag_ = false;
             return false;
         }
+        assert(!wait_flag_); // 不能同事等待多个
+        wait_flag_ = true;
 
-        bool await_suspend(std::coroutine_handle<> co_handle)
+        handle_ = co_handle;
+
+        timer_->StartTask(&timeout_task_);
+        return true;
+    }
+
+    bool await_resume() const
+    {
+        return wait_result_flag_;
+    }
+
+    void TimerCallback(ETimerResultType result_type)
+    {
         {
             std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-            if (!run_flag_)
-            {
-                wait_result_flag_ = false;
-                return false;
-            }
-            wait_flag_ = true;
-
-            handle_ = co_handle;
-
-            timer_->StartTask(&timeout_task_);
-            return true;
+            assert(wait_flag_);
+            wait_flag_        = false;
+            wait_result_flag_ = run_flag_ && result_type == ETimerResultType::TRT_TASK_STOP;
         }
 
-        bool await_resume() const
-        {
-            return wait_result_flag_;
-        }
-
-        void TimerCallback(ETimerResultType result_type)
-        {
-            {
-                std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                assert(wait_flag_);
-                wait_flag_        = false;
-                wait_result_flag_ = run_flag_ && result_type == ETimerResultType::TRT_TASK_STOP;
-            }
-
-            handle_.resume();
-        }
-
-        void Notify()
-        {
-            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-            if (!wait_flag_)
-            {
-                return;
-            }
-            timer_->StopTask(&timeout_task_);
-        }
-
-    private:
-        std::shared_ptr<ITimer> timer_;
-        std::coroutine_handle<> handle_;
-
-        std::mutex wait_flag_mutex_;
-        bool run_flag_  = true;
-        bool wait_flag_ = false;
-
-        bool wait_result_flag_ = false;
-        STimerTask timeout_task_;
-    };
+        handle_.resume();
+    }
 
 private:
     std::shared_ptr<ITimer> timer_;
+    std::coroutine_handle<> handle_;
 
-    std::mutex mutex_;
-    std::set<Awaitable*> awaitables_;
-    bool run_flag_ = false;
+    ControlStartStop& control_start_stop_;
+
+    std::mutex wait_flag_mutex_;
+    bool run_flag_  = false;
+    bool wait_flag_ = false;
+
+    STimerTask timeout_task_;
+
+    bool wait_result_flag_ = false; // 等待结果，等待到通知时为ture，超时为false
+
+    std::shared_ptr<ControlStartStop::Agent> agent_;
 };
 
 } // namespace time

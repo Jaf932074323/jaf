@@ -21,14 +21,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
-#include "impl/channel_user.h"
-#include "impl/iocp.h"
-#include "Interface/communication/i_tcp_server.h"
-#include "Interface/communication/i_tcp_client.h"
-#include "Interface/communication/i_udp.h"
 #include "Interface/communication/i_serial_port.h"
-#include "util/co_wait_notice.h"
+#include "Interface/communication/i_tcp_client.h"
+#include "Interface/communication/i_tcp_server.h"
+#include "Interface/communication/i_udp.h"
+#include "impl/iocp.h"
+#include "interface/communication/i_pack.h"
 #include "util/co_coroutine.h"
+#include "util/co_wait_notice.h"
 #include "util/latch.h"
 #include <memory>
 
@@ -45,10 +45,10 @@ public:
 
 private:
     void Init();
+    void Deal(std::shared_ptr<jaf::comm::IPack> pack);
 
 private:
     std::shared_ptr<jaf::comm::Iocp> iocp_                = std::make_shared<jaf::comm::Iocp>();
-    std::shared_ptr<jaf::comm::ChannelUser> channel_user_ = nullptr;
     std::shared_ptr<jaf::comm::ITcpServer> server_        = nullptr;
     std::shared_ptr<jaf::comm::ITcpClient> client_        = nullptr;
     std::shared_ptr<jaf::comm::IUdp> udp_                 = nullptr;

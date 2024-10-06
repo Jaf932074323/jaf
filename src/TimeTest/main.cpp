@@ -35,9 +35,7 @@
 int main(int argc, char** argv)
 {
     std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
-    timer->Start();
     jaf::time::GlobalTimer::SetTimer(timer);
-    FINALLY(timer->Stop(););
 
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
