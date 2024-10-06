@@ -144,7 +144,6 @@ private:
     std::set<std::shared_ptr<Agent>> be_controls_;
 };
 
-
 // µÈ´ıÍ£Ö¹¶ÔÏó
 struct CoWaitStop
 {
