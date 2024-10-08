@@ -54,9 +54,9 @@ void SerialPort::SetAddr(uint8_t comm, uint32_t baud_rate, uint8_t data_bit, uin
     parity_    = parity;
 }
 
-void SerialPort::SetUnpack(std::shared_ptr<IUnpack> unpack)
+void SerialPort::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel>channel)> handle_channel)
 {
-    unpack_ = unpack;
+    handle_channel_ = handle_channel;
 }
 
 jaf::Coroutine<void> SerialPort::Run()
@@ -73,7 +73,7 @@ jaf::Coroutine<void> SerialPort::Run()
     std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(completion_handle_, comm_handle_, timer_);
 
     jaf::Coroutine<void> channel_run = channel->Run();
-    co_await unpack_->Run(channel);
+    co_await handle_channel_(channel);
     channel->Stop();
     co_await channel_run;
 

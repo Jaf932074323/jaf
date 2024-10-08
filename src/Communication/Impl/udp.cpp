@@ -51,9 +51,9 @@ void Udp::SetAddr(const std::string& local_ip, uint16_t local_port, const std::s
     remote_port_ = remote_port;
 }
 
-void Udp::SetUnpack(std::shared_ptr<IUnpack> unpack)
+void Udp::SetHandleChannel(std::function<jaf::Coroutine<void>(std::shared_ptr<jaf::comm::IChannel> channel)> handle_channel)
 {
-    unpack_ = unpack;
+    handle_channel_ = handle_channel;
 }
 
 jaf::Coroutine<void> Udp::Run()
@@ -75,7 +75,7 @@ jaf::Coroutine<void> Udp::Run()
     }
 
     jaf::Coroutine<void> channel_run = channel->Run();
-    co_await unpack_->Run(channel);
+    co_await handle_channel_(channel);
     channel->Stop();
     co_await channel_run;
 

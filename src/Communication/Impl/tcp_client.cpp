@@ -110,9 +110,9 @@ void TcpClient::SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait
     reconnect_wait_time_ = reconnect_wait_time;
 }
 
-void TcpClient::SetUnpack(std::shared_ptr<IUnpack> unpack)
+void TcpClient::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel>channel)> handle_channel)
 {
-    unpack_ = unpack;
+    handle_channel_ = handle_channel;
 }
 
 jaf::Coroutine<void> TcpClient::Run()
@@ -202,7 +202,7 @@ jaf::Coroutine<void> TcpClient::Execute()
         }
 
         jaf::Coroutine<void> channel_run = channel->Run();
-        co_await unpack_->Run(channel);
+        co_await handle_channel_(channel);
         channel->Stop();
         co_await channel_run;
     }

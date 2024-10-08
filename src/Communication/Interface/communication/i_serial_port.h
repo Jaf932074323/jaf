@@ -23,6 +23,7 @@
 // 2024-6-16 ½ª°²¸»
 #include "Interface/communication/i_unpack.h"
 #include "util/co_coroutine.h"
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -38,10 +39,10 @@ public:
     virtual ~ISerialPort(){};
 
 public:
-    virtual void SetAddr(uint8_t comm, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity) = 0;
-    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack)                                                    = 0;
-    virtual jaf::Coroutine<void> Run()                                                                         = 0;
-    virtual void Stop()                                                                                        = 0;
+    virtual void SetAddr(uint8_t comm, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity)      = 0;
+    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) = 0;
+    virtual jaf::Coroutine<void> Run()                                                                              = 0;
+    virtual void Stop()                                                                                             = 0;
 };
 
 } // namespace comm

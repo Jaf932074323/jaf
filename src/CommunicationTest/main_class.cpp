@@ -85,19 +85,19 @@ void Main::Init()
 
     server_ = iocp_->CreateTcpServer();
     server_->SetAddr(str_ip, 8181);
-    server_->SetUnpack(unpack);
+    server_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
     client_ = iocp_->CreateTcpClient();
     client_->SetAddr(str_ip, 8182, str_ip, 0);
-    client_->SetUnpack(unpack);
+    client_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
     udp_ = iocp_->CreateUdp();
     udp_->SetAddr(str_ip, 8081, str_ip, 8082);
-    udp_->SetUnpack(unpack);
+    udp_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
     serial_port_ = iocp_->CreateSerialPort();
     serial_port_->SetAddr(11, 9600, 8, 0, 0);
-    serial_port_->SetUnpack(unpack);
+    serial_port_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 }
 
 void Main::Deal(std::shared_ptr<jaf::comm::IPack> pack)

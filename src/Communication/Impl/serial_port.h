@@ -45,7 +45,7 @@ public:
 
 public:
     virtual void SetAddr(uint8_t comm, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity) override;
-    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack) override;
+    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
     virtual jaf::Coroutine<void> Run() override;
     virtual void Stop() override;
 
@@ -70,7 +70,7 @@ private:
 
     HANDLE comm_handle_;
 
-    std::shared_ptr<IUnpack> unpack_ = nullptr; // 解包对象
+    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
 };
 
 } // namespace comm

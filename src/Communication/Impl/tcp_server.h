@@ -49,12 +49,11 @@ public:
 
 public:
     virtual void SetAddr(const std::string& ip, uint16_t port) override;
-    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack) override;
+    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
     virtual void SetAcceptCount(size_t accept_count) override;
     virtual void SetMaxClientCount(size_t max_client_count) override;
     virtual Coroutine<void> Run() override;
     virtual void Stop() override;
-    virtual void SetDealNewChannel(std::function<void(std::shared_ptr<IChannel>)> fun) override;
 
 private:
     void Init(void);
@@ -80,11 +79,9 @@ private:
     std::string ip_ = "0.0.0.0";
     uint16_t port_  = 0;
 
-    std::shared_ptr<IUnpack> unpack_ = nullptr; // 解包对象
+    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
     size_t accept_count_             = 5;
     size_t max_client_count_         = SOMAXCONN; // 最大客户端连接数量
-
-    std::function<void(std::shared_ptr<IChannel>)> fun_deal_new_channel_ = [](std::shared_ptr<IChannel>) {};
 
     std::mutex channels_mutex_;                                 // 所有通道的同步锁
     std::map<std::string, std::shared_ptr<IChannel>> channels_; // 当前连接的所有通道 key由IP和端口

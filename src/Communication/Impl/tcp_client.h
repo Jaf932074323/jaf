@@ -49,7 +49,7 @@ public:
     // connect_timeout 连接超时时间
     // reconnect_wait_time 重连等待时间
     virtual void SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time) override;
-    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack) override;
+    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
     virtual jaf::Coroutine<void> Run() override;
     virtual void Stop() override;
 
@@ -82,7 +82,7 @@ private:
 
     std::string error_info_;
 
-    std::shared_ptr<IUnpack> unpack_ = nullptr; // 解包对象
+    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
 
     std::mutex channel_mutex_;
     std::shared_ptr<IChannel> channel_ = nullptr;

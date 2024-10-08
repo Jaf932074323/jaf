@@ -99,9 +99,9 @@ void TcpServer::SetAddr(const std::string& ip, uint16_t port)
     port_ = port;
 }
 
-void TcpServer::SetUnpack(std::shared_ptr<IUnpack> unpack)
+void TcpServer::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel>channel)> handle_channel)
 {
-    unpack_ = unpack;
+    handle_channel_ = handle_channel;
 }
 
 void TcpServer::SetAcceptCount(size_t accept_count)
@@ -157,11 +157,6 @@ void TcpServer::Stop()
 {
     run_flag_ = false;
     control_start_stop_.Stop();
-}
-
-void TcpServer::SetDealNewChannel(std::function<void(std::shared_ptr<IChannel>)> fun)
-{
-    fun_deal_new_channel_ = fun;
 }
 
 void TcpServer::Init(void)
@@ -294,8 +289,7 @@ jaf::Coroutine<void> TcpServer::RunSocket(SOCKET socket)
     if (run_flag)
     {
         jaf::Coroutine<void> channel_run = channel->Run();
-        fun_deal_new_channel_(channel);
-        co_await unpack_->Run(channel);
+        co_await handle_channel_(channel);
         channel->Stop();
         co_await channel_run;
 

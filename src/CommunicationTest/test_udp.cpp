@@ -58,11 +58,11 @@ TEST(communication, udp)
 
         std::shared_ptr<jaf::comm::IUdp> udp_1 = iocp.CreateUdp();
         udp_1->SetAddr(str_ip, 8081, str_ip, 8082);
-        udp_1->SetUnpack(unpack);
+        udp_1->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
         std::shared_ptr<jaf::comm::IUdp> udp_2 = iocp.CreateUdp();
         udp_2->SetAddr(str_ip, 8082, str_ip, 8081);
-        udp_2->SetUnpack(unpack);
+        udp_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
         jaf::Coroutine<void> udp_1_run = udp_1->Run();
         jaf::Coroutine<void> udp_2_run = udp_2->Run();

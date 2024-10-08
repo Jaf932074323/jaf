@@ -23,6 +23,7 @@
 // 2024-6-16 ½ª°²¸»
 #include "Interface/communication/i_unpack.h"
 #include "util/co_coroutine.h"
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -38,7 +39,7 @@ public:
 
 public:
     virtual void SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port) = 0;
-    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack)                                                                    = 0;
+    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel)            = 0;
     virtual Coroutine<void> Run()                                                                                              = 0;
     virtual void Stop()                                                                                                        = 0;
     virtual std::shared_ptr<IChannel> GetChannel()                                                                             = 0;

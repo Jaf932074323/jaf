@@ -45,12 +45,12 @@ public:
     virtual ~Udp();
 
 public:
-    virtual void SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port);
-    virtual void SetUnpack(std::shared_ptr<IUnpack> unpack);
-    virtual Coroutine<void> Run();
-    virtual void Stop();
-    virtual std::shared_ptr<IChannel> GetChannel();
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout);
+    virtual void SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port) override;
+    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
+    virtual Coroutine<void> Run() override;
+    virtual void Stop() override;
+    virtual std::shared_ptr<IChannel> GetChannel() override;
+    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
     void Init(void);
@@ -67,7 +67,7 @@ private:
     std::string remote_ip_ = "0.0.0.0";
     uint16_t remote_port_  = 0;
 
-    std::shared_ptr<IUnpack> unpack_ = nullptr; // 解包对象
+    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
     std::mutex channel_mutex_;
     bool run_flag_                     = false;
     std::shared_ptr<IChannel> channel_ = std::make_shared<EmptyChannel>();
