@@ -77,7 +77,7 @@ private:
     Coroutine<void> RunAwaitObj(jaf::time::CoAwaitTime& await_time)
     {
         await_obj_result_ = co_await await_obj_;
-        await_time.Notify();
+        await_time.Stop();
         co_return;
     };
 

@@ -98,7 +98,6 @@ private:
     bool callback_flag_ = false; // 已经回调标记
 };
 
-
 UdpChannel::UdpChannel(HANDLE completion_handle, SOCKET socket,
     std::string remote_ip, uint16_t remote_port,
     std::string local_ip, uint16_t local_port,
@@ -142,7 +141,7 @@ void UdpChannel::Stop()
 {
     stop_flag_ = true;
     control_start_stop_.Stop();
- }
+}
 
 Coroutine<SChannelResult> UdpChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
 {

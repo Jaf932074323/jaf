@@ -98,7 +98,7 @@ public:
             wait_result_flag_ = false;
             return false;
         }
-        assert(!wait_flag_); // 不能同事等待多个
+        assert(!wait_flag_); // 不能同时等待多个
         wait_flag_ = true;
 
         handle_ = co_handle;
