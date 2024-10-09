@@ -130,7 +130,6 @@ jaf::Coroutine<void> TcpServer::Run()
 
     for (size_t i = 0; i < accept_count_; ++i)
     {
-        wait_all_tasks_done_.CountUp();
         Accept();
     }
 
@@ -208,6 +207,7 @@ void TcpServer::Init(void)
 
 jaf::Coroutine<void> TcpServer::Accept()
 {
+    wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
     AcceptAwaitable accept_awaitable(listen_socket_);
@@ -229,7 +229,6 @@ jaf::Coroutine<void> TcpServer::Accept()
             continue;
         }
 
-        wait_all_tasks_done_.CountUp();
         RunSocket(accept_result.sock_);
     }
 
@@ -238,6 +237,7 @@ jaf::Coroutine<void> TcpServer::Accept()
 
 jaf::Coroutine<void> TcpServer::RunSocket(SOCKET socket)
 {
+    wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
     // 获取到远端和本地的端口地址
