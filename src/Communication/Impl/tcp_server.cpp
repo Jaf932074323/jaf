@@ -158,6 +158,26 @@ void TcpServer::Stop()
     control_start_stop_.Stop();
 }
 
+Coroutine<void> TcpServer::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
+{
+    std::map<std::string, std::shared_ptr<IChannel>> channels; // 当前连接的所有通道 key由IP和端口
+    {
+        std::unique_lock<std::mutex> ul(channels_mutex_);
+        channels = channels_;
+    }
+
+    std::list<Coroutine<SChannelResult>> list_wait;
+
+    for (auto& [key, channel] : channels)
+    {
+        list_wait.push_back(channel->Write(buff, buff_size, timeout));
+    }
+    for (Coroutine<SChannelResult>& wait : list_wait)
+    {
+        co_await wait;
+    }
+}
+
 void TcpServer::Init(void)
 {
     listen_socket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);

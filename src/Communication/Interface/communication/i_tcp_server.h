@@ -45,6 +45,7 @@ public:
     virtual void SetMaxClientCount(size_t max_client_count)                                                         = 0;
     virtual Coroutine<void> Run()                                                                                   = 0;
     virtual void Stop()                                                                                             = 0;
+    virtual Coroutine<void> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)                    = 0;
 };
 
 } // namespace comm

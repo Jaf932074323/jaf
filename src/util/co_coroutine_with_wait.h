@@ -29,9 +29,6 @@ namespace jaf
 {
 
 template <typename T>
-struct CoroutineWithWait;
-
-template <typename T>
 struct PromiseReturnWithWait
 {
     void return_value(T v)
@@ -56,65 +53,62 @@ struct PromiseReturnWithWait<void>
 };
 
 template <typename T>
-struct PromiseTypeWithWait : public PromiseReturnWithWait<T>
-{
-    std::coroutine_handle<> parent_handle;
-    bool final_flag_ = false;
-    std::mutex parent_handle_mutex;
-
-    auto get_return_object()
-    {
-        return CoroutineWithWait<T>{std::coroutine_handle<PromiseTypeWithWait<T>>::from_promise(static_cast<PromiseTypeWithWait<T>&>(*this))};
-    }
-
-    auto initial_suspend()
-    {
-        return std::suspend_never{};
-    }
-
-    auto final_suspend() noexcept
-    {
-        struct Awaitable
-        {
-            bool await_ready() noexcept
-            {
-                return false;
-            }
-
-            std::coroutine_handle<> await_suspend(std::coroutine_handle<PromiseTypeWithWait<T>> co_handle) noexcept
-            {
-                PromiseTypeWithWait<T>& promise = co_handle.promise();
-                std::unique_lock<std::mutex> lock(promise.parent_handle_mutex);
-                promise.final_flag_ = true;
-                return promise.parent_handle ? promise.parent_handle : std::noop_coroutine();
-            }
-
-            void await_resume() noexcept
-            {
-            }
-        };
-
-        return Awaitable{};
-    }
-
-    void unhandled_exception()
-    {
-        std::terminate();
-    }
-
-    // ×èÈûµÈ´ý
-    void Wait()
-    {
-        PromiseReturnWithWait<T>::latch_.wait();
-    }
-};
-
-template <typename T>
 struct CoroutineWithWait
 {
-    using promise_type = PromiseTypeWithWait<T>;
+    struct promise_type : public PromiseReturnWithWait<T>
+    {
+        std::coroutine_handle<> parent_handle;
+        bool final_flag_ = false;
+        std::mutex parent_handle_mutex;
 
-    CoroutineWithWait(std::coroutine_handle<PromiseTypeWithWait<T>> h)
+        auto get_return_object()
+        {
+            return CoroutineWithWait<T>{std::coroutine_handle<promise_type>::from_promise(static_cast<promise_type&>(*this))};
+        }
+
+        auto initial_suspend()
+        {
+            return std::suspend_never{};
+        }
+
+        auto final_suspend() noexcept
+        {
+            struct Awaitable
+            {
+                bool await_ready() noexcept
+                {
+                    return false;
+                }
+
+                std::coroutine_handle<> await_suspend(std::coroutine_handle<promise_type> co_handle) noexcept
+                {
+                    promise_type& promise = co_handle.promise();
+                    std::unique_lock<std::mutex> lock(promise.parent_handle_mutex);
+                    promise.final_flag_ = true;
+                    return promise.parent_handle ? promise.parent_handle : std::noop_coroutine();
+                }
+
+                void await_resume() noexcept
+                {
+                }
+            };
+
+            return Awaitable{};
+        }
+
+        void unhandled_exception()
+        {
+            std::terminate();
+        }
+
+        // ×èÈûµÈ´ý
+        void Wait()
+        {
+            PromiseReturnWithWait<T>::latch_.wait();
+        }
+    };
+
+    CoroutineWithWait(std::coroutine_handle<promise_type> h)
         : handle{h}
     {
     }
@@ -178,7 +172,7 @@ struct CoroutineWithWait
         handle.promise().Wait();
     }
 
-    std::coroutine_handle<PromiseTypeWithWait<T>> handle;
+    std::coroutine_handle<promise_type> handle;
 };
 
 } // namespace jaf

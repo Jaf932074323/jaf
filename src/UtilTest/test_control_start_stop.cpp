@@ -28,6 +28,7 @@
 #include <atomic>
 #include <mutex>
 #include <list>
+#include <thread>
 
 TEST(test_control_start_stop, usual)
 {

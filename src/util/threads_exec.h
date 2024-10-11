@@ -111,6 +111,12 @@ public:
         return SwitchAwaitable(this);
     }
 
+    void Post(std::function<void()> fun)
+    {
+        assert(!stop_);
+        task_queue_.Push(fun);
+    }
+
 private:
     void WorkerRun()
     {

@@ -81,6 +81,12 @@ public:
         return threads_exec_.Switch();
     }
 
+    // 直接投递要执行的任务，不使用协程功能
+    void Post(std::function<void()> fun)
+    {
+        threads_exec_.Post(fun);
+    }
+
 private:
     bool runing_ = false;
 

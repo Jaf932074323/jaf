@@ -26,6 +26,7 @@
 #include <functional>
 #include <mutex>
 #include <set>
+#include <memory>
 
 namespace jaf
 {

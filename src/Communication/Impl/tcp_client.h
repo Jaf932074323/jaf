@@ -52,6 +52,7 @@ public:
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
     virtual jaf::Coroutine<void> Run() override;
     virtual void Stop() override;
+    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
     void Init(void);

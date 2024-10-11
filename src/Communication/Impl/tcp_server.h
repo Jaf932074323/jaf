@@ -32,6 +32,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <atomic>
 #include <string>
 #include <winsock2.h>
 
@@ -54,6 +55,7 @@ public:
     virtual void SetMaxClientCount(size_t max_client_count) override;
     virtual Coroutine<void> Run() override;
     virtual void Stop() override;
+    virtual Coroutine<void> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
     void Init(void);
@@ -80,8 +82,8 @@ private:
     uint16_t port_  = 0;
 
     std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
-    size_t accept_count_             = 5;
-    size_t max_client_count_         = SOMAXCONN; // 最大客户端连接数量
+    size_t accept_count_     = 5;
+    size_t max_client_count_ = SOMAXCONN; // 最大客户端连接数量
 
     std::mutex channels_mutex_;                                 // 所有通道的同步锁
     std::map<std::string, std::shared_ptr<IChannel>> channels_; // 当前连接的所有通道 key由IP和端口

@@ -110,7 +110,7 @@ void TcpClient::SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait
     reconnect_wait_time_ = reconnect_wait_time;
 }
 
-void TcpClient::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel>channel)> handle_channel)
+void TcpClient::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel)
 {
     handle_channel_ = handle_channel;
 }
@@ -152,6 +152,17 @@ jaf::Coroutine<void> TcpClient::Run()
 void TcpClient::Stop()
 {
     wait_stop_.Stop();
+}
+
+Coroutine<SChannelResult> TcpClient::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
+{
+    std::shared_ptr<IChannel> channel = nullptr;
+    {
+        std::unique_lock<std::mutex> lock(channel_mutex_);
+        channel = channel_;
+    }
+
+    co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
 void TcpClient::Init(void)
