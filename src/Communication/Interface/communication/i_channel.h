@@ -22,8 +22,8 @@
 // SOFTWARE.
 // 2024-6-16 姜安富
 #include "util/co_coroutine.h"
-#include <string>
 #include <stdint.h>
+#include <string>
 
 namespace jaf
 {
@@ -40,6 +40,7 @@ struct SChannelResult
         CRS_FAIL                 = 2, // 失败,具体错误原因由code_表示
         CRS_CHANNEL_DISCONNECTED = 3, // 通道断开连接
         CRS_TIMEOUT              = 4, // 超时
+        CRS_EMPTY                = 5, // 空通道
         CRS_UNKNOWN,                  // 未知错误
     };
 

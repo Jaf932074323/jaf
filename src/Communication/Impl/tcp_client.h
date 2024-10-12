@@ -22,6 +22,7 @@
 // SOFTWARE.
 // 2024-6-16 姜安富
 #include "Interface/communication/i_tcp_client.h"
+#include "empty_channel.h"
 #include "global_timer/co_await_time.h"
 #include "interface/communication/i_channel.h"
 #include "iocp_head.h"
@@ -86,7 +87,8 @@ private:
     std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
 
     std::mutex channel_mutex_;
-    std::shared_ptr<IChannel> channel_ = nullptr;
+    std::shared_ptr<IChannel> empty_channel_ = std::make_shared<EmptyChannel>();
+    std::shared_ptr<IChannel> channel_ = empty_channel_;
 };
 
 } // namespace comm

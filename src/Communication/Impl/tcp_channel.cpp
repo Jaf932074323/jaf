@@ -107,6 +107,7 @@ TcpChannel::~TcpChannel() {}
 Coroutine<void> TcpChannel::Run()
 {
     stop_flag_ = false;
+    control_start_stop_.Start();
 
     co_await jaf::CoWaitStop(control_start_stop_);
     co_await wait_all_tasks_done_;

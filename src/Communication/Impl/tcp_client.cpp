@@ -136,10 +136,7 @@ jaf::Coroutine<void> TcpClient::Run()
 
     {
         std::unique_lock<std::mutex> lock(channel_mutex_);
-        if (channel_)
-        {
-            channel_->Stop();
-        }
+        channel_->Stop();
     }
 
     control_start_stop_.Stop();
@@ -216,6 +213,11 @@ jaf::Coroutine<void> TcpClient::Execute()
         co_await handle_channel_(channel);
         channel->Stop();
         co_await channel_run;
+
+        {
+            std::unique_lock lock(channel_mutex_);
+            channel_ = empty_channel_;
+        }
     }
 
     co_return;

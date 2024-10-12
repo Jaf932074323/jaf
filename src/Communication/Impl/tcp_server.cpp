@@ -99,7 +99,7 @@ void TcpServer::SetAddr(const std::string& ip, uint16_t port)
     port_ = port;
 }
 
-void TcpServer::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel>channel)> handle_channel)
+void TcpServer::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel)
 {
     handle_channel_ = handle_channel;
 }
@@ -356,7 +356,6 @@ bool TcpServer::AcceptAwaitable::await_suspend(std::coroutine_handle<> co_handle
         return false;
     }
 
-    bool accept_result = AcceptEx(listen_socket_, reslult_.sock_, buf_, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &dwBytes_, &iocp_data_.overlapped);
     if (!AcceptEx(listen_socket_, reslult_.sock_, buf_, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &dwBytes_, &iocp_data_.overlapped))
     {
         int error = WSAGetLastError();

@@ -29,49 +29,58 @@
 #include "unpack.h"
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
+#include "util/co_wait_notice.h"
 #include "gtest/gtest.h"
 #include <format>
 #include <list>
 
-TEST(udp, usual)
+TEST(tcp, usual)
 {
     jaf::comm::Iocp iocp;
     jaf::Coroutine<void> iocp_run = iocp.Run();
 
     auto co_fun = [&iocp]() -> jaf::CoroutineWithWait<void> {
         std::string str = "hello world!";
-        auto fun_deal   = [&](std::shared_ptr<jaf::comm::IPack> pack) {
+        jaf::CoWaitNotice wait_recv; // 等待接收通知
+
+        auto fun_deal = [&](std::shared_ptr<jaf::comm::IPack> pack) {
             auto [buff, len] = pack->GetData();
             std::string recv_str((const char*) buff, len);
-            //LOG_INFO() << "接收:" << recv_str;
-            //pack->GetChannel()->Write(buff, len, 1000);
-
             EXPECT_TRUE(recv_str == str);
+            wait_recv.Stop();
         };
-
-
-        std::string str_ip = "127.0.0.1";
-
         std::shared_ptr<Unpack> unpack = std::make_shared<Unpack>(fun_deal);
 
-        std::shared_ptr<jaf::comm::IUdp> udp_1 = iocp.CreateUdp();
-        udp_1->SetAddr(str_ip, 8081, str_ip, 8082);
-        udp_1->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
+        auto fun_deal_client_channel   = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
+            auto result = co_await channel->Write((const unsigned char*) str.data(), str.length(), 1000);
+            co_await unpack->Run(channel);
+        };
 
-        std::shared_ptr<jaf::comm::IUdp> udp_2 = iocp.CreateUdp();
-        udp_2->SetAddr(str_ip, 8082, str_ip, 8081);
-        udp_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
+        std::string str_ip   = "127.0.0.1";
+        uint16_t server_port = 8181;
+        uint16_t client_port = 0;
 
-        jaf::Coroutine<void> udp_1_run = udp_1->Run();
-        jaf::Coroutine<void> udp_2_run = udp_2->Run();
+        std::shared_ptr<jaf::comm::ITcpServer> server = iocp.CreateTcpServer();
+        server->SetAddr(str_ip, server_port);
+        server->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
+        server->SetAcceptCount(1);
 
-        auto result = co_await udp_1->Write((const unsigned char*) str.data(), str.length(), 1000);
+        std::shared_ptr<jaf::comm::ITcpClient> client = iocp.CreateTcpClient();
+        client->SetAddr(str_ip, server_port, str_ip, client_port);
+        client->SetHandleChannel(fun_deal_client_channel);
 
-        udp_1->Stop();
-        udp_2->Stop();
+        wait_recv.Start();
 
-        co_await udp_1_run;
-        co_await udp_2_run;
+        jaf::Coroutine<void> server_run = server->Run();
+        jaf::Coroutine<void> client_run = client->Run();
+
+        co_await wait_recv.Wait();
+
+        client->Stop();
+        server->Stop();
+
+        co_await server_run;
+        co_await client_run;
     };
 
     auto co_test_co_await_time = co_fun();

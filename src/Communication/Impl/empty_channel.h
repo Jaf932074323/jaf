@@ -42,13 +42,13 @@ public:
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
     {
         SChannelResult result;
-        result.state = SChannelResult::EState::CRS_UNKNOWN;
+        result.state = SChannelResult::EState::CRS_EMPTY;
         co_return result;
     }
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
     {
         SChannelResult result;
-        result.state = SChannelResult::EState::CRS_UNKNOWN;
+        result.state = SChannelResult::EState::CRS_EMPTY;
         co_return result;
     }
 };
