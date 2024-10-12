@@ -242,6 +242,10 @@ jaf::Coroutine<void> TcpServer::Accept()
         AcceptAwaitableResult accept_result = stoopable_run.Result();
         if (accept_result.sock_ == INVALID_SOCKET)
         {
+            if (!run_flag_)
+            {
+                break;
+            }
             if (WAIT_TIMEOUT != accept_result.err_)
             {
                 LOG_ERROR() << std::format("TcpServer Accept error,code error: {} error-msg: {}", accept_result.err_, GetFormatMessage(accept_result.err_));
