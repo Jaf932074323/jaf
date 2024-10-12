@@ -149,9 +149,8 @@ private:
 struct CoWaitStop
 {
     CoWaitStop(ControlStartStop& control_start_stop)
-        : control_start_stop_(control_start_stop)
     {
-        agent_    = control_start_stop_.Register([this]() { InterStop(); });
+        agent_    = control_start_stop.Register([this]() { InterStop(); });
         run_flag_ = agent_ != nullptr;
     }
 
@@ -231,7 +230,6 @@ private:
 
     std::shared_ptr<ControlStartStop::Agent> agent_;
 
-    ControlStartStop& control_start_stop_;
     std::mutex mutex_;
     bool run_flag_  = false; // 当前是否正在运行
     bool wait_flag_ = false; // 当前是否有等待对象
