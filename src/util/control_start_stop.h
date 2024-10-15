@@ -24,9 +24,9 @@
 #include "util/co_coroutine.h"
 #include <assert.h>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <set>
-#include <memory>
 
 namespace jaf
 {
@@ -143,96 +143,6 @@ private:
     std::mutex mutex_;
     bool run_flag_ = false;
     std::set<std::shared_ptr<Agent>> be_controls_;
-};
-
-// 等待停止对象
-struct CoWaitStop
-{
-    CoWaitStop(ControlStartStop& control_start_stop)
-    {
-        agent_    = control_start_stop.Register([this]() { InterStop(); });
-        run_flag_ = agent_ != nullptr;
-    }
-
-    ~CoWaitStop()
-    {
-    }
-
-    void Stop()
-    {
-        if (agent_ == nullptr)
-        {
-            return;
-        }
-        agent_->Stop();
-    }
-private:
-    void InterStop()
-    {
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            assert(run_flag_ ? true : !wait_flag_); // 如果没有运行，则一定也不会等待
-            run_flag_ = false;
-            if (!wait_flag_)
-            {
-                return;
-            }
-            wait_flag_ = false;
-        }
-        agent_ = nullptr;
-
-        handle_.resume();
-    }
-
-public:
-    void Notify()
-    {
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            if (!wait_flag_)
-            {
-                return;
-            }
-            wait_flag_ = false;
-        }
-
-        handle_.resume();
-    }
-
-    bool await_ready() const
-    {
-        return false;
-    }
-
-    bool await_suspend(std::coroutine_handle<> co_handle)
-    {
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            if (!run_flag_)
-            {
-                return false;
-            }
-            assert(!wait_flag_); // 不能同时等待多次
-            wait_flag_ = true;
-        }
-
-        handle_ = co_handle;
-        return true;
-    }
-
-    void await_resume() const
-    {
-        return;
-    }
-
-private:
-    std::coroutine_handle<> handle_;
-
-    std::shared_ptr<ControlStartStop::Agent> agent_;
-
-    std::mutex mutex_;
-    bool run_flag_  = false; // 当前是否正在运行
-    bool wait_flag_ = false; // 当前是否有等待对象
 };
 
 } // namespace jaf

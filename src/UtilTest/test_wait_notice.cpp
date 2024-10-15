@@ -22,35 +22,16 @@
 // 2024-6-20 ½ª°²¸»
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
-#include "util/co_wait_notice.h"
+#include "util/co_wait_util_stop.h"
 #include "util/co_wait_notices.h"
 #include "gtest/gtest.h"
 #include <format>
 #include <list>
 
-TEST(wait_notice, notice)
+TEST(wait_util_stop, stop)
 {
     int number = 0;
-    jaf::CoWaitNotice wait_notice;
-    wait_notice.Start();
-
-    auto co_fun = [&]() -> jaf::CoroutineWithWait<void> {
-        co_await wait_notice.Wait();
-        ++number;
-    };
-    auto co_fun_obj = co_fun();
-    wait_notice.Notify();
-    co_fun_obj.Wait();
-
-    wait_notice.Stop();
-
-    EXPECT_EQ(number, 1);
-}
-
-TEST(wait_notice, stop)
-{
-    int number = 0;
-    jaf::CoWaitNotice wait_notice;
+    jaf::CoWaitUtilStop wait_notice;
     wait_notice.Start();
 
     auto co_fun = [&]() -> jaf::CoroutineWithWait<void> {

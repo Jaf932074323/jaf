@@ -28,7 +28,7 @@
 #include "impl/iocp.h"
 #include "interface/communication/i_pack.h"
 #include "util/co_coroutine.h"
-#include "util/co_wait_notice.h"
+#include "util/co_wait_util_stop.h"
 #include "util/latch.h"
 #include <memory>
 
@@ -56,5 +56,5 @@ private:
 
     jaf::Latch wait_finish_latch_{1};
 
-    jaf::CoWaitNotice wait_stop_;
+    jaf::CoWaitUtilStop wait_stop_;
 };

@@ -29,11 +29,11 @@ namespace jaf
 {
 
 // µÈ´ýÍ¨Öª
-class CoWaitNotice
+class CoWaitUtilStop
 {
 public:
-    CoWaitNotice(){};
-    virtual ~CoWaitNotice(){};
+    CoWaitUtilStop(){};
+    virtual ~CoWaitUtilStop(){};
 
 public:
     void Start()
@@ -56,11 +56,6 @@ public:
         wait_flag_ = false;
 
         co_return;
-    }
-
-    void Notify()
-    {
-        awaitable_.Notify();
     }
 
 private:
@@ -115,20 +110,6 @@ private:
         void await_resume() const
         {
             return;
-        }
-
-        void Notify()
-        {
-            {
-                std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                if (!wait_flag_)
-                {
-                    return;
-                }
-                wait_flag_ = false;
-            }
-
-            handle_.resume();
         }
 
     private:

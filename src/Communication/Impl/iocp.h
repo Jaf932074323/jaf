@@ -28,7 +28,7 @@
 #include "interface/communication/comm_struct.h"
 #include "iocp_head.h"
 #include "time_head.h"
-#include "util/co_wait_notice.h"
+#include "util/co_wait_util_stop.h"
 #include "util/co_wait_notices.h"
 #include "util/co_coroutine.h"
 #include "util/i_thread_pool.h"
@@ -102,7 +102,7 @@ private:
 
     CoWaitNotices wait_work_thread_finish_; // 等待工作线程结束
 
-    CoWaitNotice wait_stop_;
+    CoWaitUtilStop wait_stop_;
 };
 
 } // namespace comm

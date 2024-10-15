@@ -40,13 +40,13 @@ TEST(udp, usual)
 
     auto co_fun = [&iocp]() -> jaf::CoroutineWithWait<void> {
         std::string str = "hello world!";
+        jaf::CoWaitUtilStop wait_recv; // 等待接收通知
+
         auto fun_deal   = [&](std::shared_ptr<jaf::comm::IPack> pack) {
             auto [buff, len] = pack->GetData();
             std::string recv_str((const char*) buff, len);
-            //LOG_INFO() << "接收:" << recv_str;
-            //pack->GetChannel()->Write(buff, len, 1000);
-
             EXPECT_TRUE(recv_str == str);
+            wait_recv.Stop();
         };
 
 
@@ -62,10 +62,12 @@ TEST(udp, usual)
         udp_2->SetAddr(str_ip, 8082, str_ip, 8081);
         udp_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
+        wait_recv.Start();
         jaf::Coroutine<void> udp_1_run = udp_1->Run();
         jaf::Coroutine<void> udp_2_run = udp_2->Run();
 
         auto result = co_await udp_1->Write((const unsigned char*) str.data(), str.length(), 1000);
+        co_await wait_recv.Wait();
 
         udp_1->Stop();
         udp_2->Stop();

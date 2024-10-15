@@ -20,37 +20,30 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 姜安富
-#include "global_timer.h"
-#include "time/interface/i_timer.h"
-#include "util/co_coroutine.h"
+// 2024-9-27 姜安富
 #include "util/control_start_stop.h"
-#include "util/finally.h"
 #include <assert.h>
 #include <memory>
 #include <mutex>
 
 namespace jaf
 {
-namespace time
-{
 
-struct CoAwaitTime
+// 等待直到被控制停止
+struct CoWaitUtilControlledStop
 {
-    CoAwaitTime(uint64_t millisecond, ControlStartStop& control_start_stop, std::shared_ptr<ITimer> timer = nullptr)
-        : timer_(timer == nullptr ? GlobalTimer::Timer() : timer)
-        , control_start_stop_(control_start_stop)
-        , timeout_task_{.fun = [this](ETimerResultType result_type, STimerTask* task) { TimerCallback(result_type); }, .interval = millisecond}
+    CoWaitUtilControlledStop(ControlStartStop& control_start_stop)
     {
-        agent_ = control_start_stop_.Register([this]() { InterStop(); });
+        agent_ = control_start_stop.Register([this]() { InterStop(); });
+
         if (agent_ == nullptr)
         {
-            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+            std::unique_lock<std::mutex> lock(mutex_);
             run_flag_ = false;
         }
     }
 
-    ~CoAwaitTime()
+    ~CoWaitUtilControlledStop()
     {
     }
 
@@ -67,27 +60,33 @@ private:
     void InterStop()
     {
         {
-            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+            std::unique_lock<std::mutex> lock(mutex_);
             assert(run_flag_ ? true : !wait_flag_); // 如果没有运行，则一定也不会等待
             run_flag_ = false;
             if (!wait_flag_)
             {
                 return;
             }
-            timer_->StopTask(&timeout_task_);
+            wait_flag_ = false;
         }
         agent_ = nullptr;
+
+        handle_.resume();
     }
 
 public:
     void Notify()
     {
-        std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-        if (!wait_flag_)
         {
-            return;
+            std::unique_lock<std::mutex> lock(mutex_);
+            if (!wait_flag_)
+            {
+                return;
+            }
+            wait_flag_ = false;
         }
-        timer_->StopTask(&timeout_task_);
+
+        handle_.resume();
     }
 
     bool await_ready() const
@@ -97,54 +96,33 @@ public:
 
     bool await_suspend(std::coroutine_handle<> co_handle)
     {
-        std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-        if (!run_flag_)
         {
-            wait_result_flag_ = false;
-            return false;
+            std::unique_lock<std::mutex> lock(mutex_);
+            if (!run_flag_)
+            {
+                return false;
+            }
+            assert(!wait_flag_); // 不能同时等待多次
+            wait_flag_ = true;
         }
-        assert(!wait_flag_); // 不能同时等待多个
-        wait_flag_ = true;
 
         handle_ = co_handle;
-
-        timer_->StartTask(&timeout_task_);
         return true;
     }
 
-    bool await_resume() const
+    void await_resume() const
     {
-        return wait_result_flag_;
-    }
-
-    void TimerCallback(ETimerResultType result_type)
-    {
-        {
-            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-            assert(wait_flag_);
-            wait_flag_        = false;
-            wait_result_flag_ = run_flag_ && result_type == ETimerResultType::TRT_TASK_STOP;
-        }
-
-        handle_.resume();
+        return;
     }
 
 private:
-    std::shared_ptr<ITimer> timer_;
     std::coroutine_handle<> handle_;
 
-    ControlStartStop& control_start_stop_;
-
-    std::mutex wait_flag_mutex_;
-    bool run_flag_  = true;
-    bool wait_flag_ = false;
-
-    STimerTask timeout_task_;
-
-    bool wait_result_flag_ = false; // 等待结果，等待到通知时为ture，超时为false
-
     std::shared_ptr<ControlStartStop::Agent> agent_;
+
+    std::mutex mutex_;
+    bool run_flag_  = true;  // 当前是否正在运行
+    bool wait_flag_ = false; // 当前是否有等待对象
 };
 
-} // namespace time
 } // namespace jaf

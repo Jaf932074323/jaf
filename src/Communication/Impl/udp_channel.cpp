@@ -23,6 +23,7 @@
 #include "udp_channel.h"
 #include "Log/log_head.h"
 #include "impl/tool/run_with_timeout.h"
+#include "util/co_wait_util_controlled_stop.h"
 #include <WS2tcpip.h>
 #include <assert.h>
 #include <format>
@@ -131,7 +132,7 @@ Coroutine<void> UdpChannel::Run()
         co_return;
     }
 
-    co_await jaf::CoWaitStop(control_start_stop_);
+    co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
     co_await wait_all_tasks_done_;
 
     co_return;

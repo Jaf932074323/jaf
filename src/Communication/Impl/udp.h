@@ -25,7 +25,7 @@
 #include "empty_channel.h"
 #include "iocp_head.h"
 #include "time_head.h"
-#include "util/co_wait_notice.h"
+#include "util/co_wait_util_stop.h"
 #include <functional>
 #include <map>
 #include <memory>

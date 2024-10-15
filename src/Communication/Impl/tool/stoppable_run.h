@@ -24,7 +24,7 @@
 #include "global_timer/co_await_time.h"
 #include "time/interface/i_timer.h"
 #include "util/co_coroutine.h"
-#include "util/control_start_stop.h"
+#include "util/co_wait_util_controlled_stop.h"
 #include <type_traits>
 
 namespace jaf
@@ -56,7 +56,7 @@ public:
 public:
     Coroutine<void> Run()
     {
-        jaf::CoWaitStop wait_stop(control_start_stop_);
+        jaf::CoWaitUtilControlledStop wait_stop(control_start_stop_);
 
         Coroutine<void> run_wait_obj = RunAwaitObj(wait_stop);
         Coroutine<void> wait_timeout = WaitTimeout(wait_stop);
@@ -66,14 +66,14 @@ public:
     }
 
 private:
-    Coroutine<void> RunAwaitObj(jaf::CoWaitStop& wait_stop)
+    Coroutine<void> RunAwaitObj(jaf::CoWaitUtilControlledStop& wait_stop)
     {
         await_obj_result_ = co_await await_obj_;
         wait_stop.Notify();
         co_return;
     };
 
-    Coroutine<void> WaitTimeout(jaf::CoWaitStop& wait_stop)
+    Coroutine<void> WaitTimeout(jaf::CoWaitUtilControlledStop& wait_stop)
     {
         co_await wait_stop;
         await_obj_.Stop();

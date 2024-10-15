@@ -133,7 +133,7 @@ jaf::Coroutine<void> TcpServer::Run()
         Accept();
     }
 
-    co_await jaf::CoWaitStop(control_start_stop_);
+    co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
 
     {
         std::unique_lock<std::mutex> ul(channels_mutex_);

@@ -22,22 +22,23 @@
 // 2024-10-6 ½ª°²¸»
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
+#include "util/co_wait_util_controlled_stop.h"
 #include "util/control_start_stop.h"
 #include "util/finally.h"
 #include "gtest/gtest.h"
 #include <atomic>
-#include <mutex>
 #include <list>
+#include <mutex>
 #include <thread>
 
 TEST(test_control_start_stop, usual)
 {
-    const size_t total_number  = 100;
-    std::atomic<size_t> number = 0;
+    const size_t total_number       = 100;
+    std::atomic<size_t> number      = 0;
     std::atomic<size_t> wait_number = 0;
 
     auto co_wait_stop_fun = [&number](jaf::ControlStartStop& control_start_stop) -> jaf::Coroutine<void> {
-        jaf::CoWaitStop wait_stop(control_start_stop);
+        jaf::CoWaitUtilControlledStop wait_stop(control_start_stop);
         co_await wait_stop;
         ++number;
     };
@@ -69,7 +70,7 @@ TEST(test_control_start_stop, usual)
             ++wait_number;
         }
         coroutines.clear();
-        });
+    });
 
     for (std::thread& thread : threads)
     {
@@ -84,7 +85,7 @@ TEST(test_control_start_stop, usual)
             ++wait_number;
         }
         coroutines.clear();
-        });
+    });
 
     wait_thread_1.join();
     wait_thread_2.join();

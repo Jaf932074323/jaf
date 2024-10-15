@@ -29,7 +29,7 @@
 #include "unpack.h"
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
-#include "util/co_wait_notice.h"
+#include "util/co_wait_notices.h"
 #include "gtest/gtest.h"
 #include <format>
 #include <list>
@@ -41,13 +41,15 @@ TEST(tcp, usual)
 
     auto co_fun = [&iocp]() -> jaf::CoroutineWithWait<void> {
         std::string str = "hello world!";
-        jaf::CoWaitNotice wait_recv; // 等待接收通知
+        jaf::CoWaitNotices wait_recv; // 等待接收通知
 
-        auto fun_deal = [&](std::shared_ptr<jaf::comm::IPack> pack) {
+        auto fun_deal = [&](std::shared_ptr<jaf::comm::IPack> pack)-> jaf::CoroutineWithWait<void>  {
             auto [buff, len] = pack->GetData();
             std::string recv_str((const char*) buff, len);
             EXPECT_TRUE(recv_str == str);
-            wait_recv.Stop();
+            wait_recv.Notify();
+
+            auto result = co_await pack->GetChannel()->Write((const unsigned char*)str.data(), str.length(), 1000);
         };
         std::shared_ptr<Unpack> unpack = std::make_shared<Unpack>(fun_deal);
 
@@ -69,7 +71,7 @@ TEST(tcp, usual)
         client->SetAddr(str_ip, server_port, str_ip, client_port);
         client->SetHandleChannel(fun_deal_client_channel);
 
-        wait_recv.Start();
+        wait_recv.Start(10);
 
         jaf::Coroutine<void> server_run = server->Run();
         jaf::Coroutine<void> client_run = client->Run();
