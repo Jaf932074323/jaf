@@ -120,3 +120,21 @@ TEST(co_timer_test, co_await_time_stop)
     auto co_test_co_await_time = co_fun();
     co_test_co_await_time.Wait();
 }
+
+TEST(co_timer_test, release)
+{
+    // TODO: 目前定时器的析构时机可能会导致问题，以后再优化
+    auto co_fun = []() -> jaf::CoroutineWithWait<void> {
+        //std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
+        //jaf::Stopwatch stopwatch;
+        //uint64_t sleep_time = 100;
+
+        //jaf::time::CoTimer co_timer(timer);
+        //stopwatch.Reset();
+        //co_await co_timer.Sleep(sleep_time);
+        co_return;
+    };
+
+    auto co_test_co_timer = co_fun();
+    co_test_co_timer.Wait();
+}
