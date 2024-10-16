@@ -53,7 +53,6 @@ Iocp::Iocp(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<jaf::time::
 
 Iocp::~Iocp()
 {
-    wait_work_thread_finish_.Stop();
 }
 
 jaf::Coroutine<void> Iocp::Init()

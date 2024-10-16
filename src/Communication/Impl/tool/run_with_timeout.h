@@ -83,7 +83,7 @@ private:
 
     Coroutine<void> WaitTimeout(jaf::time::CoAwaitTime& await_time)
     {
-        timeout_flag_ = !co_await await_time;
+        timeout_flag_ = co_await await_time;
         await_obj_.Stop();
         co_return;
     };

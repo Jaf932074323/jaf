@@ -1,4 +1,4 @@
-PROJECT(CommunicationTest)
+PROJECT(global_thread_pool)
 
 file(GLOB_RECURSE PROJECT_ROOT_FILES ${PROJECT_SOURCE_DIR}/*.h ${PROJECT_SOURCE_DIR}/*.c ${PROJECT_SOURCE_DIR}/*.cpp)
 
@@ -9,26 +9,14 @@ set(
 
 source_group(TREE ${CMAKE_SOURCE_DIR}/src FILES ${ALL_FILES})
 
-ADD_EXECUTABLE(
-    ${PROJECT_NAME}
-    ${ALL_FILES}
-)
+add_definitions(-D_API_GLOBAL_THREAD_POOL_EXPORT)
 
-target_link_libraries(${PROJECT_NAME}
-    Log
-    Communication
-    Time
-    global_thread_pool
-    Mswsock
-    ws2_32
-    gtest
+add_library(
+    ${PROJECT_NAME} SHARED
+    ${ALL_FILES}
 )
 
 INCLUDE_DIRECTORIES("./")
 INCLUDE_DIRECTORIES("../")
 INCLUDE_DIRECTORIES("../../include")
 INCLUDE_DIRECTORIES("../../3rdparty")
-INCLUDE_DIRECTORIES("../../3rdparty")
-INCLUDE_DIRECTORIES("../Communication")
-INCLUDE_DIRECTORIES("../Log")
-INCLUDE_DIRECTORIES("../Time")

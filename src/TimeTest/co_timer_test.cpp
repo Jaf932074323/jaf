@@ -80,39 +80,6 @@ TEST(co_timer_test, co_await_time_wait)
         stopwatch.Reset();
         bool success          = co_await await_time;
         uint64_t elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(stopwatch.Time()).count();
-        EXPECT_FALSE(success);
-        EXPECT_TRUE(elapsed_time >= sleep_time - 20) << std::format("elapsed_time:{}, sleep_time {}", elapsed_time, sleep_time);
-
-        await_time.Stop();
-    };
-
-    auto co_test_co_await_time = co_fun();
-    co_test_co_await_time.Wait();
-}
-
-TEST(co_timer_test, co_await_time_notify)
-{
-    auto co_fun = []() -> jaf::CoroutineWithWait<void> {
-        jaf::Stopwatch stopwatch;
-
-        jaf::ControlStartStop control_start_stop;
-        control_start_stop.Start();
-
-        uint64_t sleep_time = 100;
-
-        jaf::time::CoAwaitTime await_time(1000, control_start_stop);
-
-        jaf::time::STimerTask task;
-        task.fun = [&](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) {
-            await_time.Notify();
-        };
-        task.interval = sleep_time;
-        stopwatch.Reset();
-
-        jaf::time::GlobalTimer::Timer()->StartTask(&task);
-        bool success          = co_await await_time;
-        uint64_t elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(stopwatch.Time()).count();
-
         EXPECT_TRUE(success);
         EXPECT_TRUE(elapsed_time >= sleep_time - 20) << std::format("elapsed_time:{}, sleep_time {}", elapsed_time, sleep_time);
 

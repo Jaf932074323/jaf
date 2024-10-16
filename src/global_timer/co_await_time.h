@@ -80,16 +80,6 @@ private:
     }
 
 public:
-    void Notify()
-    {
-        std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-        if (!wait_flag_)
-        {
-            return;
-        }
-        timer_->StopTask(&timeout_task_);
-    }
-
     bool await_ready() const
     {
         return false;
@@ -100,7 +90,7 @@ public:
         std::unique_lock<std::mutex> lock(wait_flag_mutex_);
         if (!run_flag_)
         {
-            wait_result_flag_ = false;
+            timeout_flag_ = false;
             return false;
         }
         assert(!wait_flag_); // 不能同时等待多个
@@ -114,7 +104,7 @@ public:
 
     bool await_resume() const
     {
-        return wait_result_flag_;
+        return timeout_flag_;
     }
 
     void TimerCallback(ETimerResultType result_type)
@@ -123,7 +113,7 @@ public:
             std::unique_lock<std::mutex> lock(wait_flag_mutex_);
             assert(wait_flag_);
             wait_flag_        = false;
-            wait_result_flag_ = run_flag_ && result_type == ETimerResultType::TRT_TASK_STOP;
+            timeout_flag_ = result_type == ETimerResultType::TRT_SUCCESS;
         }
 
         handle_.resume();
@@ -141,7 +131,7 @@ private:
 
     STimerTask timeout_task_;
 
-    bool wait_result_flag_ = false; // 等待结果，等待到通知时为ture，超时为false
+    bool timeout_flag_ = false; // 等待结果，等待到通知时为ture，超时为false
 
     std::shared_ptr<ControlStartStop::Agent> agent_;
 };

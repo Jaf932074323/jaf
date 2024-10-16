@@ -25,7 +25,9 @@
 #include "Interface/communication/i_tcp_client.h"
 #include "Interface/communication/i_tcp_server.h"
 #include "Interface/communication/i_udp.h"
+#include "global_thread_pool/global_thread_pool.h"
 #include "global_timer/co_sleep.h"
+#include "global_timer/global_timer.h"
 #include "unpack.h"
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
@@ -36,24 +38,24 @@
 
 TEST(tcp, usual)
 {
-    jaf::comm::Iocp iocp;
-    jaf::Coroutine<void> iocp_run = iocp.Run();
+    auto co_fun = []() -> jaf::CoroutineWithWait<void> {
+        jaf::comm::Iocp iocp(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
+        jaf::Coroutine<void> iocp_run = iocp.Run();
 
-    auto co_fun = [&iocp]() -> jaf::CoroutineWithWait<void> {
         std::string str = "hello world!";
         jaf::CoWaitNotices wait_recv; // 等待接收通知
 
-        auto fun_deal = [&](std::shared_ptr<jaf::comm::IPack> pack)-> jaf::CoroutineWithWait<void>  {
+        auto fun_deal = [&](std::shared_ptr<jaf::comm::IPack> pack) -> jaf::CoroutineWithWait<void> {
             auto [buff, len] = pack->GetData();
             std::string recv_str((const char*) buff, len);
             EXPECT_TRUE(recv_str == str);
             wait_recv.Notify();
 
-            auto result = co_await pack->GetChannel()->Write((const unsigned char*)str.data(), str.length(), 1000);
+            auto result = co_await pack->GetChannel()->Write((const unsigned char*) str.data(), str.length(), 1000);
         };
         std::shared_ptr<Unpack> unpack = std::make_shared<Unpack>(fun_deal);
 
-        auto fun_deal_client_channel   = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
+        auto fun_deal_client_channel = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
             auto result = co_await channel->Write((const unsigned char*) str.data(), str.length(), 1000);
             co_await unpack->Run(channel);
         };
@@ -83,10 +85,11 @@ TEST(tcp, usual)
 
         co_await server_run;
         co_await client_run;
+
+        iocp.Stop();
+        co_await iocp_run;
     };
 
     auto co_test_co_await_time = co_fun();
     co_test_co_await_time.Wait();
-
-    iocp.Stop();
 }

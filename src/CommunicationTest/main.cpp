@@ -28,6 +28,8 @@
 #include <thread>
 #include <winsock2.h>
 #include "gtest/gtest.h"
+#include "global_thread_pool/global_thread_pool.h"
+#include "util/simple_thread_pool.h"
 
 int main(int argc, char** argv)
 {
@@ -39,6 +41,8 @@ int main(int argc, char** argv)
     std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
     jaf::time::GlobalTimer::SetTimer(timer);
 
+    jaf::GlobalThreadPool::SetThreadPool(std::make_shared<jaf::SimpleThreadPool>(1));
+
     WSAData version;
     WSAStartup(WINSOCK_VERSION, &version);
 
@@ -49,7 +53,6 @@ int main(int argc, char** argv)
 
     //main.Stop();
     //main.WaitFinish();
-
 
     //LOG_INFO() << "³ÌÐò½áÊø";
 

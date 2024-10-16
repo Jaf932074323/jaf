@@ -256,8 +256,8 @@ bool TcpChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_handle)
 
     if (SOCKET_ERROR == WSARecv(socket_, &wsbuffer_, 1, nullptr, &flags, &iocp_data_.overlapped, NULL))
     {
-        int error = WSAGetLastError();
-        if (error != ERROR_IO_PENDING)
+        reslult_.err_ = WSAGetLastError();
+        if (reslult_.err_ != ERROR_IO_PENDING)
         {
             return false;
         }
