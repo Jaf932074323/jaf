@@ -78,7 +78,7 @@ TEST(tcp, usual)
         jaf::Coroutine<void> server_run = server->Run();
         jaf::Coroutine<void> client_run = client->Run();
 
-        co_await wait_recv.Wait();
+        co_await wait_recv;
 
         client->Stop();
         server->Stop();

@@ -76,7 +76,7 @@ TEST(serial, usual)
         jaf::Coroutine<void> run_1 = serial_port_1->Run();
         jaf::Coroutine<void> run_2 = serial_port_2->Run();
 
-        co_await wait_recv.Wait();
+        co_await wait_recv;
 
         serial_port_1->Stop();
         serial_port_2->Stop();

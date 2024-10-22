@@ -54,7 +54,7 @@ TEST(wait_notices, notice)
     wait_notices.Start(times);
 
     auto co_fun = [&]() -> jaf::CoroutineWithWait<void> {
-        co_await wait_notices.Wait();
+        co_await wait_notices;
         ++number;
     };
     auto co_fun_obj = co_fun();
@@ -76,7 +76,7 @@ TEST(wait_notices, stop)
     wait_notices.Start(times);
 
     auto co_fun = [&]() -> jaf::CoroutineWithWait<void> {
-        co_await wait_notices.Wait();
+        co_await wait_notices;
         ++number;
     };
     auto co_fun_obj = co_fun();

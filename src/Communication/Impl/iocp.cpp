@@ -83,7 +83,7 @@ jaf::Coroutine<void> Iocp::Run()
     {
         PostQueuedCompletionStatus(m_completionPort, 0, (DWORD) NULL, NULL);
     }
-    co_await wait_work_thread_finish_.Wait();
+    co_await wait_work_thread_finish_;
 
     CloseHandle(m_completionPort);
     m_completionPort = nullptr;

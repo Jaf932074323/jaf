@@ -29,137 +29,108 @@ namespace jaf
 {
 
 // 等待多次通知
-class CoWaitNotices
+struct CoWaitNotices
 {
-public:
-    CoWaitNotices(){};
-    virtual ~CoWaitNotices(){};
+    CoWaitNotices()
+    {
+    }
 
-public:
+    ~CoWaitNotices() {}
+
     void Start(size_t times)
     {
-        awaitable_.Start(times);
+        std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+        run_flag_ = true;
+        times_    = times;
     }
 
     void Stop()
     {
-        awaitable_.Stop();
+        {
+            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+            run_flag_ = false;
+            times_    = 0;
+            if (!wait_flag_)
+            {
+                return;
+            }
+            wait_flag_ = false;
+        }
+        handle_.resume();
     }
 
-    jaf::Coroutine<void> Wait()
+    bool await_ready() const
     {
-        assert(!wait_flag_); // 同时只能等待一个
+        return false;
+    }
+
+    bool await_suspend(std::coroutine_handle<> co_handle)
+    {
+        handle_ = co_handle;
+
+        std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+        if (times_ == 0)
+        {
+            return false;
+        }
+        if (!run_flag_)
+        {
+            return false;
+        }
+
+        assert(!wait_flag_);
         wait_flag_ = true;
 
-        co_await awaitable_;
+        return true;
+    }
 
-        wait_flag_ = false;
+    void await_resume() const
+    {
+        return;
+    }
 
-        co_return;
+    // 重置通知次数，重置之后需要重新通知times次
+    void Reset(size_t times)
+    {
+        assert(times != 0);
+
+        {
+            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+            times_ = times;
+        }
     }
 
     // 通知
     // 要通知多次才生效
     void Notify()
     {
-        awaitable_.Notify();
+        {
+            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
+            if (times_ != 0)
+            {
+                --times_;
+            }
+            if (times_ != 0)
+            {
+                return;
+            }
+            if (!wait_flag_)
+            {
+                return;
+            }
+
+            wait_flag_ = false;
+        }
+
+        handle_.resume();
     }
 
 private:
-    struct Awaitable
-    {
-        Awaitable()
-        {
-        }
+    std::coroutine_handle<> handle_;
 
-        ~Awaitable() {}
-
-        void Start(size_t times)
-        {
-            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-            run_flag_ = true;
-            times_    = times;
-        }
-
-        void Stop()
-        {
-            {
-                std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                run_flag_ = false;
-                times_    = 0;
-                if (!wait_flag_)
-                {
-                    return;
-                }
-                wait_flag_ = false;
-            }
-            handle_.resume();
-        }
-
-        bool await_ready() const
-        {
-            return false;
-        }
-
-        bool await_suspend(std::coroutine_handle<> co_handle)
-        {
-            handle_ = co_handle;
-
-            std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-            if (times_ == 0)
-            {
-                return false;
-            }
-            if (!run_flag_)
-            {
-                return false;
-            }
-
-            assert(!wait_flag_);
-            wait_flag_ = true;
-
-            return true;
-        }
-
-        void await_resume() const
-        {
-            return;
-        }
-
-        void Notify()
-        {
-            {
-                std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-                if (times_ != 0)
-                {
-                    --times_;
-                }
-                if (times_ != 0)
-                {
-                    return;
-                }
-                if (!wait_flag_)
-                {
-                    return;
-                }
-
-                wait_flag_ = false;
-            }
-
-            handle_.resume();
-        }
-
-    private:
-        std::coroutine_handle<> handle_;
-
-        std::mutex wait_flag_mutex_;
-        size_t times_   = 0;
-        bool run_flag_  = false;
-        bool wait_flag_ = false;
-    };
-
-private:
-    Awaitable awaitable_;
+    std::mutex wait_flag_mutex_;
+    size_t times_   = 0;
+    bool run_flag_  = false;
     bool wait_flag_ = false;
 };
 
