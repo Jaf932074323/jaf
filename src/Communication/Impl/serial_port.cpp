@@ -72,21 +72,44 @@ jaf::Coroutine<void> SerialPort::Run()
 
     std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(completion_handle_, comm_handle_, timer_);
 
+    {
+        std::unique_lock lock(channel_mutex_);
+        channel_ = channel;
+    }
+
     jaf::Coroutine<void> channel_run = channel->Run();
     co_await handle_channel_(channel);
     channel->Stop();
     co_await channel_run;
+
+    run_flag_ = false;
+    CloseSerialPort();
 
     co_return;
 }
 
 void SerialPort::Stop()
 {
-    if (!run_flag_)
-    {
-        return;
-    }
     run_flag_ = false;
+    std::unique_lock lock(channel_mutex_);
+    if (channel_ != nullptr)
+    {
+        channel_->Stop();
+        channel_ = std::make_shared<EmptyChannel>();
+    }
+}
+
+std::shared_ptr<IChannel> SerialPort::GetChannel()
+{
+    std::unique_lock lock(channel_mutex_);
+    assert(channel_ != nullptr);
+    return channel_;
+}
+
+Coroutine<SChannelResult> SerialPort::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
+{
+    std::shared_ptr<IChannel> channel = GetChannel();
+    co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
 void SerialPort::Init(void)
@@ -105,10 +128,11 @@ bool SerialPort::OpenSerialPort()
         return false;
     }
 
+    // TODO:这些参数的设置会影响读写效果，后续需要提供接口让用户配置
     // timeout
     COMMTIMEOUTS timeouts;
     GetCommTimeouts(comm_handle, &timeouts);
-    timeouts.ReadIntervalTimeout        = 200;
+    timeouts.ReadIntervalTimeout        = 20;
     timeouts.ReadTotalTimeoutConstant   = 0;
     timeouts.ReadTotalTimeoutMultiplier = 0;
     SetCommTimeouts(comm_handle, &timeouts);
@@ -146,10 +170,10 @@ bool SerialPort::OpenSerialPort()
 
 void SerialPort::CloseSerialPort()
 {
-    if (completion_handle_ != INVALID_HANDLE_VALUE)
+    if (comm_handle_ != INVALID_HANDLE_VALUE)
     {
-        CloseHandle(completion_handle_);
-        completion_handle_ = INVALID_HANDLE_VALUE;
+        CloseHandle(comm_handle_);
+        comm_handle_ = INVALID_HANDLE_VALUE;
     }
 }
 

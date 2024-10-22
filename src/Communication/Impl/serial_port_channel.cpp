@@ -110,6 +110,7 @@ SerialPortChannel::~SerialPortChannel()
 Coroutine<void> SerialPortChannel::Run()
 {
     stop_flag_ = false;
+    control_start_stop_.Start();
     if (CreateIoCompletionPort(comm_handle_, completion_handle_, (ULONG_PTR) comm_handle_, 0) == 0)
     {
         DWORD dw        = GetLastError();
@@ -117,6 +118,7 @@ Coroutine<void> SerialPortChannel::Run()
         LOG_ERROR() << str;
         co_return;
     }
+
 
     co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
     co_await wait_all_tasks_done_;

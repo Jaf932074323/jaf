@@ -24,6 +24,7 @@
 #include "Interface/communication/i_serial_port.h"
 #include "Interface/communication/i_unpack.h"
 #include "Interface/i_timer.h"
+#include "empty_channel.h"
 #include "iocp_head.h"
 #include <functional>
 #include <map>
@@ -48,6 +49,8 @@ public:
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
     virtual jaf::Coroutine<void> Run() override;
     virtual void Stop() override;
+    virtual std::shared_ptr<IChannel> GetChannel() override;
+    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
     void Init(void);
@@ -55,8 +58,6 @@ private:
     void CloseSerialPort();
 
 private:
-    bool run_flag_ = false;
-
     std::shared_ptr<jaf::time::ITimer> timer_;
 
     IGetCompletionPort* get_completion_port_ = nullptr;
@@ -71,6 +72,9 @@ private:
     HANDLE comm_handle_;
 
     std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // ²Ù×÷Í¨µÀ
+    std::mutex channel_mutex_;
+    std::atomic<bool> run_flag_        = false;
+    std::shared_ptr<IChannel> channel_ = std::make_shared<EmptyChannel>();
 };
 
 } // namespace comm

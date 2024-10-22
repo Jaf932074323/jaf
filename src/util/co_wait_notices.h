@@ -98,7 +98,7 @@ private:
 
         bool await_ready() const
         {
-            return true;
+            return false;
         }
 
         bool await_suspend(std::coroutine_handle<> co_handle)

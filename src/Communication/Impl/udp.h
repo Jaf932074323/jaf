@@ -26,6 +26,7 @@
 #include "iocp_head.h"
 #include "time_head.h"
 #include "util/co_wait_util_stop.h"
+#include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
@@ -69,7 +70,7 @@ private:
 
     std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // ²Ù×÷Í¨µÀ
     std::mutex channel_mutex_;
-    bool run_flag_                     = false;
+    std::atomic<bool> run_flag_        = false;
     std::shared_ptr<IChannel> channel_ = std::make_shared<EmptyChannel>();
 };
 
