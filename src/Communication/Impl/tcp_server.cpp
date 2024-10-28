@@ -51,6 +51,22 @@ std::string GetFormatMessage(DWORD dw)
     return strText;
 }
 
+static LPFN_ACCEPTEX GetAcceptEx(SOCKET a_socket)
+{
+    LPFN_ACCEPTEX func = nullptr;
+    DWORD bytes;
+    GUID guid = WSAID_ACCEPTEX;
+    if (WSAIoctl(a_socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid), &func, sizeof(func), &bytes, nullptr, nullptr) == SOCKET_ERROR)
+    {
+        DWORD dw        = GetLastError();
+        std::string str = std::format("GetAcceptEx code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
+        LOG_ERROR() << str;
+        return nullptr;
+    }
+
+    return func;
+}
+
 struct TcpServer::AcceptAwaitableResult
 {
     SOCKET sock_{INVALID_SOCKET};
@@ -75,7 +91,7 @@ private:
     std::coroutine_handle<> handle_;
 
     AcceptAwaitableResult reslult_;
-    char buf_[1]   = {0};
+    char buf_[((sizeof (sockaddr_in) + 16) * 2)]   = {0};
     DWORD dwBytes_ = 0;
 
     std::mutex mutex_;
@@ -349,6 +365,8 @@ bool TcpServer::AcceptAwaitable::await_ready()
 
 bool TcpServer::AcceptAwaitable::await_suspend(std::coroutine_handle<> co_handle)
 {
+    static LPFN_ACCEPTEX  func_accept = GetAcceptEx(listen_socket_);
+
     handle_ = co_handle;
 
     iocp_data_.call_ = std::bind(&AcceptAwaitable::IoCallback, this, std::placeholders::_1);
@@ -360,7 +378,7 @@ bool TcpServer::AcceptAwaitable::await_suspend(std::coroutine_handle<> co_handle
         return false;
     }
 
-    if (!AcceptEx(listen_socket_, reslult_.sock_, buf_, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &dwBytes_, &iocp_data_.overlapped))
+    if (!func_accept(listen_socket_, reslult_.sock_, buf_, 0, sizeof(SOCKADDR_IN) + 16, sizeof(SOCKADDR_IN) + 16, &dwBytes_, &iocp_data_.overlapped))
     {
         int error = WSAGetLastError();
         if (error != ERROR_IO_PENDING)
