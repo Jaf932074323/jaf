@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-20 姜安富
-#include "Communication/Impl/iocp.h"
+#include "Communication/Impl/communication.h"
 #include "Interface/communication/i_serial_port.h"
 #include "Interface/communication/i_tcp_client.h"
 #include "Interface/communication/i_tcp_server.h"
@@ -39,8 +39,8 @@
 TEST(tcp, usual)
 {
     auto co_fun = []() -> jaf::CoroutineWithWait<void> {
-        jaf::comm::Iocp iocp(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-        jaf::Coroutine<void> iocp_run = iocp.Run();
+        jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
+        jaf::Coroutine<void> communication_run = communication.Run();
 
         std::string str = "hello world!";
         jaf::CoWaitNotices wait_recv; // 等待接收通知
@@ -64,12 +64,12 @@ TEST(tcp, usual)
         uint16_t server_port = 8181;
         uint16_t client_port = 0;
 
-        std::shared_ptr<jaf::comm::ITcpServer> server = iocp.CreateTcpServer();
+        std::shared_ptr<jaf::comm::ITcpServer> server = communication.CreateTcpServer();
         server->SetAddr(str_ip, server_port);
         server->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
         server->SetAcceptCount(1);
 
-        std::shared_ptr<jaf::comm::ITcpClient> client = iocp.CreateTcpClient();
+        std::shared_ptr<jaf::comm::ITcpClient> client = communication.CreateTcpClient();
         client->SetAddr(str_ip, server_port, str_ip, client_port);
         client->SetHandleChannel(fun_deal_client_channel);
 
@@ -86,8 +86,8 @@ TEST(tcp, usual)
         co_await server_run;
         co_await client_run;
 
-        iocp.Stop();
-        co_await iocp_run;
+        communication.Stop();
+        co_await communication_run;
     };
 
     auto co_test_co_await_time = co_fun();

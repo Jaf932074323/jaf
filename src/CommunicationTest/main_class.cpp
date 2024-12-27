@@ -26,7 +26,7 @@
 #include "util/simple_thread_pool.h"
 
 Main::Main()
-    : iocp_(std::make_shared<jaf::comm::Iocp>(std::make_shared<jaf::SimpleThreadPool>(2)))
+    : communication_(std::make_shared<jaf::comm::Communication>(std::make_shared<jaf::SimpleThreadPool>(2)))
 {
 }
 
@@ -43,7 +43,7 @@ jaf::Coroutine<void> Main::Run()
 
     wait_stop_.Start();
 
-    jaf::Coroutine<void> iocp_run = iocp_->Run();
+    jaf::Coroutine<void> communication_run = communication_->Run();
     //coroutines.push_back(server_->Run());
     //coroutines.push_back(client_->Run());
     coroutines.push_back(udp_->Run());
@@ -60,8 +60,8 @@ jaf::Coroutine<void> Main::Run()
         co_await coroutine;
     }
 
-    iocp_->Stop();
-    co_await iocp_run;
+    communication_->Stop();
+    co_await communication_run;
     wait_finish_latch_.CountDown();
 }
 
@@ -77,25 +77,25 @@ void Main::WaitFinish()
 
 void Main::Init()
 {
-    iocp_->Init();
+    communication_->Init();
 
     std::string str_ip = "127.0.0.1";
 
     std::shared_ptr<Unpack> unpack = std::make_shared<Unpack>(std::bind(&Main::Deal, this, std::placeholders::_1));
 
-    server_ = iocp_->CreateTcpServer();
+    server_ = communication_->CreateTcpServer();
     server_->SetAddr(str_ip, 8181);
     server_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
-    client_ = iocp_->CreateTcpClient();
+    client_ = communication_->CreateTcpClient();
     client_->SetAddr(str_ip, 8182, str_ip, 0);
     client_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
-    udp_ = iocp_->CreateUdp();
+    udp_ = communication_->CreateUdp();
     udp_->SetAddr(str_ip, 8081, str_ip, 8082);
     udp_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
-    serial_port_ = iocp_->CreateSerialPort();
+    serial_port_ = communication_->CreateSerialPort();
     serial_port_->SetAddr(11, 9600, 8, 0, 0);
     serial_port_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 }

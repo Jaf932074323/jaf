@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-20 姜安富
-#include "Communication/Impl/iocp.h"
+#include "Communication/Impl/communication.h"
 #include "Interface/communication/i_serial_port.h"
 #include "Interface/communication/i_tcp_client.h"
 #include "Interface/communication/i_tcp_server.h"
@@ -35,10 +35,10 @@
 
 TEST(udp, usual)
 {
-    jaf::comm::Iocp iocp;
-    jaf::Coroutine<void> iocp_run = iocp.Run();
+    jaf::comm::Communication communication;
+    jaf::Coroutine<void> communication_run = communication.Run();
 
-    auto co_fun = [&iocp]() -> jaf::CoroutineWithWait<void> {
+    auto co_fun = [&communication]() -> jaf::CoroutineWithWait<void> {
         std::string str = "hello world!";
         jaf::CoWaitUtilStop wait_recv; // 等待接收通知
 
@@ -54,11 +54,11 @@ TEST(udp, usual)
 
         std::shared_ptr<Unpack> unpack = std::make_shared<Unpack>(fun_deal);
 
-        std::shared_ptr<jaf::comm::IUdp> udp_1 = iocp.CreateUdp();
+        std::shared_ptr<jaf::comm::IUdp> udp_1 = communication.CreateUdp();
         udp_1->SetAddr(str_ip, 8081, str_ip, 8082);
         udp_1->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
-        std::shared_ptr<jaf::comm::IUdp> udp_2 = iocp.CreateUdp();
+        std::shared_ptr<jaf::comm::IUdp> udp_2 = communication.CreateUdp();
         udp_2->SetAddr(str_ip, 8082, str_ip, 8081);
         udp_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
@@ -79,5 +79,5 @@ TEST(udp, usual)
     auto co_test_co_await_time = co_fun();
     co_test_co_await_time.Wait();
 
-    iocp.Stop();
+    communication.Stop();
 }

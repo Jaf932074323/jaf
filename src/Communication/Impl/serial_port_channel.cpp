@@ -114,7 +114,7 @@ Coroutine<void> SerialPortChannel::Run()
     if (CreateIoCompletionPort(comm_handle_, completion_handle_, (ULONG_PTR) comm_handle_, 0) == 0)
     {
         DWORD dw        = GetLastError();
-        std::string str = std::format("Iocp code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
+        std::string str = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
         LOG_ERROR() << str;
         co_return;
     }

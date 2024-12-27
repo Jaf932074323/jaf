@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
-#include "iocp.h"
+#include "communication.h"
 #include "define_constant.h"
 #include "log_head.h"
 #include "serial_port.h"
@@ -44,23 +44,23 @@ namespace comm
 
 std::string GetFormatMessage(DWORD dw);
 
-Iocp::Iocp(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<jaf::time::ITimer> timer)
+Communication::Communication(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<jaf::time::ITimer> timer)
     : thread_pool_(thread_pool == nullptr ? std::make_shared<SimpleThreadPool>() : thread_pool)
     , timer_(timer == nullptr ? std::make_shared<time::Timer>() : timer)
     , get_completion_port_(this)
 {
 }
 
-Iocp::~Iocp()
+Communication::~Communication()
 {
 }
 
-jaf::Coroutine<void> Iocp::Init()
+jaf::Coroutine<void> Communication::Init()
 {
     co_return;
 }
 
-jaf::Coroutine<void> Iocp::Run()
+jaf::Coroutine<void> Communication::Run()
 {
     if (run_flag_)
     {
@@ -91,36 +91,36 @@ jaf::Coroutine<void> Iocp::Run()
     co_return;
 }
 
-void Iocp::Stop()
+void Communication::Stop()
 {
     wait_stop_.Stop();
 }
 
-std::shared_ptr<ITcpServer> Iocp::CreateTcpServer()
+std::shared_ptr<ITcpServer> Communication::CreateTcpServer()
 {
     std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(&get_completion_port_, timer_);
     return std::static_pointer_cast<ITcpServer>(server);
 }
 
-std::shared_ptr<ITcpClient> Iocp::CreateTcpClient()
+std::shared_ptr<ITcpClient> Communication::CreateTcpClient()
 {
     std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(&get_completion_port_, timer_);
     return std::static_pointer_cast<ITcpClient>(client);
 }
 
-std::shared_ptr<IUdp> Iocp::CreateUdp()
+std::shared_ptr<IUdp> Communication::CreateUdp()
 {
     std::shared_ptr<Udp> udp = std::make_shared<Udp>(&get_completion_port_, timer_);
     return std::static_pointer_cast<IUdp>(udp);
 }
 
-std::shared_ptr<ISerialPort> Iocp::CreateSerialPort()
+std::shared_ptr<ISerialPort> Communication::CreateSerialPort()
 {
     std::shared_ptr<SerialPort> server = std::make_shared<SerialPort>(&get_completion_port_, timer_);
     return std::static_pointer_cast<ISerialPort>(server);
 }
 
-void Iocp::CreateWorkThread()
+void Communication::CreateWorkThread()
 {
     SYSTEM_INFO mySysInfo;
     GetSystemInfo(&mySysInfo);
@@ -128,11 +128,11 @@ void Iocp::CreateWorkThread()
 
     for (size_t i = 0; i < work_thread_count_; ++i)
     {
-        thread_pool_->Post(std::bind(&Iocp::WorkThreadRun, this));
+        thread_pool_->Post(std::bind(&Communication::WorkThreadRun, this));
     }
 }
 
-void Iocp::WorkThreadRun()
+void Communication::WorkThreadRun()
 {
     FINALLY(wait_work_thread_finish_.Notify(););
 
@@ -153,7 +153,7 @@ void Iocp::WorkThreadRun()
                     continue;
                 }
 
-                std::string str = std::format("Iocp code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
+                std::string str = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
                 LOG_ERROR(LOG_NAME) << str;
             }
 

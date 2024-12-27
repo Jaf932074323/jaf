@@ -26,7 +26,7 @@
 #include "Interface/communication/i_tcp_server.h"
 #include "Interface/communication/i_udp.h"
 #include "Interface/communication/comm_struct.h"
-#include "iocp_head.h"
+#include "communication_head.h"
 #include "time_head.h"
 #include "util/co_wait_util_stop.h"
 #include "util/co_wait_notices.h"
@@ -43,11 +43,11 @@ namespace comm
 {
 
 // windows平台下的完成端口
-class Iocp
+class Communication
 {
 public:
-    Iocp(std::shared_ptr<IThreadPool> thread_pool = nullptr, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
-    virtual ~Iocp();
+    Communication(std::shared_ptr<IThreadPool> thread_pool = nullptr, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
+    virtual ~Communication();
 
 public:
     virtual jaf::Coroutine<void> Init();
@@ -75,18 +75,18 @@ private:
     class CompletionPort : public IGetCompletionPort
     {
     public:
-        CompletionPort(Iocp* iocp)
-            : iocp_(iocp) {}
+        CompletionPort(Communication* communication)
+            : communication_(communication) {}
         ~CompletionPort() {}
 
     public:
         HANDLE Get()
         {
-            return iocp_->GetCompletionPort();
+            return communication_->GetCompletionPort();
         }
 
     private:
-        Iocp* iocp_;
+        Communication* communication_;
     };
 
 private:

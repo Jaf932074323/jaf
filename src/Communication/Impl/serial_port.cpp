@@ -123,7 +123,7 @@ bool SerialPort::OpenSerialPort()
     if (comm_handle == INVALID_HANDLE_VALUE)
     {
         DWORD dw        = GetLastError();
-        std::string str = std::format("Iocp code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
+        std::string str = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
         LOG_ERROR(LOG_NAME) << str;
         return false;
     }

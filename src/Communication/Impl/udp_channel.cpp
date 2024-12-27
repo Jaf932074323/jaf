@@ -127,7 +127,7 @@ Coroutine<void> UdpChannel::Run()
     if (CreateIoCompletionPort((HANDLE) socket_, completion_handle_, 0, 0) == 0)
     {
         DWORD dw        = GetLastError();
-        std::string str = std::format("Iocp code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
+        std::string str = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
         LOG_ERROR() << str;
         co_return;
     }

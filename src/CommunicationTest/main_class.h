@@ -21,12 +21,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
+#include "Impl/communication.h"
+#include "Interface/communication/i_pack.h"
 #include "Interface/communication/i_serial_port.h"
 #include "Interface/communication/i_tcp_client.h"
 #include "Interface/communication/i_tcp_server.h"
 #include "Interface/communication/i_udp.h"
-#include "Impl/iocp.h"
-#include "Interface/communication/i_pack.h"
 #include "util/co_coroutine.h"
 #include "util/co_wait_util_stop.h"
 #include "util/latch.h"
@@ -48,11 +48,11 @@ private:
     void Deal(std::shared_ptr<jaf::comm::IPack> pack);
 
 private:
-    std::shared_ptr<jaf::comm::Iocp> iocp_                = std::make_shared<jaf::comm::Iocp>();
-    std::shared_ptr<jaf::comm::ITcpServer> server_        = nullptr;
-    std::shared_ptr<jaf::comm::ITcpClient> client_        = nullptr;
-    std::shared_ptr<jaf::comm::IUdp> udp_                 = nullptr;
-    std::shared_ptr<jaf::comm::ISerialPort> serial_port_  = nullptr;
+    std::shared_ptr<jaf::comm::Communication> communication_ = std::make_shared<jaf::comm::Communication>();
+    std::shared_ptr<jaf::comm::ITcpServer> server_           = nullptr;
+    std::shared_ptr<jaf::comm::ITcpClient> client_           = nullptr;
+    std::shared_ptr<jaf::comm::IUdp> udp_                    = nullptr;
+    std::shared_ptr<jaf::comm::ISerialPort> serial_port_     = nullptr;
 
     jaf::Latch wait_finish_latch_{1};
 

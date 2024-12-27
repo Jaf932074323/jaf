@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-10-19 姜安富
-#include "Communication/Impl/iocp.h"
+#include "Communication/Impl/communication.h"
 #include "Interface/communication/i_serial_port.h"
 #include "Interface/communication/i_tcp_client.h"
 #include "Interface/communication/i_tcp_server.h"
@@ -39,8 +39,8 @@
 TEST(serial, usual)
 {
     auto co_fun = []() -> jaf::CoroutineWithWait<void> {
-        jaf::comm::Iocp iocp(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-        jaf::Coroutine<void> iocp_run = iocp.Run();
+        jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
+        jaf::Coroutine<void> communication_run = communication.Run();
 
         std::string str = "hello world!";
         jaf::CoWaitNotices wait_recv; // 等待接收通知
@@ -62,11 +62,11 @@ TEST(serial, usual)
             co_await unpack_run;
         };
 
-        std::shared_ptr<jaf::comm::ISerialPort> serial_port_1 = iocp.CreateSerialPort();
+        std::shared_ptr<jaf::comm::ISerialPort> serial_port_1 = communication.CreateSerialPort();
         serial_port_1->SetAddr(11, 9600, 8, 0, 0);
         serial_port_1->SetHandleChannel(fun_deal_client_channel);
 
-        std::shared_ptr<jaf::comm::ISerialPort> serial_port_2 = iocp.CreateSerialPort();
+        std::shared_ptr<jaf::comm::ISerialPort> serial_port_2 = communication.CreateSerialPort();
         serial_port_2->SetAddr(21, 9600, 8, 0, 0);
         serial_port_2->SetHandleChannel(fun_deal_client_channel);
         //serial_port_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
@@ -84,8 +84,8 @@ TEST(serial, usual)
         co_await run_1;
         co_await run_2;
 
-        iocp.Stop();
-        co_await iocp_run;
+        communication.Stop();
+        co_await communication_run;
     };
 
     auto co_test_co_await_time = co_fun();
