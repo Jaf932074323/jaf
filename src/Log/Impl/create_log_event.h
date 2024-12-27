@@ -22,7 +22,7 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include "define_log_export.h"
-#include "interface/log/i_logger.h"
+#include "Interface/log/i_logger.h"
 #include <memory>
 #include <string>
 

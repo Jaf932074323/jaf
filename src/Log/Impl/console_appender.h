@@ -22,8 +22,8 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include "define_log_export.h"
-#include "interface/log/i_filter.h"
-#include "interface/log/i_format.h"
+#include "Interface/log/i_filter.h"
+#include "Interface/log/i_format.h"
 #include <memory>
 
 namespace jaf

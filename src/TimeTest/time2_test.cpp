@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-8-19 ½ª°²¸»
-#include "impl/timer2.h"
+#include "Impl/timer2.h"
 #include "util/stopwatch.h"
 #include "gtest/gtest.h"
 #include <atomic>

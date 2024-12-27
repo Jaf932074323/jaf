@@ -20,31 +20,44 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "get_time_high_precision.h"
+#include "get_time_tick.h"
+
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#elif defined(__linux__)
+#include <sys/time.h>
+#endif
 
 namespace jaf
 {
 namespace time
 {
 
-GetTimeHighPrecision::GetTimeHighPrecision()
+GetTimeTick::GetTimeTick()
 {
-    QueryPerformanceFrequency(&m_cpuFreq);
 }
 
-GetTimeHighPrecision::~GetTimeHighPrecision() {}
+GetTimeTick::~GetTimeTick() {}
 
-uint64_t GetTimeHighPrecision::GetNowTime()
+#ifdef _WIN32
+
+uint64_t GetTimeTick::GetNowTime()
 {
-    LARGE_INTEGER time;
-    double rumTime = 0.0;
-    QueryPerformanceCounter(&time);
-    rumTime = (time.QuadPart * 1000.0f) / m_cpuFreq.QuadPart;
-
-    return (unsigned __int64) rumTime;
+    return GetTickCount64();
 }
+
+#elif defined(__linux__)
+
+uint64_t GetTimeTick::GetNowTime()
+{
+    struct timeval tv;
+    gettimeofday(&tv, nullptr); 
+    return ((unsigned long long)tv.tv_usec / 1000) + ((unsigned long long)tv.tv_sec * 1000);
+}
+
+#endif
+
 
 } // namespace time
 } // namespace jaf

@@ -25,7 +25,7 @@
 #include "Interface/communication/i_tcp_client.h"
 #include "Interface/communication/i_tcp_server.h"
 #include "Interface/communication/i_udp.h"
-#include "interface/communication/comm_struct.h"
+#include "Interface/communication/comm_struct.h"
 #include "iocp_head.h"
 #include "time_head.h"
 #include "util/co_wait_util_stop.h"

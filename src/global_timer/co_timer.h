@@ -22,7 +22,7 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include "global_timer.h"
-#include "time/interface/i_timer.h"
+#include "Time/Interface/i_timer.h"
 #include "util/co_coroutine.h"
 #include <assert.h>
 #include <memory>

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 // MIT License
 //
 // Copyright(c) 2021 Jaf932074323
@@ -20,27 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+// 2024-6-16 ������
 
-// 2020-12-3 姜安富
-// Tick定时器
-// 使用GetTickCount64()的方式去获取系统时间
-#include "interface/i_get_time.h"
-
-namespace jaf
-{
-namespace time
-{
-
-class GetTimeTick : public IGetTime
-{
-public:
-    GetTimeTick();
-    virtual ~GetTimeTick();
-
-protected:
-    // 获取当前时间，不同的方式获取的时间，得到的定时精度不相同
-    virtual uint64_t GetNowTime() override;
-};
-
-} // namespace time
-} // namespace jaf
+#include "global_timer/co_timer.h"
+#include "Impl/timer.h"

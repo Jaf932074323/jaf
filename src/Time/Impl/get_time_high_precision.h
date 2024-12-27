@@ -24,9 +24,12 @@
 // 2020-12-3 姜安富
 // Tick定时器
 // 使用GetTickCount64()的方式去获取系统时间，
-#include "interface/i_get_time.h"
+#include "Interface/i_get_time.h"
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#elif defined(__linux__)
+#endif
 
 namespace jaf
 {
@@ -44,7 +47,10 @@ protected:
     virtual uint64_t GetNowTime() override;
 
 private:
+#ifdef _WIN32
     LARGE_INTEGER m_cpuFreq;
+#elif defined(__linux__)
+#endif
 };
 
 } // namespace time

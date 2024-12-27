@@ -1,5 +1,4 @@
-#pragma once
-// MIT License
+ï»¿// MIT License
 //
 // Copyright(c) 2021 Jaf932074323
 //
@@ -20,7 +19,53 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
 
-#include "global_timer/co_timer.h"
-#include "impl/timer.h"
+#include "get_time_high_precision.h"
+
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#elif defined(__linux__)
+#include <time.h>
+#endif
+
+namespace jaf
+{
+namespace time
+{
+
+GetTimeHighPrecision::GetTimeHighPrecision()
+{
+#ifdef _WIN32
+    QueryPerformanceFrequency(&m_cpuFreq);
+#elif defined(__linux__)
+#endif
+}
+
+GetTimeHighPrecision::~GetTimeHighPrecision() {}
+
+#ifdef _WIN32
+
+uint64_t GetTimeHighPrecision::GetNowTime()
+{
+    LARGE_INTEGER time;
+    double rumTime = 0.0;
+    QueryPerformanceCounter(&time);
+    rumTime = (time.QuadPart * 1000.0f) / m_cpuFreq.QuadPart;
+
+    return (unsigned __int64) rumTime;
+}
+
+#elif defined(__linux__)
+
+uint64_t GetTimeHighPrecision::GetNowTime()
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    return ((unsigned long long)ts.tv_nsec / 1000000) + ((unsigned long long)ts.tv_sec * 1000);
+}
+
+#endif
+
+} // namespace time
+} // namespace jaf

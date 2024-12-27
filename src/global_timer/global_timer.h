@@ -22,7 +22,7 @@
 // SOFTWARE.
 // 2024-6-16 姜安富
 #include "define_global_timer_export.h"
-#include "time/interface/i_timer.h"
+#include "Time/Interface/i_timer.h"
 #include <memory>
 
 namespace jaf

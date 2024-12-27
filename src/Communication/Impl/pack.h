@@ -21,7 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
-#include "interface/communication/i_pack.h"
+#include "Interface/communication/i_pack.h"
 
 namespace jaf
 {

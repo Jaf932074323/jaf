@@ -22,10 +22,13 @@
 // 2024-8-16 ½ª°²¸»
 #include "util/red_black_tree.h"
 #include "gtest/gtest.h"
-#include <Windows.h>
 #include <format>
 #include <stdint.h>
 #include <time.h>
+
+#ifdef _WIN32
+
+#include <Windows.h>
 
 namespace jaf
 {
@@ -325,3 +328,6 @@ TEST(red_black_tree, LowerBound_UpperBound)
     auto it = rb_tree.UpperBound(9);
     EXPECT_TRUE(it.GetNode() == nullptr);
 }
+
+#elif defined(__linux__)
+#endif

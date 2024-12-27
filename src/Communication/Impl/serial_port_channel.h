@@ -22,8 +22,8 @@
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
 #include "global_timer/co_await_time.h"
-#include "interface/communication/comm_struct.h"
-#include "interface/communication/i_channel.h"
+#include "Interface/communication/comm_struct.h"
+#include "Interface/communication/i_channel.h"
 #include "util/co_wait_all_tasks_done.h"
 #include "util/control_start_stop.h"
 #include <functional>

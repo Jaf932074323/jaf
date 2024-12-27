@@ -9,7 +9,9 @@ set(
 
 source_group(TREE ${CMAKE_SOURCE_DIR}/src FILES ${ALL_FILES})
 
-add_definitions(-D_API_GLOBAL_TIMER_EXPORT)
+if ("${STR_SYSTEM}" STREQUAL "windows")
+    add_definitions(-D_API_GLOBAL_TIMER_EXPORT)
+endif()
 
 add_library(
     ${PROJECT_NAME} SHARED
