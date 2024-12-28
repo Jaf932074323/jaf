@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
+#ifdef _WIN32
+
 #include "udp.h"
 #include "udp_channel.h"
 #include <WS2tcpip.h>
@@ -133,3 +135,6 @@ void Udp::Init(void)
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif

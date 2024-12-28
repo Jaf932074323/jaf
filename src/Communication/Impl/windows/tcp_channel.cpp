@@ -20,14 +20,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "serial_port_channel.h"
+#ifdef _WIN32
+
+#include "tcp_channel.h"
 #include "Log/log_head.h"
 #include "Impl/tool/run_with_timeout.h"
 #include "util/co_wait_util_controlled_stop.h"
+#include "util/finally.h"
+#include <WS2tcpip.h>
 #include <assert.h>
 #include <format>
-#include <mutex>
-
+#include <mswsock.h>
 
 namespace jaf
 {
@@ -36,17 +39,17 @@ namespace comm
 
 std::string GetFormatMessage(DWORD dw);
 
-struct SerialPortChannel::AwaitableResult
+struct TcpChannel::AwaitableResult
 {
     size_t len_ = 0; // 接收数据长度 为0时表示接收失败
     int err_    = 0; // 错误代码
 };
-
-class SerialPortChannel::ReadAwaitable
+class TcpChannel::ReadAwaitable
 {
 public:
-    ReadAwaitable(SerialPortChannel* serial_port_channel, unsigned char* buff, size_t size);
+    ReadAwaitable(TcpChannel* tcp_channel, SOCKET socket, unsigned char* buff, size_t size);
     ~ReadAwaitable();
+
     bool await_ready();
     bool await_suspend(std::coroutine_handle<> co_handle);
     AwaitableResult await_resume() const;
@@ -54,24 +57,22 @@ public:
     void Stop();
 
 private:
-    SerialPortChannel* serial_port_channel_ = nullptr;
+    TcpChannel* tcp_channel_ = nullptr;
+    SOCKET socket_           = 0; // 收发数据的套接字
     AwaitableResult reslult_;
 
     IOCP_DATA iocp_data_;
     std::coroutine_handle<> handle;
-
     WSABUF wsbuffer_;
-
-    DWORD dwBytes = 0;
 
     std::mutex mutex_;
     bool callback_flag_ = false; // 已经回调标记
 };
 
-class SerialPortChannel::WriteAwaitable
+class TcpChannel::WriteAwaitable
 {
 public:
-    WriteAwaitable(SerialPortChannel* serial_port_channel, const unsigned char* buff, size_t size);
+    WriteAwaitable(TcpChannel* tcp_channel, SOCKET socket, const unsigned char* buff, size_t size);
     ~WriteAwaitable();
     bool await_ready();
     bool await_suspend(std::coroutine_handle<> co_handle);
@@ -80,59 +81,48 @@ public:
     void Stop();
 
 private:
-    SerialPortChannel* serial_port_channel_ = nullptr;
+    TcpChannel* tcp_channel_ = nullptr;
+    SOCKET socket_           = 0; // 收发数据的套接字
     AwaitableResult reslult_;
-
-    sockaddr_in send_addr_ = {};
 
     IOCP_DATA iocp_data_;
     std::coroutine_handle<> handle;
 
     WSABUF wsbuffer_;
-
     DWORD dwBytes = 0;
 
     std::mutex mutex_;
     bool callback_flag_ = false; // 已经回调标记
 };
 
-SerialPortChannel::SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle, std::shared_ptr<jaf::time::ITimer> timer)
-    : timer_(timer)
-    , completion_handle_(completion_handle)
-    , comm_handle_(comm_handle)
+TcpChannel::TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
+    : socket_(socket)
+    , remote_ip_(remote_ip)
+    , remote_port_(remote_port)
+    , local_ip_(local_ip)
+    , local_port_(local_port)
+    , timer_(timer)
 {
 }
 
-SerialPortChannel::~SerialPortChannel()
-{
-}
+TcpChannel::~TcpChannel() {}
 
-Coroutine<void> SerialPortChannel::Run()
+Coroutine<void> TcpChannel::Run()
 {
     stop_flag_ = false;
     control_start_stop_.Start();
-    if (CreateIoCompletionPort(comm_handle_, completion_handle_, (ULONG_PTR) comm_handle_, 0) == 0)
-    {
-        DWORD dw        = GetLastError();
-        std::string str = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        LOG_ERROR() << str;
-        co_return;
-    }
-
 
     co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
     co_await wait_all_tasks_done_;
-
-    co_return;
 }
 
-void SerialPortChannel::Stop()
+void TcpChannel::Stop()
 {
     stop_flag_ = true;
     control_start_stop_.Stop();
 }
 
-Coroutine<SChannelResult> SerialPortChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
+Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
@@ -144,7 +134,7 @@ Coroutine<SChannelResult> SerialPortChannel::Read(unsigned char* buff, size_t bu
         co_return result;
     }
 
-    ReadAwaitable read_awaitable(this, buff, buff_size);
+    ReadAwaitable read_awaitable(this, socket_, buff, buff_size);
     RunWithTimeout run_with_timeout(control_start_stop_, read_awaitable, timeout, timer_);
     co_await run_with_timeout.Run();
 
@@ -171,20 +161,24 @@ Coroutine<SChannelResult> SerialPortChannel::Read(unsigned char* buff, size_t bu
     {
         if (read_result.err_ == 0)
         {
-            result.state = SChannelResult::EState::CRS_UNKNOWN;
+            result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
+            result.error = "The connection has been disconnected";
         }
         else
         {
             result.state = SChannelResult::EState::CRS_FAIL;
             result.code_ = read_result.err_;
-            result.error = std::format("SerialPortChannel code error:{},error-msg:{}", read_result.err_, GetFormatMessage(read_result.err_));
+            CancelIo((HANDLE) socket_);
+            closesocket(socket_);
+            socket_      = INVALID_SOCKET;
+            result.error = std::format("TcpChannel code error:{},error-msg:{}", read_result.err_, GetFormatMessage(read_result.err_));
         }
     }
 
     co_return result;
 }
 
-Coroutine<SChannelResult> SerialPortChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
+Coroutine<SChannelResult> TcpChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
@@ -196,7 +190,7 @@ Coroutine<SChannelResult> SerialPortChannel::Write(const unsigned char* buff, si
         co_return result;
     }
 
-    WriteAwaitable write_awaitable(this, buff, buff_size);
+    WriteAwaitable write_awaitable(this, socket_, buff, buff_size);
     RunWithTimeout run_with_timeout(control_start_stop_, write_awaitable, timeout, timer_);
     co_await run_with_timeout.Run();
 
@@ -223,47 +217,50 @@ Coroutine<SChannelResult> SerialPortChannel::Write(const unsigned char* buff, si
     {
         if (write_result.err_ == 0)
         {
-            result.state = SChannelResult::EState::CRS_UNKNOWN;
+            result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
+            result.error = "The connection has been disconnected";
         }
         else
         {
             result.state = SChannelResult::EState::CRS_FAIL;
             result.code_ = write_result.err_;
-            result.error = std::format("SerialPortChannel code error:{},error-msg:{}", write_result.err_, GetFormatMessage(write_result.err_));
+            CancelIo((HANDLE) socket_);
+            closesocket(socket_);
+            socket_      = INVALID_SOCKET;
+            result.error = std::format("TcpChannel code error:{},error-msg: {}", write_result.err_, GetFormatMessage(write_result.err_));
         }
     }
 
     co_return result;
 }
 
-SerialPortChannel::ReadAwaitable::ReadAwaitable(SerialPortChannel* serial_port_channel, unsigned char* buff, size_t size)
-    : serial_port_channel_(serial_port_channel)
+TcpChannel::ReadAwaitable::ReadAwaitable(TcpChannel* tcp_channel, SOCKET socket, unsigned char* buff, size_t size)
+    : tcp_channel_(tcp_channel)
+    , socket_(socket)
     , wsbuffer_{.len = (ULONG) size, .buf = (char*) buff}
 {
 }
 
-SerialPortChannel::ReadAwaitable::~ReadAwaitable()
+TcpChannel::ReadAwaitable::~ReadAwaitable()
 {
 }
 
-bool SerialPortChannel::ReadAwaitable::await_ready()
+bool TcpChannel::ReadAwaitable::await_ready()
 {
     return false;
 }
 
-bool SerialPortChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_handle)
+bool TcpChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_handle)
 {
-    DWORD flags = 0;
-    handle      = co_handle;
+    handle           = co_handle;
+    DWORD flags      = 0;
+    iocp_data_.call_ = [this](IOCP_DATA* pData) { IoCallback(pData); };
 
-    iocp_data_.call_ = std::bind(&ReadAwaitable::IoCallback, this, std::placeholders::_1);
-
-    if (!ReadFile(serial_port_channel_->comm_handle_, wsbuffer_.buf, wsbuffer_.len, nullptr, &iocp_data_.overlapped))
+    if (SOCKET_ERROR == WSARecv(socket_, &wsbuffer_, 1, nullptr, &flags, &iocp_data_.overlapped, NULL))
     {
-        int error = GetLastError();
-        if (error != ERROR_IO_PENDING)
+        reslult_.err_ = WSAGetLastError();
+        if (reslult_.err_ != ERROR_IO_PENDING)
         {
-            reslult_.err_ = error;
             return false;
         }
     }
@@ -271,12 +268,12 @@ bool SerialPortChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_
     return true;
 }
 
-SerialPortChannel::AwaitableResult SerialPortChannel::ReadAwaitable::await_resume() const
+TcpChannel::AwaitableResult TcpChannel::ReadAwaitable::await_resume() const
 {
     return reslult_;
 }
 
-void SerialPortChannel::ReadAwaitable::IoCallback(IOCP_DATA* pData)
+void TcpChannel::ReadAwaitable::IoCallback(IOCP_DATA* pData)
 {
     {
         std::unique_lock<std::mutex> lock(mutex_);
@@ -286,7 +283,7 @@ void SerialPortChannel::ReadAwaitable::IoCallback(IOCP_DATA* pData)
     if (pData->success_ == 0)
     {
         reslult_.len_ = 0;
-        reslult_.err_ = GetLastError();
+        reslult_.err_ = WSAGetLastError();
     }
     else
     {
@@ -296,7 +293,7 @@ void SerialPortChannel::ReadAwaitable::IoCallback(IOCP_DATA* pData)
     handle.resume();
 }
 
-void SerialPortChannel::ReadAwaitable::Stop()
+void TcpChannel::ReadAwaitable::Stop()
 {
     std::unique_lock<std::mutex> lock(mutex_);
     if (callback_flag_)
@@ -304,37 +301,36 @@ void SerialPortChannel::ReadAwaitable::Stop()
         return;
     }
     callback_flag_ = true;
-    CancelIoEx(serial_port_channel_->comm_handle_, &iocp_data_.overlapped);
+    CancelIoEx((HANDLE) socket_, &iocp_data_.overlapped);
 }
 
-SerialPortChannel::WriteAwaitable::WriteAwaitable(SerialPortChannel* serial_port_channel, const unsigned char* buff, size_t size)
-    : serial_port_channel_(serial_port_channel)
+TcpChannel::WriteAwaitable::WriteAwaitable(TcpChannel* tcp_channel, SOCKET socket, const unsigned char* buff, size_t size)
+    : tcp_channel_(tcp_channel)
+    , socket_(socket)
     , wsbuffer_{.len = (ULONG) size, .buf = (char*) buff}
 {
 }
 
-SerialPortChannel::WriteAwaitable::~WriteAwaitable()
+TcpChannel::WriteAwaitable::~WriteAwaitable()
 {
 }
 
-bool SerialPortChannel::WriteAwaitable::await_ready()
+bool TcpChannel::WriteAwaitable::await_ready()
 {
     return false;
 }
 
-bool SerialPortChannel::WriteAwaitable::await_suspend(std::coroutine_handle<> co_handle)
+bool TcpChannel::WriteAwaitable::await_suspend(std::coroutine_handle<> co_handle)
 {
-    DWORD flags = 0;
-    handle      = co_handle;
-
+    DWORD flags      = 0;
+    handle           = co_handle;
     iocp_data_.call_ = std::bind(&WriteAwaitable::IoCallback, this, std::placeholders::_1);
 
-    if (!WriteFile(serial_port_channel_->comm_handle_, wsbuffer_.buf, wsbuffer_.len, nullptr, &iocp_data_.overlapped))
+    if (SOCKET_ERROR == WSASend(socket_, &wsbuffer_, 1, nullptr, flags, &iocp_data_.overlapped, NULL))
     {
-        int error = GetLastError();
+        int error = WSAGetLastError();
         if (error != ERROR_IO_PENDING)
         {
-            reslult_.err_ = error;
             return false;
         }
     }
@@ -342,12 +338,12 @@ bool SerialPortChannel::WriteAwaitable::await_suspend(std::coroutine_handle<> co
     return true;
 }
 
-SerialPortChannel::AwaitableResult SerialPortChannel::WriteAwaitable::await_resume() const
+TcpChannel::AwaitableResult TcpChannel::WriteAwaitable::await_resume() const
 {
     return reslult_;
 }
 
-void SerialPortChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
+void TcpChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
 {
     {
         std::unique_lock<std::mutex> lock(mutex_);
@@ -357,7 +353,7 @@ void SerialPortChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
     if (pData->success_ == 0)
     {
         reslult_.len_ = 0;
-        reslult_.err_ = GetLastError();
+        reslult_.err_ = WSAGetLastError();
     }
     else
     {
@@ -367,7 +363,7 @@ void SerialPortChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
     handle.resume();
 }
 
-void SerialPortChannel::WriteAwaitable::Stop()
+void TcpChannel::WriteAwaitable::Stop()
 {
     std::unique_lock<std::mutex> lock(mutex_);
     if (callback_flag_)
@@ -375,8 +371,11 @@ void SerialPortChannel::WriteAwaitable::Stop()
         return;
     }
     callback_flag_ = true;
-    CancelIoEx(serial_port_channel_->comm_handle_, &iocp_data_.overlapped);
+    CancelIoEx((HANDLE) socket_, &iocp_data_.overlapped);
 }
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif

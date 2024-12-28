@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
+#ifdef _WIN32
+
 #include "tcp_server.h"
 #include "Log/log_head.h"
 #include "Impl/tool/stoppable_run.h"
@@ -429,3 +431,6 @@ void TcpServer::AcceptAwaitable::Stop()
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif

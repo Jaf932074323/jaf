@@ -21,49 +21,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "Interface/communication/i_serial_port.h"
-#include "Interface/communication/i_tcp_client.h"
-#include "Interface/communication/i_tcp_server.h"
-#include "Interface/communication/i_udp.h"
+
+#ifdef _WIN32
+
 #include "Interface/communication/comm_struct.h"
-#include "communication_head.h"
+#include "Interface/communication/i_communication.h"
+#include "i_get_completion_port.h"
 #include "time_head.h"
-#include "util/co_wait_util_stop.h"
 #include "util/co_wait_notices.h"
-#include "util/co_coroutine.h"
+#include "util/co_wait_util_stop.h"
 #include "util/i_thread_pool.h"
-#include <list>
-#include <map>
-#include <memory>
-#include <string>
 
 namespace jaf
 {
 namespace comm
 {
 
-// windows平台下的完成端口
-class Communication
+// windows平台下的通讯类
+class Communication : public ICommunication
 {
 public:
     Communication(std::shared_ptr<IThreadPool> thread_pool = nullptr, std::shared_ptr<jaf::time::ITimer> timer = nullptr);
     virtual ~Communication();
 
 public:
-    virtual jaf::Coroutine<void> Init();
-    virtual jaf::Coroutine<void> Run();
-    virtual void Stop();
-
-    HANDLE GetCompletionPort()
-    {
-        return m_completionPort;
-    }
+    virtual jaf::Coroutine<void> Init() override;
+    virtual jaf::Coroutine<void> Run() override;
+    virtual void Stop() override;
 
 public:
-    std::shared_ptr<ITcpServer> CreateTcpServer();
-    std::shared_ptr<ITcpClient> CreateTcpClient();
-    std::shared_ptr<IUdp> CreateUdp();
-    std::shared_ptr<ISerialPort> CreateSerialPort();
+    virtual std::shared_ptr<ITcpServer> CreateTcpServer() override;
+    virtual std::shared_ptr<ITcpClient> CreateTcpClient() override;
+    virtual std::shared_ptr<IUdp> CreateUdp() override;
+    virtual std::shared_ptr<ISerialPort> CreateSerialPort() override;
 
 private:
     // 创建工作线程
@@ -72,6 +62,11 @@ private:
     void WorkThreadRun();
 
 private:
+    HANDLE GetCompletionPort()
+    {
+        return m_completionPort;
+    }
+
     class CompletionPort : public IGetCompletionPort
     {
     public:
@@ -107,3 +102,6 @@ private:
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif

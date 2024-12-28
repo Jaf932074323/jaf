@@ -21,14 +21,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "Interface/communication/i_tcp_client.h"
-#include "empty_channel.h"
-#include "global_timer/co_await_time.h"
-#include "Interface/communication/i_channel.h"
-#include "communication_head.h"
-#include "time_head.h"
+#ifdef _WIN32
+
+#include "Interface/communication/i_tcp_server.h"
+#include "Interface/i_timer.h"
+#include "Interface/communication/i_unpack.h"
+#include "i_get_completion_port.h"
 #include "util/co_coroutine.h"
-#include "util/co_wait_util_stop.h"
+#include "util/co_wait_all_tasks_done.h"
+#include "util/control_start_stop.h"
+#include <functional>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <atomic>
 #include <string>
 #include <winsock2.h>
 
@@ -37,59 +43,56 @@ namespace jaf
 namespace comm
 {
 
-// TCP客户端
-class TcpClient : public ITcpClient
+// TCP服务端
+class TcpServer : public ITcpServer
 {
 public:
-    TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~TcpClient();
+    TcpServer(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer);
+    virtual ~TcpServer();
 
 public:
-    virtual void SetAddr(const std::string& remote_ip, uint16_t remote_port, const std::string& local_ip = "0.0.0.0", uint16_t local_port = 0) override;
-    // 设置连接时间
-    // connect_timeout 连接超时时间
-    // reconnect_wait_time 重连等待时间
-    virtual void SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time) override;
+    virtual void SetAddr(const std::string& ip, uint16_t port) override;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
-    virtual jaf::Coroutine<void> Run() override;
+    virtual void SetAcceptCount(size_t accept_count) override;
+    virtual void SetMaxClientCount(size_t max_client_count) override;
+    virtual Coroutine<void> Run() override;
     virtual void Stop() override;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
+    virtual Coroutine<void> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
     void Init(void);
-    jaf::Coroutine<void> Execute();
-
-    SOCKET CreationSocket();
-
-private:
-    struct ConnectResult;
-    class ConnectAwaitable;
+    Coroutine<void> Accept();
+    Coroutine<void> RunSocket(SOCKET socket);
 
 private:
-    bool run_flag_ = false;
-    CoWaitUtilStop wait_stop_;
+    struct AcceptAwaitableResult;
+    class AcceptAwaitable;
+
+private:
+    std::atomic<bool> run_flag_ = false;
+
+    jaf::ControlStartStop control_start_stop_;
+    CoWaitAllTasksDone wait_all_tasks_done_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
-    jaf::ControlStartStop control_start_stop_;
 
     IGetCompletionPort* get_completion_port_ = nullptr;
     HANDLE completion_handle_                = nullptr;
+    SOCKET listen_socket_                    = 0; // 侦听套接字
 
-    std::string local_ip_ = "0.0.0.0";
-    uint16_t local_port_  = 0;
-    std::string remote_ip_;
-    uint16_t remote_port_         = 0;
-    uint64_t connect_timeout_     = 5000; // 连接等待时间
-    uint64_t reconnect_wait_time_ = 5000; // 重连等待时间
-
-    std::string error_info_;
+    std::string ip_ = "0.0.0.0";
+    uint16_t port_  = 0;
 
     std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
+    size_t accept_count_     = 5;
+    size_t max_client_count_ = SOMAXCONN; // 最大客户端连接数量
 
-    std::mutex channel_mutex_;
-    std::shared_ptr<IChannel> empty_channel_ = std::make_shared<EmptyChannel>();
-    std::shared_ptr<IChannel> channel_ = empty_channel_;
+    std::mutex channels_mutex_;                                 // 所有通道的同步锁
+    std::map<std::string, std::shared_ptr<IChannel>> channels_; // 当前连接的所有通道 key由IP和端口
 };
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif

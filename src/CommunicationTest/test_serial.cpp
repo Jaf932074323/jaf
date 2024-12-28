@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-10-19 ½ª°²¸»
-#include "Communication/Impl/communication.h"
+#include "Communication/Impl/communication_include.h"
 #include "Interface/communication/i_serial_port.h"
 #include "Interface/communication/i_tcp_client.h"
 #include "Interface/communication/i_tcp_server.h"

@@ -20,24 +20,16 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 姜安富
-#include "util/co_coroutine.h"
+// 2024-12-28 姜安富
 
-typedef void* HANDLE;
-
-namespace jaf
-{
-namespace comm
-{
-
-class IGetCompletionPort
-{
-public:
-    virtual ~IGetCompletionPort() {}
-
-public:
-    virtual HANDLE Get() = 0;
-};
-
-} // namespace comm
-} // namespace jaf
+#ifdef _WIN32
+#include "communication.h"
+#include "tcp_client.h"
+#include "tcp_server.h"
+#include "tcp_channel.h"
+#include "udp.h"
+#include "udp_channel.h"
+#include "serial_port.h"
+#include "serial_port_channel.h"
+#elif defined(__linux__)
+#endif

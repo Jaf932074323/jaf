@@ -21,6 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
+#ifdef _WIN32
+
 #include "global_timer/co_await_time.h"
 #include "Interface/communication/comm_struct.h"
 #include "Interface/communication/i_channel.h"
@@ -67,3 +69,6 @@ private:
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif

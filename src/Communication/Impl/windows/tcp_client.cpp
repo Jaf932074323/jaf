@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
+#ifdef _WIN32
+
 #include "tcp_client.h"
 #include "Log/log_head.h"
 #include "Impl/tool/run_with_timeout.h"
@@ -348,3 +350,6 @@ void TcpClient::ConnectAwaitable::Stop()
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif

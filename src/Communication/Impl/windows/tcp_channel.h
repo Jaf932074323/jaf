@@ -21,6 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
+#ifdef _WIN32
+
 #include "global_timer/co_await_time.h"
 #include "Interface/communication/comm_struct.h"
 #include "Interface/communication/i_channel.h"
@@ -36,35 +38,32 @@ namespace comm
 {
 
 // TCP通道
-class UdpChannel : public IChannel
+class TcpChannel : public IChannel
 {
     struct AwaitableResult;
     class ReadAwaitable;
     class WriteAwaitable;
 
 public:
-    UdpChannel(HANDLE completion_handle, SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~UdpChannel();
+    TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
+    virtual ~TcpChannel();
 
 public:
     virtual Coroutine<void> Run();
     virtual void Stop() override;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, std::string remote_ip, uint16_t remote_port, uint64_t timeout);
 
 private:
     std::atomic<bool> stop_flag_ = false;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
-    HANDLE completion_handle_ = nullptr;
-    SOCKET socket_            = 0; // 收发数据的套接字
+    SOCKET socket_ = 0; // 收发数据的套接字
     std::string remote_ip_;
     uint16_t remote_port_ = 0;
     std::string local_ip_;
-    uint16_t local_port_   = 0;
-    sockaddr_in send_addr_ = {};
+    uint16_t local_port_ = 0;
 
     jaf::ControlStartStop control_start_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;
@@ -73,3 +72,6 @@ private:
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif

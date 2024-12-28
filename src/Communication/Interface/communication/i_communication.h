@@ -21,52 +21,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "global_timer/co_await_time.h"
-#include "Interface/communication/comm_struct.h"
-#include "Interface/communication/i_channel.h"
-#include "time_head.h"
-#include "util/co_wait_all_tasks_done.h"
-#include <functional>
+#include "Interface/communication/i_serial_port.h"
+#include "Interface/communication/i_tcp_client.h"
+#include "Interface/communication/i_tcp_server.h"
+#include "Interface/communication/i_udp.h"
+#include "util/co_coroutine.h"
 #include <memory>
-#include <string>
 
 namespace jaf
 {
 namespace comm
 {
 
-// TCP通道
-class TcpChannel : public IChannel
+// 通讯接口
+class ICommunication
 {
-    struct AwaitableResult;
-    class ReadAwaitable;
-    class WriteAwaitable;
+public:
+    ICommunication(){};
+    virtual ~ICommunication(){};
 
 public:
-    TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~TcpChannel();
+    virtual jaf::Coroutine<void> Init() = 0;
+    virtual jaf::Coroutine<void> Run()  = 0;
+    virtual void Stop()                 = 0;
 
 public:
-    virtual Coroutine<void> Run();
-    virtual void Stop() override;
-    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-
-private:
-    std::atomic<bool> stop_flag_ = false;
-
-    std::shared_ptr<jaf::time::ITimer> timer_;
-
-    SOCKET socket_ = 0; // 收发数据的套接字
-    std::string remote_ip_;
-    uint16_t remote_port_ = 0;
-    std::string local_ip_;
-    uint16_t local_port_ = 0;
-
-    jaf::ControlStartStop control_start_stop_;
-    jaf::CoWaitAllTasksDone wait_all_tasks_done_;
+    virtual std::shared_ptr<ITcpServer> CreateTcpServer()   = 0;
+    virtual std::shared_ptr<ITcpClient> CreateTcpClient()   = 0;
+    virtual std::shared_ptr<IUdp> CreateUdp()               = 0;
+    virtual std::shared_ptr<ISerialPort> CreateSerialPort() = 0;
 };
-
 
 } // namespace comm
 } // namespace jaf

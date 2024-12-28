@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 ½ª°²¸»
+#ifdef _WIN32
+
 #include "serial_port.h"
 #include "define_constant.h"
 #include "log_head.h"
@@ -179,3 +181,6 @@ void SerialPort::CloseSerialPort()
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif

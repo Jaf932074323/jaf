@@ -21,40 +21,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "Impl/communication_include.h"
-#include "Interface/communication/i_pack.h"
-#include "Interface/communication/i_serial_port.h"
-#include "Interface/communication/i_tcp_client.h"
-#include "Interface/communication/i_tcp_server.h"
-#include "Interface/communication/i_udp.h"
+#ifdef _WIN32
 #include "util/co_coroutine.h"
-#include "util/co_wait_util_stop.h"
-#include "util/latch.h"
-#include <memory>
 
-// 处理通信通道通信通道 负责从通道读写数据
-class Main
+typedef void* HANDLE;
+
+namespace jaf
+{
+namespace comm
+{
+
+class IGetCompletionPort
 {
 public:
-    Main();
-    virtual ~Main();
+    virtual ~IGetCompletionPort() {}
 
-    jaf::Coroutine<void> Run();
-    void Stop();
-    void WaitFinish(); // 阻塞等待Run结束
-
-private:
-    void Init();
-    void Deal(std::shared_ptr<jaf::comm::IPack> pack);
-
-private:
-    std::shared_ptr<jaf::comm::Communication> communication_ = std::make_shared<jaf::comm::Communication>();
-    std::shared_ptr<jaf::comm::ITcpServer> server_           = nullptr;
-    std::shared_ptr<jaf::comm::ITcpClient> client_           = nullptr;
-    std::shared_ptr<jaf::comm::IUdp> udp_                    = nullptr;
-    std::shared_ptr<jaf::comm::ISerialPort> serial_port_     = nullptr;
-
-    jaf::Latch wait_finish_latch_{1};
-
-    jaf::CoWaitUtilStop wait_stop_;
+public:
+    virtual HANDLE Get() = 0;
 };
+
+} // namespace comm
+} // namespace jaf
+
+#elif defined(__linux__)
+#endif

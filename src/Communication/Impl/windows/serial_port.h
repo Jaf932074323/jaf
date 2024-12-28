@@ -21,52 +21,58 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "Interface/communication/i_udp.h"
-#include "empty_channel.h"
-#include "communication_head.h"
-#include "time_head.h"
-#include "util/co_wait_util_stop.h"
-#include <atomic>
+#ifdef _WIN32
+
+#include "Interface/communication/i_serial_port.h"
+#include "Interface/communication/i_unpack.h"
+#include "Interface/i_timer.h"
+#include "Impl/empty_channel.h"
+#include "i_get_completion_port.h"
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <winsock2.h>
+#include <atomic>
 
 namespace jaf
 {
 namespace comm
 {
 
-class Udp : public IUdp
+// 串口
+class SerialPort : public ISerialPort
 {
 public:
-    Udp(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~Udp();
+    SerialPort(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer);
+    virtual ~SerialPort();
 
 public:
-    virtual void SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port) override;
+    virtual void SetAddr(uint8_t comm, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity) override;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
-    virtual Coroutine<void> Run() override;
+    virtual jaf::Coroutine<void> Run() override;
     virtual void Stop() override;
     virtual std::shared_ptr<IChannel> GetChannel() override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
     void Init(void);
+    bool OpenSerialPort();
+    void CloseSerialPort();
 
 private:
-    IGetCompletionPort* get_completion_port_ = nullptr;
-    HANDLE completion_handle_                = nullptr;
-    SOCKET socket_                           = 0; // 侦听套接字
-
     std::shared_ptr<jaf::time::ITimer> timer_;
 
-    std::string local_ip_  = "0.0.0.0";
-    uint16_t local_port_   = 0;
-    std::string remote_ip_ = "0.0.0.0";
-    uint16_t remote_port_  = 0;
+    IGetCompletionPort* get_completion_port_ = nullptr;
+    HANDLE completion_handle_                = nullptr;
+
+    std::string comm_;   //串口
+    uint32_t baud_rate_; // 波特率
+    uint8_t data_bit_;   // 数据位
+    uint8_t stop_bit_;   // 停止位
+    uint8_t parity_;     //校验位
+
+    HANDLE comm_handle_;
 
     std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
     std::mutex channel_mutex_;
@@ -76,3 +82,6 @@ private:
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif
