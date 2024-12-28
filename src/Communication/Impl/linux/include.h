@@ -23,7 +23,13 @@
 // 2024-12-28 ½ª°²¸»
 
 #ifdef _WIN32
-#include "windows/include.h"
 #elif defined(__linux__)
-#include "linux/include.h"
+#include "communication.h"
+#include "tcp_client.h"
+#include "tcp_server.h"
+#include "tcp_channel.h"
+#include "udp.h"
+#include "udp_channel.h"
+#include "serial_port.h"
+#include "serial_port_channel.h"
 #endif

@@ -21,9 +21,27 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-12-28 ½ª°²¸»
-
 #ifdef _WIN32
-#include "windows/include.h"
+#include "util/co_coroutine.h"
+
+typedef void* HANDLE;
+
+namespace jaf
+{
+namespace comm
+{
+
+class IGetCompletionPort
+{
+public:
+    virtual ~IGetCompletionPort() {}
+
+public:
+    virtual HANDLE Get() = 0;
+};
+
+} // namespace comm
+} // namespace jaf
+
 #elif defined(__linux__)
-#include "linux/include.h"
 #endif
