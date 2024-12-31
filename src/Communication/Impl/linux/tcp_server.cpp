@@ -42,21 +42,6 @@ namespace jaf
 namespace comm
 {
 
-std::string GetFormatMessage(DWORD dw)
-{
-    LPTSTR lpMsgBuf;
-    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK,
-        nullptr,
-        dw,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        (LPTSTR) &lpMsgBuf,
-        0, NULL);
-    std::string strText = lpMsgBuf;
-    LocalFree(lpMsgBuf);
-
-    return strText;
-}
-
 static LPFN_ACCEPTEX GetAcceptEx(SOCKET a_socket)
 {
     LPFN_ACCEPTEX func = nullptr;

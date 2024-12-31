@@ -23,9 +23,10 @@
 // 2024-6-16 ½ª°²¸»
 #ifdef _WIN32
 
-#include "global_timer/co_await_time.h"
 #include "Interface/communication/comm_struct.h"
 #include "Interface/communication/i_channel.h"
+#include "global_timer/co_await_time.h"
+#include "head.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
 #include <functional>

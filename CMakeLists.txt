@@ -5,6 +5,8 @@ PROJECT(Jaf) #项目
 # 使用 C++ 20 标准
 set(CMAKE_CXX_STANDARD 20)
 
+message("aasdf ${PLATFORM_X64}")
+
 message("默认编译器路径：${CMAKE_CXX_COMPILER}")
 message("编译器:${CMAKE_CXX_COMPILER_ID}")
 

@@ -21,26 +21,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
+#ifdef _WIN32
 #include <functional>
+#include <WinSock2.h>
+#include <Windows.h>
 
 namespace jaf
 {
 namespace comm
 {
 
-// 数据
-struct SData
+struct IOCP_DATA
 {
-    unsigned char* buff = nullptr;
-    size_t len          = 0;
-};
-
-// 已读取数据
-struct SConstData
-{
-    const unsigned char* buff = nullptr;
-    size_t len                = 0;
+    OVERLAPPED overlapped   = {0};
+    int success_            = 0;
+    DWORD bytesTransferred_ = 0;
+    std::function<void(IOCP_DATA*)> call_;
 };
 
 } // namespace comm
 } // namespace jaf
+
+#elif defined(__linux__)
+#endif

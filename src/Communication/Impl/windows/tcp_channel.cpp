@@ -23,8 +23,9 @@
 #ifdef _WIN32
 
 #include "tcp_channel.h"
-#include "Log/log_head.h"
 #include "Impl/tool/run_with_timeout.h"
+#include "Log/log_head.h"
+#include "head.h"
 #include "util/co_wait_util_controlled_stop.h"
 #include "util/finally.h"
 #include <WS2tcpip.h>
