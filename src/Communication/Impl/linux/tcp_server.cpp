@@ -28,11 +28,14 @@
 #include "Impl/tool/stoppable_run.h"
 #include "tcp_channel.h"
 #include "util/finally.h"
-#include <WS2tcpip.h>
 #include <assert.h>
 #include <format>
-#include <mswsock.h>
-
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/epoll.h>
 
 namespace jaf
 {
@@ -89,7 +92,7 @@ public:
     void Stop();
 
 private:
-    SOCKET listen_socket_ = 0; // 侦听套接字
+    int listen_socket_ = -1; // 侦听套接字
     IOCP_DATA iocp_data_;
     std::coroutine_handle<> handle_;
 
@@ -101,11 +104,11 @@ private:
     bool callback_flag_ = false; // 已经回调标记
 };
 
-TcpServer::TcpServer(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
-    : get_completion_port_(get_completion_port)
+TcpServer::TcpServer(IGetEpollFd* get_epoll_fd, std::shared_ptr<jaf::time::ITimer> timer)
+    : get_epoll_fd_(get_epoll_fd)
     , timer_(timer)
 {
-    assert(get_completion_port_ != nullptr);
+    assert(get_epoll_fd_ != nullptr);
 }
 
 TcpServer::~TcpServer()
@@ -199,47 +202,44 @@ Coroutine<void> TcpServer::Write(const unsigned char* buff, size_t buff_size, ui
 
 void TcpServer::Init(void)
 {
-    listen_socket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (INVALID_SOCKET == listen_socket_)
+    listen_socket_ = socket(AF_INET, SOCK_STREAM, 0);
+    if (listen_socket_ < 0)
     {
-        DWORD dw        = GetLastError();
-        std::string str = std::format("TcpServer code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        OutputDebugString(str.c_str());
+        // TODO:
         return;
     }
 
-    ULONG NBIO = TRUE;
-    if (SOCKET_ERROR == ioctlsocket(listen_socket_, FIONBIO, &NBIO))
-    {
-        closesocket(listen_socket_);
-        DWORD dw        = GetLastError();
-        std::string str = std::format("TcpServer code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        OutputDebugString(str.c_str());
+    	/* 端口重用，调用close(socket)一般不会立即关闭socket，而经历“TIME_WAIT”的过程 */
+	int reuse = 0x01;
+	if(setsockopt(listen_socket_, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(int)) < 0)
+	{
+		close(listen_socket_);
         return;
-    }
+	}
 
-    SOCKADDR_IN server = {0};
+    struct sockaddr_in server;      
     inet_pton(AF_INET, ip_.c_str(), (void*) &server.sin_addr);
     server.sin_family = AF_INET;
     server.sin_port   = htons(port_);
 
-    if (SOCKET_ERROR == ::bind(listen_socket_, (LPSOCKADDR) &server, sizeof(server)))
+    if (::bind(listen_socket_, (const sockaddr_in*) &server, sizeof(server)) < 0)
     {
-        closesocket(listen_socket_);
-        DWORD dw        = GetLastError();
-        std::string str = std::format("TcpServer code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        OutputDebugString(str.c_str());
+        close(listen_socket_);
         return;
     }
 
-    CreateIoCompletionPort((HANDLE) listen_socket_, completion_handle_, 0, 0);
-
-    if (SOCKET_ERROR == listen(listen_socket_, max_client_count_))
+    struct epoll_event e_event;   	/* 监听事件 */ 
+    e_event.data.fd = listen_socket_;   
+    e_event.events = EPOLLIN;
+	if(epoll_ctl(get_epoll_fd_->Get(), EPOLL_CTL_ADD, listen_socket_, &e_event) < 0)
     {
-        closesocket(listen_socket_);
-        DWORD dw        = GetLastError();
-        std::string str = std::format("TcpServer code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        OutputDebugString(str.c_str());
+        close(listen_socket_);
+        return;
+    }
+
+    if (listen(listen_socket_, max_client_count_) < 0)
+    {
+        close(listen_socket_);
         return;
     }
 }

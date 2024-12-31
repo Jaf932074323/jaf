@@ -35,7 +35,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <winsock2.h>
 
 namespace jaf
 {

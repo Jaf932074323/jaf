@@ -33,7 +33,6 @@
 #include "util/co_coroutine.h"
 #include "util/co_wait_util_stop.h"
 #include <string>
-#include <winsock2.h>
 
 namespace jaf
 {

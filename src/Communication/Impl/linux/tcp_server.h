@@ -27,7 +27,7 @@
 #include "Interface/communication/i_tcp_server.h"
 #include "Interface/i_timer.h"
 #include "Interface/communication/i_unpack.h"
-#include "i_get_completion_port.h"
+#include "i_get_epoll_fd.h"
 #include "util/co_coroutine.h"
 #include "util/co_wait_all_tasks_done.h"
 #include "util/control_start_stop.h"
@@ -37,7 +37,6 @@
 #include <mutex>
 #include <atomic>
 #include <string>
-#include <winsock2.h>
 
 namespace jaf
 {
@@ -48,7 +47,7 @@ namespace comm
 class TcpServer : public ITcpServer
 {
 public:
-    TcpServer(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer);
+    TcpServer(IGetEpollFd* get_epoll_fd, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~TcpServer();
 
 public:
@@ -77,7 +76,7 @@ private:
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
-    IGetCompletionPort* get_completion_port_ = nullptr;
+    IGetEpollFd* get_epoll_fd_ = nullptr;
     HANDLE completion_handle_                = nullptr;
     SOCKET listen_socket_                    = 0; // ÕìÌýÌ×½Ó×Ö
 

@@ -27,7 +27,7 @@
 
 #include "Interface/communication/comm_struct.h"
 #include "Interface/communication/i_communication.h"
-#include "i_get_completion_port.h"
+#include "i_get_epoll_fd.h"
 #include "time_head.h"
 #include "util/co_wait_notices.h"
 #include "util/co_wait_util_stop.h"
@@ -63,22 +63,22 @@ private:
     void WorkThreadRun();
 
 private:
-    HANDLE GetCompletionPort()
+    int GetEpollFd()
     {
-        return m_completionPort;
+        return epoll_fd;
     }
 
-    class CompletionPort : public IGetCompletionPort
+    class EpollFd : public IGetEpollFd
     {
     public:
-        CompletionPort(Communication* communication)
+        EpollFd(Communication* communication)
             : communication_(communication) {}
-        ~CompletionPort() {}
+        ~EpollFd() {}
 
     public:
-        HANDLE Get()
+        int Get()
         {
-            return communication_->GetCompletionPort();
+            return communication_->GetEpollFd();
         }
 
     private:
@@ -86,8 +86,8 @@ private:
     };
 
 private:
-    HANDLE m_completionPort = 0;
-    CompletionPort get_completion_port_; // 获取完成端口对象
+    int  epoll_fd = -1;
+    EpollFd get_epoll_fd_; // 获取完成端口对象
 
     bool run_flag_ = false; // 运行标志
 

@@ -22,26 +22,23 @@
 // SOFTWARE.
 // 2024-12-28 ½ª°²¸»
 #ifdef _WIN32
-#include "util/co_coroutine.h"
-
-typedef void* HANDLE;
+#elif defined(__linux__)
 
 namespace jaf
 {
 namespace comm
 {
 
-class IGetCompletionPort
+class IGetEpollFd
 {
 public:
-    virtual ~IGetCompletionPort() {}
+    virtual ~IGetEpollFd() {}
 
 public:
-    virtual HANDLE Get() = 0;
+    virtual int Get() = 0;
 };
 
 } // namespace comm
 } // namespace jaf
 
-#elif defined(__linux__)
 #endif

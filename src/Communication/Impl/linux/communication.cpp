@@ -36,21 +36,17 @@
 #include <assert.h>
 #include <format>
 #include <functional>
-
-#pragma comment(lib, "ws2_32.lib")
-#pragma comment(lib, "Mswsock.lib")
+#include  <sys/epoll.h>
 
 namespace jaf
 {
 namespace comm
 {
 
-std::string GetFormatMessage(DWORD dw);
-
 Communication::Communication(std::shared_ptr<IThreadPool> thread_pool, std::shared_ptr<jaf::time::ITimer> timer)
     : thread_pool_(thread_pool == nullptr ? std::make_shared<SimpleThreadPool>() : thread_pool)
     , timer_(timer == nullptr ? std::make_shared<time::Timer>() : timer)
-    , get_completion_port_(this)
+    , get_epoll_fd_(this)
 {
 }
 
@@ -74,7 +70,12 @@ jaf::Coroutine<void> Communication::Run()
     wait_stop_.Start();
     wait_work_thread_finish_.Start(work_thread_count_);
 
-    m_completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+    epoll_fd = epoll_create(10);
+    // TODO: 后续处理错误情况
+    // if(epoll_fd < 0)
+    // {
+    //     co_return;
+    // }
 
     CreateWorkThread();
 
@@ -86,10 +87,10 @@ jaf::Coroutine<void> Communication::Run()
     {
         PostQueuedCompletionStatus(m_completionPort, 0, (DWORD) NULL, NULL);
     }
+
     co_await wait_work_thread_finish_;
 
-    CloseHandle(m_completionPort);
-    m_completionPort = nullptr;
+    close(epoll_fd);
 
     co_return;
 }
@@ -101,32 +102,32 @@ void Communication::Stop()
 
 std::shared_ptr<ITcpServer> Communication::CreateTcpServer()
 {
-    std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(&get_completion_port_, timer_);
+    std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(&get_epoll_fd_, timer_);
     return std::static_pointer_cast<ITcpServer>(server);
 }
 
 std::shared_ptr<ITcpClient> Communication::CreateTcpClient()
 {
-    std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(&get_completion_port_, timer_);
+    std::shared_ptr<TcpClient> client = std::make_shared<TcpClient>(&get_epoll_fd_, timer_);
     return std::static_pointer_cast<ITcpClient>(client);
 }
 
 std::shared_ptr<IUdp> Communication::CreateUdp()
 {
-    std::shared_ptr<Udp> udp = std::make_shared<Udp>(&get_completion_port_, timer_);
+    std::shared_ptr<Udp> udp = std::make_shared<Udp>(&get_epoll_fd_, timer_);
     return std::static_pointer_cast<IUdp>(udp);
 }
 
 std::shared_ptr<ISerialPort> Communication::CreateSerialPort()
 {
-    std::shared_ptr<SerialPort> server = std::make_shared<SerialPort>(&get_completion_port_, timer_);
+    std::shared_ptr<SerialPort> server = std::make_shared<SerialPort>(&get_epoll_fd_, timer_);
     return std::static_pointer_cast<ISerialPort>(server);
 }
 
 void Communication::CreateWorkThread()
 {
-    SYSTEM_INFO mySysInfo;
-    GetSystemInfo(&mySysInfo);
+    // SYSTEM_INFO mySysInfo;
+    // GetSystemInfo(&mySysInfo);
     // size_t work_thread_count = mySysInfo.dwNumberOfProcessors * 2;
 
     for (size_t i = 0; i < work_thread_count_; ++i)
