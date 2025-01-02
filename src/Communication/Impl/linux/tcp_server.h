@@ -77,7 +77,6 @@ private:
     std::shared_ptr<jaf::time::ITimer> timer_;
 
     IGetEpollFd* get_epoll_fd_ = nullptr;
-    HANDLE completion_handle_                = nullptr;
     SOCKET listen_socket_                    = 0; // ÕìÌýÌ×½Ó×Ö
 
     std::string ip_ = "0.0.0.0";
