@@ -36,6 +36,7 @@ public:
 
 public:
     virtual int Get() = 0;
+    virtual void AddFun(std::function<void(void)> fun) = 0;
 };
 
 } // namespace comm

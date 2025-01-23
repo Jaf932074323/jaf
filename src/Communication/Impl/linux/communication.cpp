@@ -24,19 +24,22 @@
 #elif defined(__linux__)
 
 #include "communication.h"
+#include "Time/Impl/timer.h"
 #include "define_constant.h"
 #include "log_head.h"
-#include "serial_port.h"
 #include "tcp_client.h"
-#include "tcp_server.h"
-#include "Time/Impl/timer.h"
-#include "udp.h"
 #include "util/finally.h"
 #include "util/simple_thread_pool.h"
 #include <assert.h>
+#include <errno.h>
 #include <format>
 #include <functional>
-#include  <sys/epoll.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
 
 namespace jaf
 {
@@ -68,14 +71,12 @@ jaf::Coroutine<void> Communication::Run()
     run_flag_ = true;
 
     wait_stop_.Start();
-    wait_work_thread_finish_.Start(work_thread_count_);
+    wait_work_thread_finish_.Start(1);
 
-    epoll_fd = epoll_create(10);
-    // TODO: 后续处理错误情况
-    // if(epoll_fd < 0)
-    // {
-    //     co_return;
-    // }
+    if (!CreateEpoll())
+    {
+        co_return;
+    }
 
     CreateWorkThread();
 
@@ -83,14 +84,18 @@ jaf::Coroutine<void> Communication::Run()
 
     run_flag_ = false;
 
-    for (size_t i = 0; i < work_thread_count_; ++i)
-    {
-        PostQueuedCompletionStatus(m_completionPort, 0, (DWORD) NULL, NULL);
-    }
+    assert(stop_fd_ >= 0);
+    uint64_t counter = 1;
+    int result       = ::write(stop_fd_, &counter, sizeof(uint64_t));
 
     co_await wait_work_thread_finish_;
 
-    close(epoll_fd);
+    close(stop_fd_);
+    stop_fd_ = -1;
+    close(funs_fd_);
+    funs_fd_ = -1;
+    close(epoll_fd_);
+    epoll_fd_ = -1;
 
     co_return;
 }
@@ -102,8 +107,7 @@ void Communication::Stop()
 
 std::shared_ptr<ITcpServer> Communication::CreateTcpServer()
 {
-    std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(&get_epoll_fd_, timer_);
-    return std::static_pointer_cast<ITcpServer>(server);
+    return nullptr;
 }
 
 std::shared_ptr<ITcpClient> Communication::CreateTcpClient()
@@ -114,58 +118,90 @@ std::shared_ptr<ITcpClient> Communication::CreateTcpClient()
 
 std::shared_ptr<IUdp> Communication::CreateUdp()
 {
-    std::shared_ptr<Udp> udp = std::make_shared<Udp>(&get_epoll_fd_, timer_);
-    return std::static_pointer_cast<IUdp>(udp);
+    return nullptr;
 }
 
 std::shared_ptr<ISerialPort> Communication::CreateSerialPort()
 {
-    std::shared_ptr<SerialPort> server = std::make_shared<SerialPort>(&get_epoll_fd_, timer_);
-    return std::static_pointer_cast<ISerialPort>(server);
+    return nullptr;
+}
+
+bool Communication::CreateEpoll()
+{
+    if ((epoll_fd_ = epoll_create(1)) < 0)
+    {
+        std::string str = std::format("Communication CreateEpoll() create epoll error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+        return false;
+    }
+
+    // 创建停止事件描述符，用于在停止时通知停止
+    stop_fd_ = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
+    if (stop_fd_ < 0)
+    {
+        std::string str = std::format("Communication CreateEpoll() create stop_fd_ error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+        return false;
+    }
+
+    epoll_event stop_ = {0, {0}};
+    stop_.events      = EPOLLIN | EPOLLERR;
+    stop_.data.ptr    = &stop_comm_data_;
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, stop_fd_, &stop_) < 0)
+    {
+        std::string str = std::format("Communication CreateEpoll() epoll_ctl stop_fd_ error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+        return false;
+    }
+
+    // 创建执行功能事件描述符
+    funs_fd_ = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    if (funs_fd_ < 0)
+    {
+        std::string str = std::format("Communication CreateEpoll() create funs_fd_ error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+        return false;
+    }
+
+    epoll_event funs_event = {0, {0}};
+    funs_event.events      = EPOLLIN | EPOLLERR;
+    funs_event.data.ptr    = &funs_data_;
+    if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, funs_fd_, &funs_event) < 0)
+    {
+        std::string str = std::format("Communication CreateEpoll() epoll_ctl funs_event error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+        return false;
+    }
+
+    return true;
 }
 
 void Communication::CreateWorkThread()
 {
-    // SYSTEM_INFO mySysInfo;
-    // GetSystemInfo(&mySysInfo);
-    // size_t work_thread_count = mySysInfo.dwNumberOfProcessors * 2;
-
-    for (size_t i = 0; i < work_thread_count_; ++i)
-    {
-        thread_pool_->Post(std::bind(&Communication::WorkThreadRun, this));
-    }
+    thread_pool_->Post(std::bind(&Communication::WorkThreadRun, this));
 }
 
 void Communication::WorkThreadRun()
 {
     FINALLY(wait_work_thread_finish_.Notify(););
 
-    ULONG_PTR completionKey = 0;
-    IOCP_DATA* pPerIoData   = nullptr;
-    DWORD bytesTransferred  = 0;
+    assert(epoll_fd_ >= 0);
+    const int events_size = 10;
+    epoll_event events[events_size];
     while (run_flag_)
     {
-        BOOL success = GetQueuedCompletionStatus(m_completionPort, &bytesTransferred, (PULONG_PTR) &completionKey, (LPOVERLAPPED*) &pPerIoData, INFINITE);
-
-        if (pPerIoData == nullptr)
+        //获取已经准备好的描述符事件
+        int events_wait_count = epoll_wait(epoll_fd_, events, events_size, -1);
+        if (events_wait_count < 0)
         {
-            if (!success)
+            if(errno == EINTR )
             {
-                DWORD dw = GetLastError();
-                if (WAIT_TIMEOUT == dw)
-                {
-                    continue;
-                }
-
-                std::string str = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-                LOG_ERROR(LOG_NAME) << str;
+                continue;
             }
-
-            continue;
+            std::string err = std::format("OnConnect(): connect error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+            return;
         }
-        pPerIoData->success_          = success;
-        pPerIoData->bytesTransferred_ = bytesTransferred;
-        pPerIoData->call_(pPerIoData);
+        for (int i = 0; i < events_wait_count; ++i)
+        {
+            EpollData* comm_data = (EpollData*) events[i].data.ptr;
+            comm_data->events_   = events[i].events;
+            comm_data->call_(comm_data);
+        }
     }
 }
 

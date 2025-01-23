@@ -23,6 +23,7 @@
 #include "recv_buffer.h"
 #include "pack.h"
 #include <assert.h>
+#include <string.h>
 
 
 namespace jaf

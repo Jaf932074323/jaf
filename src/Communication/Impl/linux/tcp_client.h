@@ -24,11 +24,13 @@
 #ifdef _WIN32
 #elif defined(__linux__)
 
-#include "Interface/communication/i_tcp_client.h"
 #include "Impl/empty_channel.h"
-#include "global_timer/co_await_time.h"
 #include "Interface/communication/i_channel.h"
+#include "Interface/communication/i_tcp_client.h"
+#include "global_timer/co_await_time.h"
+#include "head.h"
 #include "i_get_epoll_fd.h"
+#include "Interface/i_timer.h"
 #include "time_head.h"
 #include "util/co_coroutine.h"
 #include "util/co_wait_util_stop.h"
@@ -43,7 +45,7 @@ namespace comm
 class TcpClient : public ITcpClient
 {
 public:
-    TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer);
+    TcpClient(IGetEpollFd* get_epoll_fd, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~TcpClient();
 
 public:
@@ -58,10 +60,7 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-    void Init(void);
     jaf::Coroutine<void> Execute();
-
-    SOCKET CreationSocket();
 
 private:
     struct ConnectResult;
@@ -74,8 +73,13 @@ private:
     std::shared_ptr<jaf::time::ITimer> timer_;
     jaf::ControlStartStop control_start_stop_;
 
-    IGetCompletionPort* get_completion_port_ = nullptr;
-    HANDLE completion_handle_                = nullptr;
+    int epoll_fd_ = -1;         // epoll描述符
+    IGetEpollFd* get_epoll_fd_; // 获取完成端口对象
+    int connect_socket_ = -1;
+
+    std::atomic<bool> close_flag_   = true;  // 套接字是否已经关闭标志
+    std::atomic<bool> read_status_  = false; // 是否可读
+    std::atomic<bool> write_status_ = false; // 是否可写
 
     std::string local_ip_ = "0.0.0.0";
     uint16_t local_port_  = 0;
@@ -88,9 +92,12 @@ private:
 
     std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
 
+
+    ConnectAwaitable* connect_awaitable_ = nullptr;
+
     std::mutex channel_mutex_;
     std::shared_ptr<IChannel> empty_channel_ = std::make_shared<EmptyChannel>();
-    std::shared_ptr<IChannel> channel_ = empty_channel_;
+    std::shared_ptr<IChannel> channel_       = empty_channel_;
 };
 
 } // namespace comm

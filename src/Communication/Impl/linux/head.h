@@ -20,53 +20,54 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 #elif defined(__linux__)
 
-#include "global_timer/co_await_time.h"
-#include "Interface/communication/comm_struct.h"
-#include "Interface/communication/i_channel.h"
-#include "util/co_wait_all_tasks_done.h"
-#include "util/control_start_stop.h"
+#include "Time/Interface/i_timer.h"
 #include <functional>
-#include <memory>
-#include <string>
+#include <mutex>
+#include <stdint.h>
 
 namespace jaf
 {
 namespace comm
 {
 
-// ´®¿ÚÍ¨µÀ
-class SerialPortChannel : public IChannel
+struct EpollData
 {
-    struct AwaitableResult;
-    class ReadAwaitable;
-    class WriteAwaitable;
-
-public:
-    SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~SerialPortChannel();
-
-public:
-    virtual Coroutine<void> Run();
-    virtual void Stop() override;
-    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-
-private:
-    bool stop_flag_ = false;
-
-    std::shared_ptr<jaf::time::ITimer> timer_;
-
-    HANDLE completion_handle_ = nullptr;
-    HANDLE comm_handle_;
-
-    jaf::ControlStartStop control_start_stop_;
-    jaf::CoWaitAllTasksDone wait_all_tasks_done_;
+    std::function<void(EpollData*)> call_;
+    uint32_t events_;
 };
 
+struct WSABUF
+{
+    uint32_t len; /* the length of the buffer */
+    char* buf;    /* the pointer to the buffer */
+};
+
+struct CommunData
+{
+    CommunData()
+    {
+    }
+    ~CommunData()
+    {
+    }
+
+    std::function<void(void)> call_;
+    uint32_t need_len_         = 0;
+    unsigned char* result_buf_ = nullptr;
+    
+    std::mutex mutex_;
+
+    jaf::time::STimerTask timeout_task_;
+
+    bool timeout_flag_ = false;
+    bool finish_flag_  = false;
+
+    SChannelResult result;
+};
 
 } // namespace comm
 } // namespace jaf

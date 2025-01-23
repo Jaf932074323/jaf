@@ -19,8 +19,6 @@ target_link_libraries(${PROJECT_NAME}
     Communication
     Time
     global_thread_pool
-    Mswsock
-    ws2_32
     gtest
 )
 

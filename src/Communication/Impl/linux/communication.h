@@ -27,6 +27,7 @@
 
 #include "Interface/communication/comm_struct.h"
 #include "Interface/communication/i_communication.h"
+#include "head.h"
 #include "i_get_epoll_fd.h"
 #include "time_head.h"
 #include "util/co_wait_notices.h"
@@ -57,6 +58,9 @@ public:
     virtual std::shared_ptr<ISerialPort> CreateSerialPort() override;
 
 private:
+    bool CreateEpoll();
+
+private:
     // 创建工作线程
     void CreateWorkThread();
     // 工作线程执行
@@ -65,7 +69,35 @@ private:
 private:
     int GetEpollFd()
     {
-        return epoll_fd;
+        return epoll_fd_;
+    }
+
+    void AddFun(std::function<void(void)> fun)
+    {
+        {
+            std::unique_lock<std::mutex> lock(funs_mutex_);
+            funs_.push_back(fun);
+        }
+
+        assert(funs_fd_ >= 0);
+        uint64_t write_data = 1;
+        ::write(funs_fd_, &write_data, sizeof(write_data));
+    }
+    
+    void OnRunFuns()
+    {
+        uint64_t read_data;
+        ::read(funs_fd_, &read_data, sizeof(read_data));
+
+        std::list<std::function<void(void)>> funs;
+        {
+            std::unique_lock<std::mutex> lock(funs_mutex_);
+            funs.swap(funs_);
+        }
+        for (auto& fun : funs)
+        {
+            fun();
+        }
     }
 
     class EpollFd : public IGetEpollFd
@@ -80,18 +112,29 @@ private:
         {
             return communication_->GetEpollFd();
         }
+        void AddFun(std::function<void(void)> fun) override
+        {
+            communication_->AddFun(fun);
+        }
 
     private:
         Communication* communication_;
     };
 
 private:
-    int  epoll_fd = -1;
+    int epoll_fd_ = -1;    // epoll描述符
     EpollFd get_epoll_fd_; // 获取完成端口对象
 
     bool run_flag_ = false; // 运行标志
+    
+    int stop_fd_              = -1;                          // 停止事件描述符，用于通知停止epoll
+    EpollData stop_comm_data_ = {[](EpollData*) -> void {}}; // 停止时用的通讯数据
 
-    size_t work_thread_count_ = 1;
+    int funs_fd_         = -1;                                            // 执行功能描述符，用于通知停止epoll
+    EpollData funs_data_ = {[this](EpollData*) -> void { OnRunFuns(); }}; // 执行功能时用的通讯数据
+    std::mutex funs_mutex_;
+    std::list<std::function<void()>> funs_;
+
     std::shared_ptr<IThreadPool> thread_pool_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;

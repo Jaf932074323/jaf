@@ -24,9 +24,11 @@
 #ifdef _WIN32
 #elif defined(__linux__)
 
-#include "global_timer/co_await_time.h"
 #include "Interface/communication/comm_struct.h"
 #include "Interface/communication/i_channel.h"
+#include "global_timer/co_await_time.h"
+#include "head.h"
+#include "tcp_channel_read.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
 #include <functional>
@@ -46,7 +48,7 @@ class TcpChannel : public IChannel
     class WriteAwaitable;
 
 public:
-    TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
+    TcpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~TcpChannel();
 
 public:
@@ -56,11 +58,17 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
+    void OnEpoll(EpollData* data);
+    void OnWrite(EpollData* data);
+
+private:
     std::atomic<bool> stop_flag_ = false;
+    std::string finish_reason_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
-    SOCKET socket_ = 0; // 收发数据的套接字
+    int socket_   = 0;  // 收发数据的套接字
+    int epoll_fd_ = -1; // epoll描述符
     std::string remote_ip_;
     uint16_t remote_port_ = 0;
     std::string local_ip_;
@@ -68,6 +76,13 @@ private:
 
     jaf::ControlStartStop control_start_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;
+
+    EpollData epoll_data_; // 连接时用的通讯数据
+
+    std::atomic<bool> close_flag_   = true;  // 套接字是否已经关闭标志
+    std::atomic<bool> write_status_ = false; // 是否可写
+
+    TcpChannelRead tcp_channel_read_;
 };
 
 

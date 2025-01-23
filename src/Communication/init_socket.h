@@ -20,24 +20,46 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 姜安富
-
+// 2025-1-18 姜安富
 #ifdef _WIN32
-#include "communication.h"
-#include "tcp_client.h"
-#include "tcp_server.h"
-#include "tcp_channel.h"
-#include "udp.h"
-#include "udp_channel.h"
-#include "serial_port.h"
-#include "serial_port_channel.h"
+#include <string>
+#include <windows.h>
+#include <winsock2.h>
+#pragma comment(lib, "Ws2_32.lib")
+
+class InitSocket
+{
+public:
+    InitSocket(BYTE version_low = 2, BYTE version_high = 2)
+    {
+        //WinSock版本号
+       WORD version = MAKEWORD(version_low, version_high);
+
+        // WinSock库初始化
+        WSADATA wsa_data;
+        int result = ::WSAStartup(version, &wsa_data);
+        if (result != 0) // WinSock库初始化失败!
+        {
+            std::string err = "WinSock库初始化失败,错误号:" + WSAGetLastError();
+            throw err;
+        }
+    }
+    ~InitSocket()
+    {
+        ::WSACleanup();
+    }
+};
+
 #elif defined(__linux__)
-#include "communication.h"
-#include "tcp_client.h"
-// #include "tcp_server.h"
-#include "tcp_channel.h"
-// #include "udp.h"
-// #include "udp_channel.h"
-// #include "serial_port.h"
-// #include "serial_port_channel.h"
+
+class InitSocket
+{
+public:
+    InitSocket(unsigned long version_low = 2, unsigned long version_high = 2)
+    {
+    }
+    ~InitSocket()
+    {
+    }
+};
 #endif

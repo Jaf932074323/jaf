@@ -21,15 +21,15 @@
 // SOFTWARE.
 // 2024-6-16 姜安富
 #include "define_constant.h"
+#include "global_thread_pool/global_thread_pool.h"
+#include "init_socket.h"
 #include "log_head.h"
 #include "main_class.h"
 #include "time_head.h"
+#include "util/simple_thread_pool.h"
+#include "gtest/gtest.h"
 #include <iostream>
 #include <thread>
-#include <winsock2.h>
-#include "gtest/gtest.h"
-#include "global_thread_pool/global_thread_pool.h"
-#include "util/simple_thread_pool.h"
 
 int main(int argc, char** argv)
 {
@@ -43,8 +43,7 @@ int main(int argc, char** argv)
 
     jaf::GlobalThreadPool::SetThreadPool(std::make_shared<jaf::SimpleThreadPool>(1));
 
-    WSAData version;
-    WSAStartup(WINSOCK_VERSION, &version);
+    InitSocket init_socket;
 
     //Main main;
     //main.Run();
@@ -56,10 +55,9 @@ int main(int argc, char** argv)
 
     //LOG_INFO() << "程序结束";
 
+    ::testing::GTEST_FLAG(filter) = "tcp.tcp_client";
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
-
-    WSACleanup();
 
     return 0;
 }

@@ -24,38 +24,23 @@
 #elif defined(__linux__)
 
 #include "tcp_client.h"
-#include "Log/log_head.h"
 #include "Impl/tool/run_with_timeout.h"
+#include "Log/log_head.h"
 #include "tcp_channel.h"
 #include "util/finally.h"
-#include <WS2tcpip.h>
+#include <arpa/inet.h>
+#include <errno.h>
 #include <format>
-#include <mswsock.h>
-#include <winsock2.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <sys/epoll.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
 
 namespace jaf
 {
 namespace comm
 {
-
-std::string GetFormatMessage(DWORD dw);
-
-static LPFN_CONNECTEX GetConnectEx(SOCKET a_socket)
-{
-    LPFN_CONNECTEX func = nullptr;
-    DWORD bytes;
-    GUID guid = WSAID_CONNECTEX;
-    if (WSAIoctl(a_socket, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid), &func, sizeof(func), &bytes, nullptr, nullptr) == SOCKET_ERROR)
-    {
-        DWORD dw        = GetLastError();
-        std::string str = std::format("GetConnectEx code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        LOG_ERROR() << str;
-        return nullptr;
-    }
-
-    return func;
-}
-
 struct TcpClient::ConnectResult
 {
     bool success = false;
@@ -65,32 +50,199 @@ struct TcpClient::ConnectResult
 class TcpClient::ConnectAwaitable
 {
 public:
-    ConnectAwaitable(TcpClient* client, SOCKET connect_socket);
-    ~ConnectAwaitable();
-    bool await_ready();
-    bool await_suspend(std::coroutine_handle<> co_handle);
-    ConnectResult await_resume();
-    void IoCallback(IOCP_DATA* pData);
-    void Stop();
+    ConnectAwaitable(TcpClient* tcp_client)
+        : tcp_client_(tcp_client)
+    {
+        connect_epoll_data_.call_ = [this](EpollData* data) { OnConnect(data); };
+    }
+    ~ConnectAwaitable() {}
+    bool await_ready()
+    {
+        return false;
+    }
+    bool await_suspend(std::coroutine_handle<> co_handle)
+    {
+        handle_ = co_handle;
+
+        timeout_flag_ = false;
+        callback_flag_ = false;
+
+        epoll_fd_ = tcp_client_->get_epoll_fd_->Get();
+        Connect();
+        if (connect_socket_ < 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+    void await_resume()
+    {
+        return;
+    }
 
 private:
-    TcpClient* client_ = nullptr;
+    void Connect()
+    {
+        connect_socket_ = CreationSocket();
+        if (connect_socket_ < 0)
+        {
+            LOG_ERROR() << error_info_;
+            return;
+        }
+
+        sockaddr_in connect_addr     = {0};
+        connect_addr.sin_family      = AF_INET;
+        connect_addr.sin_addr.s_addr = inet_addr(tcp_client_->remote_ip_.c_str());
+        connect_addr.sin_port        = htons(tcp_client_->remote_port_);
+        if (::connect(connect_socket_, (struct sockaddr*) &connect_addr, sizeof(connect_addr)) < 0)
+        {
+            if (errno != EINPROGRESS)
+            {
+                LOG_WARNING() << std::format("Failed to connect ,local {}:{},remote {}:{},code:{},:{}",
+                    tcp_client_->local_ip_, tcp_client_->local_port_,
+                    tcp_client_->remote_ip_, tcp_client_->remote_port_,
+                    errno, strerror(errno));
+                close(connect_socket_);
+                return;
+            }
+        }
+
+        timeout_task_.fun      = [this](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) { OnConnectTimeout(); };
+        timeout_task_.interval = tcp_client_->connect_timeout_;
+
+        struct epoll_event connect_event;
+        connect_event.events   = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
+        connect_event.data.ptr = &connect_epoll_data_;
+        int ret                = epoll_ctl(tcp_client_->epoll_fd_, EPOLL_CTL_ADD, connect_socket_, &connect_event);
+        if (ret == -1)
+        {
+            close(connect_socket_);
+            std::string str = std::format("epoll_ctl(): error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+            return;
+        }
+
+        tcp_client_->timer_->StartTask(&timeout_task_);
+    }
+
+    int CreationSocket()
+    {
+        int connect_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (connect_socket < 0)
+        {
+            int error   = errno;
+            error_info_ = std::format("Failed to create a connection socket,local {}:{},remote {}:{},code:{},:{}",
+                tcp_client_->local_ip_, tcp_client_->local_port_,
+                tcp_client_->remote_ip_, tcp_client_->remote_port_,
+                error, strerror(error));
+            return -1;
+        }
+
+        sockaddr_in bind_addr     = {};
+        bind_addr.sin_family      = AF_INET;
+        bind_addr.sin_addr.s_addr = inet_addr(tcp_client_->local_ip_.c_str());
+        bind_addr.sin_port        = htons(tcp_client_->local_port_);
+
+        //绑定套接字, 绑定到端口
+        if (::bind(connect_socket, (sockaddr*) &bind_addr, sizeof(bind_addr)) < 0)
+        {
+            int error   = errno;
+            error_info_ = std::format("Failed to bind to the local,local {}:{},remote {}:{},code:{},:{}",
+                tcp_client_->local_ip_, tcp_client_->local_port_,
+                tcp_client_->remote_ip_, tcp_client_->remote_port_,
+                error, strerror(error));
+            close(connect_socket);
+            return -1;
+        }
+
+        //设置 connect 的 socket 为非阻塞
+        long on = 1L;
+        if (ioctl(connect_socket, (int) FIONBIO, (char*) &on))
+        {
+            perror("ioctl FIONBIO call failed\n");
+            return -1;
+        }
+
+        return connect_socket;
+    }
+
+    void OnConnect(EpollData* data)
+    {
+        int ret = epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, connect_socket_, nullptr);
+
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+
+            if (!timeout_flag_)
+            {
+                FINALLY(tcp_client_->timer_->StopTask(&timeout_task_););
+
+                //看看 socket 是不是链接成功了
+                int result;
+                socklen_t result_len = sizeof(result);
+                if (getsockopt(connect_socket_, SOL_SOCKET, SO_ERROR, &result, &result_len) < 0 || result != 0)
+                {
+                    connect_result_.success     = false;
+                    connect_result_.error_info_ = std::format("OnConnect(): connect error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+                    close(connect_socket_);
+                    return;
+                }
+
+                callback_flag_          = true;
+                connect_result_.success = true;
+                return;
+            }
+
+            close(connect_socket_);
+            connect_socket_ = -1;
+        }
+
+        handle_.resume();
+    }
+
+    void OnConnectTimeout()
+    {
+        {
+            std::unique_lock<std::mutex> lock(mutex_);
+            if (!callback_flag_)
+            {
+                timeout_flag_ = true;
+
+                connect_result_.success     = false;
+                connect_result_.error_info_ = std::format("Connect timeout");
+
+                shutdown(connect_socket_, SHUT_RDWR);
+                return;
+            }
+        }
+
+        handle_.resume();
+    }
+
+public:
+    TcpClient* tcp_client_;
+
+    ConnectResult connect_result_;
+    std::mutex mutex_;
+    bool timeout_flag_    = false;
+    bool callback_flag_ = false;
+
+    int connect_socket_ = -1;
+
+    int epoll_fd_ = -1;
+
+    jaf::time::STimerTask timeout_task_;
+
     std::string error_info_;
-    IOCP_DATA iocp_data_;
+
+    EpollData connect_epoll_data_; // 连接时用的通讯数据
+
+private:
     std::coroutine_handle<> handle_;
-    SOCKET connect_socket_;
-
-    bool success_ = false;
-
-    char buf_[1]   = {0};
-    DWORD dwBytes_ = 0;
-
-    std::mutex mutex_;           // 超时使用的同步
-    bool callback_flag_ = false; // 已经回调标记
 };
 
-TcpClient::TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
-    : get_completion_port_(get_completion_port)
+TcpClient::TcpClient(IGetEpollFd* get_epoll_fd, std::shared_ptr<jaf::time::ITimer> timer)
+    : get_epoll_fd_(get_epoll_fd)
     , timer_(timer)
 {
 }
@@ -127,9 +279,7 @@ jaf::Coroutine<void> TcpClient::Run()
     run_flag_ = true;
 
     wait_stop_.Start();
-    completion_handle_ = get_completion_port_->Get();
-
-    Init();
+    epoll_fd_ = get_epoll_fd_->Get();
 
     jaf::Coroutine<void> execute = Execute();
 
@@ -165,47 +315,34 @@ Coroutine<SChannelResult> TcpClient::Write(const unsigned char* buff, size_t buf
     co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
-void TcpClient::Init(void)
-{
-}
-
 jaf::Coroutine<void> TcpClient::Execute()
 {
-    SOCKET connect_socket = INVALID_SOCKET; // 连接套接字
+    ConnectAwaitable connect_awaitable(this);
 
     while (run_flag_)
     {
-        connect_socket = CreationSocket();
-        if (connect_socket == INVALID_SOCKET)
-        {
-            LOG_ERROR() << error_info_;
-            co_return;
-        }
-        FINALLY(closesocket(connect_socket); connect_socket = INVALID_SOCKET;);
+        co_await connect_awaitable;
 
-        ConnectAwaitable connect_awaitable(this, connect_socket);
-        RunWithTimeout run_with_timeout(control_start_stop_, connect_awaitable, connect_timeout_, timer_);
-        co_await run_with_timeout.Run();
-
-        const auto& result = run_with_timeout.Result();
         if (!run_flag_)
         {
             co_return;
         }
-        if (!result.success)
+
+        const ConnectResult& connect_result = connect_awaitable.connect_result_;
+        if (!connect_result.success)
         {
             LOG_WARNING() << std::format("TCP连接失败,本地{}:{},远程{}:{},{}",
                 local_ip_, local_port_,
                 remote_ip_, remote_port_,
-                result.error_info_);
+                connect_result.error_info_);
 
             jaf::time::CoAwaitTime await_time(reconnect_wait_time_, control_start_stop_, timer_);
             co_await await_time;
             continue;
         }
 
-
-        std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket, remote_ip_, remote_port_, local_ip_, local_port_, timer_);
+        connect_socket_                     = connect_awaitable.connect_socket_;
+        std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket_, epoll_fd_, remote_ip_, remote_port_, local_ip_, local_port_, timer_);
 
         {
             std::unique_lock lock(channel_mutex_);
@@ -224,129 +361,6 @@ jaf::Coroutine<void> TcpClient::Execute()
     }
 
     co_return;
-}
-
-SOCKET TcpClient::CreationSocket()
-{
-    SOCKET connect_socket = INVALID_SOCKET; // 连接套接字
-    connect_socket        = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (INVALID_SOCKET == connect_socket)
-    {
-        DWORD dw    = GetLastError();
-        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},code:{},:{}",
-            local_ip_, local_port_,
-            remote_ip_, remote_port_,
-            dw, GetFormatMessage(dw));
-        return false;
-    }
-
-    sockaddr_in bind_addr = {};
-    inet_pton(AF_INET, local_ip_.c_str(), (void*) &bind_addr.sin_addr);
-    bind_addr.sin_family = AF_INET;
-    bind_addr.sin_port   = htons(local_port_);
-
-    //绑定套接字, 绑定到端口
-    if (SOCKET_ERROR == ::bind(connect_socket, (SOCKADDR*) &bind_addr, sizeof(bind_addr)))
-    {
-        DWORD dw    = GetLastError();
-        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},code:{},:{}",
-            local_ip_, local_port_,
-            remote_ip_, remote_port_,
-            dw, GetFormatMessage(dw));
-        closesocket(connect_socket);
-        connect_socket = INVALID_SOCKET;
-        return false;
-    }
-
-    if (CreateIoCompletionPort((HANDLE) connect_socket, completion_handle_, 0, 0) == 0)
-    {
-        DWORD dw    = GetLastError();
-        error_info_ = std::format("TCP连接创建套接字失败,本地{}:{},远程{}:{},code:{},:{}",
-            local_ip_, local_port_,
-            remote_ip_, remote_port_,
-            dw, GetFormatMessage(dw));
-        closesocket(connect_socket);
-        connect_socket = INVALID_SOCKET;
-        return false;
-    }
-
-    return connect_socket;
-}
-
-TcpClient::ConnectAwaitable::ConnectAwaitable(TcpClient* client, SOCKET connect_socket)
-    : client_(client)
-    , connect_socket_(connect_socket)
-{
-}
-
-TcpClient::ConnectAwaitable::~ConnectAwaitable()
-{
-}
-
-bool TcpClient::ConnectAwaitable::await_ready()
-{
-    return false;
-}
-
-bool TcpClient::ConnectAwaitable::await_suspend(std::coroutine_handle<> co_handle)
-{
-    static LPFN_CONNECTEX func_connect = GetConnectEx(connect_socket_);
-
-    handle_          = co_handle;
-    iocp_data_.call_ = std::bind(&ConnectAwaitable::IoCallback, this, std::placeholders::_1);
-
-    sockaddr_in connect_addr = {0};
-    inet_pton(AF_INET, client_->remote_ip_.c_str(), (void*) &connect_addr.sin_addr);
-    connect_addr.sin_family = AF_INET;
-    connect_addr.sin_port   = htons(client_->remote_port_);
-    DWORD bytes;
-    bool connect_result = func_connect(connect_socket_, (const sockaddr*) &connect_addr, sizeof(connect_addr), nullptr, 0, &bytes, &iocp_data_.overlapped);
-
-    if (!connect_result && WSAGetLastError() != ERROR_IO_PENDING)
-    {
-        DWORD dw    = GetLastError();
-        error_info_ = std::format("code:{},:{}", dw, GetFormatMessage(dw));
-        return false;
-    }
-
-    return true;
-}
-
-TcpClient::ConnectResult TcpClient::ConnectAwaitable::await_resume()
-{
-    return ConnectResult{.success = success_, .error_info_ = error_info_};
-}
-
-void TcpClient::ConnectAwaitable::IoCallback(IOCP_DATA* pData)
-{
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        callback_flag_ = true;
-    }
-
-    if (pData->success_ == 0)
-    {
-        DWORD dw    = GetLastError();
-        error_info_ = std::format("code:{},:{}", dw, GetFormatMessage(dw));
-        success_    = false;
-    }
-    else
-    {
-        success_ = true;
-    }
-
-    handle_.resume();
-}
-
-void TcpClient::ConnectAwaitable::Stop()
-{
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (callback_flag_)
-    {
-        return;
-    }
-    callback_flag_ = true;
-    CancelIoEx((HANDLE) connect_socket_, &iocp_data_.overlapped);
 }
 
 } // namespace comm

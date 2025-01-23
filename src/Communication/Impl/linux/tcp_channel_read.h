@@ -24,14 +24,15 @@
 #ifdef _WIN32
 #elif defined(__linux__)
 
-#include "global_timer/co_await_time.h"
 #include "Interface/communication/comm_struct.h"
 #include "Interface/communication/i_channel.h"
+#include "global_timer/co_await_time.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
 #include <functional>
 #include <memory>
 #include <string>
+#include "head.h"
 
 namespace jaf
 {
@@ -39,38 +40,29 @@ namespace comm
 {
 
 // TCP通道
-class UdpChannel : public IChannel
+class TcpChannelRead
 {
-    struct AwaitableResult;
-    class ReadAwaitable;
-    class WriteAwaitable;
-
 public:
-    UdpChannel(HANDLE completion_handle, SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~UdpChannel();
+    TcpChannelRead();
+    virtual ~TcpChannelRead();
 
-public:
-    virtual Coroutine<void> Run();
-    virtual void Stop() override;
-    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, std::string remote_ip, uint16_t remote_port, uint64_t timeout);
-
+    void Start(int socket_);
+    void Stop();
+    void AddReadData(std::shared_ptr<CommunData> read_data);
+    void OnRead(EpollData* data);
 private:
-    std::atomic<bool> stop_flag_ = false;
+    void Read();
+    bool ReadImp(std::list<std::shared_ptr<CommunData>>& finish_read_datas); // 读取数据，结束时若缓存区还有数据则返回true
+private:
+    int socket_   = 0;  // 收发数据的套接字
+        
+    std::atomic<bool> run_flag_   = true;  // 套接字是否已经关闭标志
+    std::atomic<bool> readable_flag_  = false; // 是否可读
 
-    std::shared_ptr<jaf::time::ITimer> timer_;
-
-    HANDLE completion_handle_ = nullptr;
-    SOCKET socket_            = 0; // 收发数据的套接字
-    std::string remote_ip_;
-    uint16_t remote_port_ = 0;
-    std::string local_ip_;
-    uint16_t local_port_   = 0;
-    sockaddr_in send_addr_ = {};
-
-    jaf::ControlStartStop control_start_stop_;
-    jaf::CoWaitAllTasksDone wait_all_tasks_done_;
+    std::list<std::shared_ptr<CommunData>> ready_read_queue_;
+    std::mutex ready_read_queue_mutex_;
+    std::list<std::shared_ptr<CommunData>> read_queue_;
+    std::mutex read_mutex_;
 };
 
 
