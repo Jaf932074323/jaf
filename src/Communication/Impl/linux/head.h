@@ -46,18 +46,27 @@ struct WSABUF
     char* buf;    /* the pointer to the buffer */
 };
 
-struct CommunData
+struct ReadCommunData
 {
-    CommunData()
-    {
-    }
-    ~CommunData()
-    {
-    }
-
     std::function<void(void)> call_;
     uint32_t need_len_         = 0;
     unsigned char* result_buf_ = nullptr;
+    
+    std::mutex mutex_;
+
+    jaf::time::STimerTask timeout_task_;
+
+    bool timeout_flag_ = false;
+    bool finish_flag_  = false;
+
+    SChannelResult result;
+};
+
+struct WriteCommunData
+{
+    std::function<void(void)> call_;
+    uint32_t need_len_         = 0;
+    const unsigned char* result_buf_ = nullptr;
     
     std::mutex mutex_;
 

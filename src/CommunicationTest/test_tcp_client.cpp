@@ -52,12 +52,23 @@ TEST(tcp, tcp_client)
             unsigned char buff[1024];
             while (true)
             {
-                auto result = co_await channel->Read(buff, 1024, 5000);
-                if (result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
+                auto read_result = co_await channel->Read(buff, 1024, 5000);
+                std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff), (int) read_result.state, read_result.error) << std::endl;
+                if (read_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
                 {
                     break;
                 }
-                std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff), (int) result.state, result.error) << std::endl;
+                if (read_result.state != jaf::comm::SChannelResult::EState::CRS_SUCCESS)
+                {
+                    continue;
+                }
+
+                auto write_result = co_await channel->Write(buff, 1024, 5000);
+                std::cout << std::format("write {}, state {}, error {}", std::string((char*) buff), (int) write_result.state, write_result.error) << std::endl;
+                if (write_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
+                {
+                    break;
+                }
             }
         };
 

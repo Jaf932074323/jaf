@@ -20,70 +20,49 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 ½ª°²¸»
+// 2024-12-28 å§œå®‰å¯Œ
 #ifdef _WIN32
 #elif defined(__linux__)
 
 #include "Interface/communication/comm_struct.h"
 #include "Interface/communication/i_channel.h"
 #include "global_timer/co_await_time.h"
-#include "head.h"
-#include "tcp_channel_read.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
 #include <functional>
 #include <memory>
 #include <string>
-#include "tcp_channel_write.h"
+#include "head.h"
 
 namespace jaf
 {
 namespace comm
 {
 
-// TCPÍ¨µÀ
-class TcpChannel : public IChannel
+// TCPé€šé“
+class TcpChannelWrite
 {
-    struct AwaitableResult;
-    class ReadAwaitable;
-    class WriteAwaitable;
-
 public:
-    TcpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~TcpChannel();
+    TcpChannelWrite();
+    virtual ~TcpChannelWrite();
 
-public:
-    virtual Coroutine<void> Run();
-    virtual void Stop() override;
-    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-
+    void Start(int socket_);
+    void Stop();
+    void AddWriteData(std::shared_ptr<WriteCommunData> write_data);
+    void OnWrite(EpollData* data);
 private:
-    void OnEpoll(EpollData* data);
-
+    void Write();
+    bool WriteImp(std::list<std::shared_ptr<WriteCommunData>>& finish_write_datas); // è¯»å–æ•°æ®ï¼Œç»“æŸæ—¶è‹¥ç¼“å­˜åŒºè¿˜æœ‰æ•°æ®åˆ™è¿”å›true
 private:
-    std::atomic<bool> stop_flag_ = false;
-    std::string finish_reason_;
+    int socket_   = 0;  // æ”¶å‘æ•°æ®çš„å¥—æ¥å­—
+        
+    std::atomic<bool> run_flag_   = true;  // å¥—æ¥å­—æ˜¯å¦å·²ç»å…³é—­æ ‡å¿—
+    std::atomic<bool> writeable_flag_  = false; // æ˜¯å¦å¯å†™
 
-    std::shared_ptr<jaf::time::ITimer> timer_;
-
-    int socket_   = 0;  // ÊÕ·¢Êı¾İµÄÌ×½Ó×Ö
-    int epoll_fd_ = -1; // epollÃèÊö·û
-    std::string remote_ip_;
-    uint16_t remote_port_ = 0;
-    std::string local_ip_;
-    uint16_t local_port_ = 0;
-
-    jaf::ControlStartStop control_start_stop_;
-    jaf::CoWaitAllTasksDone wait_all_tasks_done_;
-
-    EpollData epoll_data_; // Á¬½ÓÊ±ÓÃµÄÍ¨Ñ¶Êı¾İ
-
-    std::atomic<bool> close_flag_   = true;  // Ì×½Ó×ÖÊÇ·ñÒÑ¾­¹Ø±Õ±êÖ¾
-    std::atomic<bool> write_status_ = false; // ÊÇ·ñ¿ÉĞ´
-
-    TcpChannelRead tcp_channel_read_;
-    TcpChannelWrite tcp_channel_write_;
+    std::list<std::shared_ptr<WriteCommunData>> ready_write_queue_;
+    std::mutex ready_write_queue_mutex_;
+    std::list<std::shared_ptr<WriteCommunData>> write_queue_;
+    std::mutex write_mutex_;
 };
 
 

@@ -48,20 +48,20 @@ public:
 
     void Start(int socket_);
     void Stop();
-    void AddReadData(std::shared_ptr<CommunData> read_data);
+    void AddReadData(std::shared_ptr<ReadCommunData> read_data);
     void OnRead(EpollData* data);
 private:
     void Read();
-    bool ReadImp(std::list<std::shared_ptr<CommunData>>& finish_read_datas); // 读取数据，结束时若缓存区还有数据则返回true
+    bool ReadImp(std::list<std::shared_ptr<ReadCommunData>>& finish_read_datas); // 读取数据，结束时若缓存区还有数据则返回true
 private:
     int socket_   = 0;  // 收发数据的套接字
         
     std::atomic<bool> run_flag_   = true;  // 套接字是否已经关闭标志
     std::atomic<bool> readable_flag_  = false; // 是否可读
 
-    std::list<std::shared_ptr<CommunData>> ready_read_queue_;
+    std::list<std::shared_ptr<ReadCommunData>> ready_read_queue_;
     std::mutex ready_read_queue_mutex_;
-    std::list<std::shared_ptr<CommunData>> read_queue_;
+    std::list<std::shared_ptr<ReadCommunData>> read_queue_;
     std::mutex read_mutex_;
 };
 

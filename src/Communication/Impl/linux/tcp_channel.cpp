@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 ������
+// 2024-12-28 姜安富
 #ifdef _WIN32
 #elif defined(__linux__)
 
@@ -57,10 +57,10 @@ public:
         , buff_(buff)
         , buff_size_(buff_size)
     {
-        std::shared_ptr<CommunData> read_data = std::make_shared<CommunData>();
+        std::shared_ptr<ReadCommunData> read_data = std::make_shared<ReadCommunData>();
         read_data_                            = read_data;
 
-        CommunData* p_read_data  = read_data_.get();
+        ReadCommunData* p_read_data  = read_data_.get();
         p_read_data->call_       = [this]() { IoCallback(); };
         p_read_data->need_len_   = buff_size;
         p_read_data->result_buf_ = buff;
@@ -100,8 +100,7 @@ public:
         handle_.resume();
     }
 
-
-    void OnTimeout(CommunData* p_read_data)
+    void OnTimeout(ReadCommunData* p_read_data)
     {
         {
             std::unique_lock<std::mutex> lock(p_read_data->mutex_);
@@ -114,12 +113,12 @@ public:
         }
 
         p_read_data->result.state = SChannelResult::EState::CRS_TIMEOUT;
-        p_read_data->result.error = std::format("Read timeout");
+        p_read_data->result.error = std::format("timeout");
 
         handle_.resume();
     }
 
-    const CommunData* ReadData()
+    const ReadCommunData* ReadData()
     {
         return read_data_.get();
     }
@@ -133,33 +132,94 @@ private:
     unsigned char* buff_;
     size_t buff_size_;
 
-    std::shared_ptr<CommunData> read_data_;
+    std::shared_ptr<ReadCommunData> read_data_;
 };
 
 class TcpChannel::WriteAwaitable
 {
 public:
-    WriteAwaitable(TcpChannel* tcp_channel, int socket, int epoll_fd, const unsigned char* buff, size_t size);
-    ~WriteAwaitable();
-    bool await_ready();
-    bool await_suspend(std::coroutine_handle<> co_handle);
-    AwaitableResult await_resume() const;
-    void IoCallback(EpollData* pData);
-    void Stop();
+    WriteAwaitable(TcpChannel* tcp_channel, const unsigned char* buff, size_t buff_size, uint32_t timeout)
+        : tcp_channel_(tcp_channel)
+        , buff_(buff)
+        , buff_size_(buff_size)
+    {        
+        std::shared_ptr<WriteCommunData> write_data = std::make_shared<WriteCommunData>();
+        write_data_                            = write_data;
 
-private:
+        WriteCommunData* p_write_data  = write_data_.get();
+        p_write_data->call_       = [this]() { IoCallback(); };
+        p_write_data->need_len_   = buff_size;
+        p_write_data->result_buf_ = buff;
+
+        p_write_data->timeout_task_.interval = timeout;
+        p_write_data->timeout_task_.fun      = [this, write_data](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) {
+            OnTimeout(write_data.get());
+            write_data->timeout_task_.fun = [](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) {};
+        };
+    }
+    
+    ~WriteAwaitable()
+    {
+    }
+
+    bool await_ready()
+    {
+        return false;
+    }
+
+    bool await_suspend(std::coroutine_handle<> co_handle)
+    {        
+        handle_ = co_handle;
+        tcp_channel_->tcp_channel_write_.AddWriteData(write_data_);
+        tcp_channel_->timer_->StartTask(&write_data_->timeout_task_);
+        return true;
+    }
+
+    void await_resume() const
+    {
+        return;
+    }
+
+    void IoCallback()
+    {
+        tcp_channel_->timer_->StopTask(&write_data_->timeout_task_);
+        handle_.resume();
+    }
+    
+    void OnTimeout(WriteCommunData* p_write_data)
+    {
+        {
+            std::unique_lock<std::mutex> lock(p_write_data->mutex_);
+
+            if (p_write_data->finish_flag_)
+            {
+                return;
+            }
+            p_write_data->timeout_flag_ = true;
+        }
+
+        p_write_data->result.state = SChannelResult::EState::CRS_TIMEOUT;
+        p_write_data->result.error = std::format("timeout");
+
+        handle_.resume();
+    }
+
+    const WriteCommunData* ReadData()
+    {
+        return write_data_.get();
+    }
+
+
+private:    
     TcpChannel* tcp_channel_ = nullptr;
-    int socket_              = 0;  // �շ����ݵ��׽���
-    int epoll_fd_            = -1; // epoll������
-    AwaitableResult reslult_;
 
     EpollData iocp_data_;
-    std::coroutine_handle<> handle;
+    std::coroutine_handle<> handle_;
 
-    WSABUF wsbuffer_;
+    const unsigned char* buff_;
+    size_t buff_size_;
 
-    std::mutex mutex_;
-    bool callback_flag_ = false; // �Ѿ��ص����?
+    std::shared_ptr<WriteCommunData> write_data_;
 };
 
 TcpChannel::TcpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
@@ -197,6 +257,7 @@ Coroutine<void> TcpChannel::Run()
     }
 
     tcp_channel_read_.Start(socket_);
+    tcp_channel_write_.Start(socket_);
 
     control_start_stop_.Start();
     co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
@@ -208,6 +269,7 @@ void TcpChannel::Stop()
     stop_flag_ = true;
     close(socket_);
     tcp_channel_read_.Stop();
+    tcp_channel_write_.Stop();
     control_start_stop_.Stop();
 }
 
@@ -224,7 +286,7 @@ Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size
     ReadAwaitable read_awaitable(this, buff, buff_size, timeout);
     co_await read_awaitable;
 
-    const CommunData* read_data = read_awaitable.ReadData();
+    const ReadCommunData* read_data = read_awaitable.ReadData();
 
     if (read_data->result.state == SChannelResult::EState::CRS_SUCCESS)
     {
@@ -240,57 +302,31 @@ Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size
 }
 
 Coroutine<SChannelResult> TcpChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
-{
+{    
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
-    SChannelResult result;
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    WriteAwaitable write_awaitable(this, socket_, epoll_fd_, buff, buff_size);
-    RunWithTimeout run_with_timeout(control_start_stop_, write_awaitable, timeout, timer_);
-    co_await run_with_timeout.Run();
+    WriteAwaitable write_awaitable(this, buff, buff_size, timeout);
+    co_await write_awaitable;
 
-    const AwaitableResult& write_result = run_with_timeout.Result();
-    if (run_with_timeout.IsTimeout())
-    {
-        result.state = SChannelResult::EState::CRS_TIMEOUT;
-    }
-    result.len = write_result.len_;
+    const WriteCommunData* write_data = write_awaitable.ReadData();
 
-    if (result.len != 0)
+    if (write_data->result.state == SChannelResult::EState::CRS_SUCCESS)
     {
-        result.state = SChannelResult::EState::CRS_SUCCESS;
-        co_return result;
+        co_return write_data->result;
     }
 
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    // if (result.state != SChannelResult::EState::CRS_TIMEOUT)
-    // {
-    //     if (write_result.err_ == 0)
-    //     {
-    //         result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
-    //         result.error = "The connection has been disconnected";
-    //     }
-    //     else
-    //     {
-    //         result.state = SChannelResult::EState::CRS_FAIL;
-    //         result.code_ = write_result.err_;
-    //         close(socket_);
-    //         result.error = std::format("TcpChannel code error:{},error-msg: {}", write_result.err_, strerror(write_result.err_));
-    //     }
-    // }
-
-    co_return result;
+    co_return write_data->result;
 }
 
 void TcpChannel::OnEpoll(EpollData* data)
@@ -309,82 +345,8 @@ void TcpChannel::OnEpoll(EpollData* data)
 
     if (data->events_ & EPOLLOUT)
     {
-        OnWrite(data);
+        tcp_channel_write_.OnWrite(data);
     }
-}
-
-void TcpChannel::OnWrite(EpollData* data)
-{
-}
-
-TcpChannel::WriteAwaitable::WriteAwaitable(TcpChannel* tcp_channel, int socket, int epoll_fd, const unsigned char* buff, size_t size)
-    : tcp_channel_(tcp_channel)
-    , socket_(socket)
-    , epoll_fd_(epoll_fd)
-    , wsbuffer_{.len = (uint32_t) size, .buf = (char*) buff}
-{
-}
-
-TcpChannel::WriteAwaitable::~WriteAwaitable()
-{
-}
-
-bool TcpChannel::WriteAwaitable::await_ready()
-{
-    return false;
-}
-
-bool TcpChannel::WriteAwaitable::await_suspend(std::coroutine_handle<> co_handle)
-{
-    handle           = co_handle;
-    iocp_data_.call_ = [this](EpollData* pData) { IoCallback(pData); };
-
-    struct epoll_event ev;
-    ev.events   = EPOLLOUT;
-    ev.data.ptr = &iocp_data_;
-    epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket_, &ev);
-    return true;
-}
-
-TcpChannel::AwaitableResult TcpChannel::WriteAwaitable::await_resume() const
-{
-    return reslult_;
-}
-
-void TcpChannel::WriteAwaitable::IoCallback(EpollData* pData)
-{
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        callback_flag_ = true;
-    }
-
-    int buflen = ::write(socket_, wsbuffer_.buf, wsbuffer_.len); // TODO: ��������δ������ȫ�����?
-
-    if (buflen < 0)
-    {
-        reslult_.len_ = 0;
-    }
-    else
-    {
-        reslult_.len_ = (size_t) buflen;
-    }
-
-    handle.resume();
-}
-
-void TcpChannel::WriteAwaitable::Stop()
-{
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (callback_flag_)
-    {
-        return;
-    }
-    callback_flag_ = true;
-
-    struct epoll_event ev;
-    ev.events   = EPOLLIN;
-    ev.data.ptr = &iocp_data_;
-    epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, socket_, &ev);
 }
 
 } // namespace comm

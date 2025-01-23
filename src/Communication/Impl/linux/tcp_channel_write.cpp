@@ -23,7 +23,7 @@
 #ifdef _WIN32
 #elif defined(__linux__)
 
-#include "tcp_channel_read.h"
+#include "tcp_channel_write.h"
 #include "Impl/tool/run_with_timeout.h"
 #include "Log/log_head.h"
 #include "head.h"
@@ -42,120 +42,120 @@ namespace jaf
 namespace comm
 {
 
-TcpChannelRead::TcpChannelRead()
+TcpChannelWrite::TcpChannelWrite()
     : run_flag_(false)
 {
 }
 
-TcpChannelRead::~TcpChannelRead() {}
+TcpChannelWrite::~TcpChannelWrite() {}
 
-void TcpChannelRead::Start(int socket)
+void TcpChannelWrite::Start(int socket)
 {
     socket_   = socket;
     run_flag_ = true;
 }
 
-void TcpChannelRead::Stop()
+void TcpChannelWrite::Stop()
 {
     run_flag_ = false;
 }
 
-void TcpChannelRead::AddReadData(std::shared_ptr<ReadCommunData> read_data)
+void TcpChannelWrite::AddWriteData(std::shared_ptr<WriteCommunData> write_data)
 {
     {
-        std::unique_lock lock_ready_read_queue(ready_read_queue_mutex_);
-        ready_read_queue_.push_back(read_data);
+        std::unique_lock lock_ready_write_queue(ready_write_queue_mutex_);
+        ready_write_queue_.push_back(write_data);
     }
-    if (!readable_flag_)
+    if (!writeable_flag_)
     {
         return;
     }
-    Read();
+    Write();
 }
 
-void TcpChannelRead::OnRead(EpollData* data)
+void TcpChannelWrite::OnWrite(EpollData* data)
 {
-    readable_flag_ = true;
-    Read();
+    writeable_flag_ = true;
+    Write();
 }
 
-void TcpChannelRead::Read()
+void TcpChannelWrite::Write()
 {
-    readable_flag_ = false;
+    writeable_flag_ = false;
 
-    std::list<std::shared_ptr<ReadCommunData>> finish_read_datas;
+    std::list<std::shared_ptr<WriteCommunData>> finish_write_datas;
 
-    if (ReadImp(finish_read_datas))
+    if (WriteImp(finish_write_datas))
     {
-        readable_flag_ = true;
+        writeable_flag_ = true;
     }
 
-    for (std::shared_ptr<ReadCommunData>& finish_read_data : finish_read_datas)
+    for (std::shared_ptr<WriteCommunData>& finish_write_data : finish_write_datas)
     {
-        finish_read_data->call_();
+        finish_write_data->call_();
     }
 
     if (!run_flag_)
     {
-        std::list<std::shared_ptr<ReadCommunData>> read_queue;
+        std::list<std::shared_ptr<WriteCommunData>> write_queue;
         {
-            std::unique_lock<std::mutex> lock(read_mutex_);
+            std::unique_lock<std::mutex> lock(write_mutex_);
             {
-                read_queue.swap(read_queue_);
-                std::unique_lock<std::mutex> lock_ready_read_queue(ready_read_queue_mutex_);
-                read_queue.splice(read_queue.end(), ready_read_queue_);
+                write_queue.swap(write_queue_);
+                std::unique_lock<std::mutex> lock_ready_write_queue(ready_write_queue_mutex_);
+                write_queue.splice(write_queue.end(), ready_write_queue_);
             }
         }
 
-        for (std::shared_ptr<ReadCommunData>& read_data : read_queue)
+        for (std::shared_ptr<WriteCommunData>& write_data : write_queue)
         {
             {
-                std::unique_lock<std::mutex> lock_index(read_data->mutex_);
-                if (read_data->timeout_flag_)
+                std::unique_lock<std::mutex> lock_index(write_data->mutex_);
+                if (write_data->timeout_flag_)
                 {
                     continue;
                 }
-                read_data->finish_flag_ = true;
+                write_data->finish_flag_ = true;
             }
-            read_data->result.error = std::format(" The socket was disconnected.");
-            read_data->result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
-            read_data->call_();
+            write_data->result.error = std::format(" The socket was disconnected.");
+            write_data->result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
+            write_data->call_();
         }
     }
 }
 
-bool TcpChannelRead::ReadImp(std::list<std::shared_ptr<ReadCommunData>>& finish_read_datas)
+bool TcpChannelWrite::WriteImp(std::list<std::shared_ptr<WriteCommunData>>& finish_write_datas)
 {
-    std::unique_lock lock(read_mutex_);
+    std::unique_lock lock(write_mutex_);
     {
-        std::unique_lock lock_ready_read_queue(ready_read_queue_mutex_);
-        read_queue_.splice(read_queue_.end(), ready_read_queue_);
+        std::unique_lock lock_ready_write_queue(ready_write_queue_mutex_);
+        write_queue_.splice(write_queue_.end(), ready_write_queue_);
     }
 
     while (true)
     {
-        if (read_queue_.empty())
+        if (write_queue_.empty())
         {
             return true;
         }
 
-        std::shared_ptr<ReadCommunData> commun_data = read_queue_.front();
+        std::shared_ptr<WriteCommunData> commun_data = write_queue_.front();
 
         {
             std::unique_lock<std::mutex> lock_index(commun_data->mutex_);
             if (commun_data->timeout_flag_)
             {
-                read_queue_.erase(read_queue_.begin());
+                write_queue_.erase(write_queue_.begin());
                 continue;
             }
 
-            commun_data->result.len = ::read(socket_, commun_data->result_buf_, commun_data->need_len_);
+            commun_data->result.len = ::write(socket_, commun_data->result_buf_, commun_data->need_len_);
             if (commun_data->result.len == 0)
             {
                 return false;
             }
 
-            read_queue_.erase(read_queue_.begin());
+            write_queue_.erase(write_queue_.begin());
             commun_data->finish_flag_ = true;
         }
 
@@ -166,11 +166,11 @@ bool TcpChannelRead::ReadImp(std::list<std::shared_ptr<ReadCommunData>>& finish_
             int error_code            = errno;
             commun_data->result.error = std::format("epoll_ctl(), error: {}, error-msg: {}", error_code, strerror(error_code));
             commun_data->result.state = SChannelResult::EState::CRS_FAIL;
-            finish_read_datas.push_back(commun_data);
+            finish_write_datas.push_back(commun_data);
             return false;
         }
         commun_data->result.state = SChannelResult::EState::CRS_SUCCESS;
-        finish_read_datas.push_back(commun_data);
+        finish_write_datas.push_back(commun_data);
 
         if (commun_data->result.len < commun_data->need_len_)
         {
