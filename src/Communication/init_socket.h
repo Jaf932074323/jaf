@@ -23,8 +23,8 @@
 // 2025-1-18 姜安富
 #ifdef _WIN32
 #include <string>
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 #pragma comment(lib, "Ws2_32.lib")
 
 class InitSocket

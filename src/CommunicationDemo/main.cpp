@@ -27,6 +27,7 @@
 #include "time_head.h"
 #include "util/simple_thread_pool.h"
 #include <iostream>
+#include <memory>
 
 void TestClient();
 void TestServer();

@@ -19,8 +19,13 @@ target_link_libraries(${PROJECT_NAME}
     Communication
     Time
     global_thread_pool
-    pthread
 )
+
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    target_link_libraries(${PROJECT_NAME}
+        pthread
+    )
+endif()
 
 INCLUDE_DIRECTORIES("./")
 INCLUDE_DIRECTORIES("../")

@@ -21,10 +21,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "define_log_export.h"
 #include "Interface/log/i_logger.h"
+#include "define_log_export.h"
 #include <memory>
-#include <string.h>
+#include <string>
 
 namespace jaf
 {
@@ -35,11 +35,9 @@ namespace log
 class API_LOG_EXPORT CreateLogEvent
 {
 public:
-    CreateLogEvent(
-        uint32_t level, std::string file_name, uint32_t line, std::string fun_name, std::shared_ptr<jaf::log::ILogger> logger, uint64_t time = GetCurTime(), uint64_t thread_id = GetCurThreadId(), uint32_t group_number = 0);
+    CreateLogEvent(uint32_t level, std::string file_name, uint32_t line, std::string fun_name, std::shared_ptr<jaf::log::ILogger> logger, uint64_t time = GetCurTime(), uint64_t thread_id = GetCurThreadId(), uint32_t group_number = 0);
 
-    CreateLogEvent(
-        uint32_t level, std::string file_name, uint32_t line, std::string fun_name, uint64_t time = GetCurTime(), uint64_t thread_id = GetCurThreadId(), uint32_t group_number = 0);
+    CreateLogEvent(uint32_t level, std::string file_name, uint32_t line, std::string fun_name, uint64_t time = GetCurTime(), uint64_t thread_id = GetCurThreadId(), uint32_t group_number = 0);
 
     ~CreateLogEvent();
 
