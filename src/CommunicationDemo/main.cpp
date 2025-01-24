@@ -1,4 +1,3 @@
-#pragma once
 // MIT License
 //
 // Copyright(c) 2021 Jaf932074323
@@ -20,24 +19,33 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 å§œå®‰å¯Œ
+// 2024-6-16 ½ª°²¸»
+#include "define_constant.h"
+#include "global_thread_pool/global_thread_pool.h"
+#include "init_socket.h"
+#include "log_head.h"
+#include "time_head.h"
+#include "util/simple_thread_pool.h"
+#include <iostream>
 
-#ifdef _WIN32
-#include "communication.h"
-#include "tcp_client.h"
-#include "tcp_server.h"
-#include "tcp_channel.h"
-#include "udp.h"
-#include "udp_channel.h"
-#include "serial_port.h"
-#include "serial_port_channel.h"
-#elif defined(__linux__)
-#include "communication.h"
-#include "tcp_client.h"
-// #include "tcp_server.h"
-#include "tcp_channel.h"
-// #include "udp.h"
-// #include "udp_channel.h"
-// #include "serial_port.h"
-// #include "serial_port_channel.h"
-#endif
+void TestClient();
+void TestServer();
+
+int main(int argc, char** argv)
+{
+    std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
+    jaf::log::CommonLogger::SetDefaultLogger(std::make_shared<jaf::log::Logger>(appender));
+    jaf::log::CommonLogger::SetLogger(jaf::comm::LOG_NAME, std::make_shared<jaf::log::Logger>(appender));
+    LOG_INFO() << "ÈÕÖ¾³õÊ¼»¯Íê³É";
+
+    std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
+    jaf::time::GlobalTimer::SetTimer(timer);
+
+    jaf::GlobalThreadPool::SetThreadPool(std::make_shared<jaf::SimpleThreadPool>(1));
+
+    InitSocket init_socket;
+
+    TestServer();
+
+    return 0;
+}

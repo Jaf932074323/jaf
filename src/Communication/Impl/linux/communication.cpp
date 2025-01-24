@@ -28,6 +28,7 @@
 #include "define_constant.h"
 #include "log_head.h"
 #include "tcp_client.h"
+#include "tcp_server.h"
 #include "util/finally.h"
 #include "util/simple_thread_pool.h"
 #include <assert.h>
@@ -107,7 +108,8 @@ void Communication::Stop()
 
 std::shared_ptr<ITcpServer> Communication::CreateTcpServer()
 {
-    return nullptr;
+    std::shared_ptr<TcpServer> server = std::make_shared<TcpServer>(&get_epoll_fd_, timer_);
+    return std::static_pointer_cast<ITcpServer>(server);
 }
 
 std::shared_ptr<ITcpClient> Communication::CreateTcpClient()

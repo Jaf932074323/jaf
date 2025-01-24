@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 ½ª°²¸»
+// 2024-12-28 å§œå®‰å¯Œ
 
 #ifdef _WIN32
 #elif defined(__linux__)
@@ -39,7 +39,7 @@ namespace jaf
 namespace comm
 {
 
-// linuxÆ½Ì¨ÏÂµÄÍ¨Ñ¶Àà
+// linuxå¹³å°ä¸‹çš„é€šè®¯ç±»
 class Communication : public ICommunication
 {
 public:
@@ -61,9 +61,9 @@ private:
     bool CreateEpoll();
 
 private:
-    // ´´½¨¹¤×÷Ïß³Ì
+    // åˆ›å»ºå·¥ä½œçº¿ç¨‹
     void CreateWorkThread();
-    // ¹¤×÷Ïß³ÌÖ´ĞĞ
+    // å·¥ä½œçº¿ç¨‹æ‰§è¡Œ
     void WorkThreadRun();
 
 private:
@@ -122,16 +122,16 @@ private:
     };
 
 private:
-    int epoll_fd_ = -1;    // epollÃèÊö·û
-    EpollFd get_epoll_fd_; // »ñÈ¡Íê³É¶Ë¿Ú¶ÔÏó
+    int epoll_fd_ = -1;    // epollæè¿°ç¬¦
+    EpollFd get_epoll_fd_; // è·å–å®Œæˆç«¯å£å¯¹è±¡
 
-    bool run_flag_ = false; // ÔËĞĞ±êÖ¾
+    bool run_flag_ = false; // è¿è¡Œæ ‡å¿—
     
-    int stop_fd_              = -1;                          // Í£Ö¹ÊÂ¼şÃèÊö·û£¬ÓÃÓÚÍ¨ÖªÍ£Ö¹epoll
-    EpollData stop_comm_data_ = {[](EpollData*) -> void {}}; // Í£Ö¹Ê±ÓÃµÄÍ¨Ñ¶Êı¾İ
+    int stop_fd_              = -1;                          // åœæ­¢äº‹ä»¶æè¿°ç¬¦ï¼Œç”¨äºé€šçŸ¥åœæ­¢epoll
+    EpollData stop_comm_data_ = {[](EpollData*) -> void {}}; // åœæ­¢æ—¶ç”¨çš„é€šè®¯æ•°æ®
 
-    int funs_fd_         = -1;                                            // Ö´ĞĞ¹¦ÄÜÃèÊö·û£¬ÓÃÓÚÍ¨ÖªÍ£Ö¹epoll
-    EpollData funs_data_ = {[this](EpollData*) -> void { OnRunFuns(); }}; // Ö´ĞĞ¹¦ÄÜÊ±ÓÃµÄÍ¨Ñ¶Êı¾İ
+    int funs_fd_         = -1;                                            // æ‰§è¡ŒåŠŸèƒ½æè¿°ç¬¦ï¼Œç”¨äºé€šçŸ¥åœæ­¢epoll
+    EpollData funs_data_ = {[this](EpollData*) -> void { OnRunFuns(); }}; // æ‰§è¡ŒåŠŸèƒ½æ—¶ç”¨çš„é€šè®¯æ•°æ®
     std::mutex funs_mutex_;
     std::list<std::function<void()>> funs_;
 
@@ -139,7 +139,7 @@ private:
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
-    CoWaitNotices wait_work_thread_finish_; // µÈ´ı¹¤×÷Ïß³Ì½áÊø
+    CoWaitNotices wait_work_thread_finish_; // ç­‰å¾…å·¥ä½œçº¿ç¨‹ç»“æŸ
 
     CoWaitUtilStop wait_stop_;
 };

@@ -20,82 +20,78 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 ½ª°²¸»
+// 2025-1-23 å§œå®‰å¯Œ
 #ifdef _WIN32
 #elif defined(__linux__)
 
 #include "Impl/empty_channel.h"
 #include "Interface/communication/i_channel.h"
-#include "Interface/communication/i_tcp_client.h"
+#include "Interface/communication/i_tcp_server.h"
+#include "Interface/i_timer.h"
 #include "global_timer/co_await_time.h"
 #include "head.h"
 #include "i_get_epoll_fd.h"
-#include "Interface/i_timer.h"
 #include "time_head.h"
 #include "util/co_coroutine.h"
+#include "util/co_wait_all_tasks_done.h"
 #include "util/co_wait_util_stop.h"
 #include <string>
+#include <sys/socket.h>
 
 namespace jaf
 {
 namespace comm
 {
 
-// TCP¿Í»§¶Ë
-class TcpClient : public ITcpClient
+// TCPæœåŠ¡ç«¯
+class TcpServer : public ITcpServer
 {
 public:
-    TcpClient(IGetEpollFd* get_epoll_fd, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~TcpClient();
+    TcpServer(IGetEpollFd* get_epoll_fd, std::shared_ptr<jaf::time::ITimer> timer);
+    virtual ~TcpServer();
 
 public:
-    virtual void SetAddr(const std::string& remote_ip, uint16_t remote_port, const std::string& local_ip = "0.0.0.0", uint16_t local_port = 0) override;
-    // ÉèÖÃÁ¬½ÓÊ±¼ä
-    // connect_timeout Á¬½Ó³¬Ê±Ê±¼ä
-    // reconnect_wait_time ÖØÁ¬µÈ´ıÊ±¼ä
-    virtual void SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time) override;
+    virtual void SetAddr(const std::string& ip, uint16_t port) override;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
-    virtual jaf::Coroutine<void> Run() override;
+    virtual void SetAcceptCount(size_t accept_count) override;
+    virtual void SetMaxClientCount(size_t max_client_count) override;
+    virtual Coroutine<void> Run() override;
     virtual void Stop() override;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
+    virtual Coroutine<void> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-    jaf::Coroutine<void> Execute();
+    bool Init(void);
+    Coroutine<void> RunSocket(int socket);
 
 private:
-    struct ConnectResult;
-    class ConnectAwaitable;
+    void OnListen(EpollData* data);
 
 private:
-    bool run_flag_ = false;
-    CoWaitUtilStop wait_stop_;
+    std::atomic<bool> run_flag_ = false;
+
+    jaf::ControlStartStop control_start_stop_;
+    CoWaitAllTasksDone wait_all_tasks_done_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
-    jaf::ControlStartStop control_start_stop_;
 
-    int epoll_fd_ = -1;         // epollÃèÊö·û
-    IGetEpollFd* get_epoll_fd_; // »ñÈ¡epoll¶ÔÏó
-    int connect_socket_ = -1;
+    int epoll_fd_ = -1;         // epollæè¿°ç¬¦
+    IGetEpollFd* get_epoll_fd_; // è·å–epollå¯¹è±¡
+    int listen_socket_ = 0;     // ä¾¦å¬å¥—æ¥å­—
+    EpollData listen_epoll_data_; // ä¾¦å¬æ—¶ç”¨çš„é€šè®¯æ•°æ®
 
-    std::string local_ip_ = "0.0.0.0";
-    uint16_t local_port_  = 0;
-    std::string remote_ip_;
-    uint16_t remote_port_         = 0;
-    uint64_t connect_timeout_     = 5000; // Á¬½ÓµÈ´ıÊ±¼ä
-    uint64_t reconnect_wait_time_ = 5000; // ÖØÁ¬µÈ´ıÊ±¼ä
+    std::string ip_ = "0.0.0.0";
+    uint16_t port_  = 0;
+    
+    std::string error_info_;    
 
-    std::string error_info_;
+    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // æ“ä½œé€šé“
+    size_t accept_count_     = 5;
+    size_t max_client_count_ = SOMAXCONN; // æœ€å¤§å®¢æˆ·ç«¯è¿æ¥æ•°é‡
 
-    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // ²Ù×÷Í¨µÀ
-
-    ConnectAwaitable* connect_awaitable_ = nullptr;
-
-    std::mutex channel_mutex_;
-    std::shared_ptr<IChannel> empty_channel_ = std::make_shared<EmptyChannel>();
-    std::shared_ptr<IChannel> channel_       = empty_channel_;
+    std::mutex channels_mutex_;                                 // æ‰€æœ‰é€šé“çš„åŒæ­¥é”
+    std::map<std::string, std::shared_ptr<IChannel>> channels_; // å½“å‰è¿æ¥çš„æ‰€æœ‰é€šé“ keyç”±IPå’Œç«¯å£ç»„æˆ
 };
 
 } // namespace comm
 } // namespace jaf
-
 #endif

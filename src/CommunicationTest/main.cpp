@@ -55,7 +55,7 @@ int main(int argc, char** argv)
 
     //LOG_INFO() << "³ÌÐò½áÊø";
 
-    ::testing::GTEST_FLAG(filter) = "tcp.tcp_client";
+    // ::testing::GTEST_FLAG(filter) = "tcp.tcp_client";
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 

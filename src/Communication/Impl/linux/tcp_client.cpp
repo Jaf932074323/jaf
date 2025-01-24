@@ -127,7 +127,7 @@ private:
 
     int CreationSocket()
     {
-        int connect_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        int connect_socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (connect_socket < 0)
         {
             int error   = errno;
@@ -277,8 +277,8 @@ jaf::Coroutine<void> TcpClient::Run()
         co_return;
     }
     run_flag_ = true;
-
     wait_stop_.Start();
+
     epoll_fd_ = get_epoll_fd_->Get();
 
     jaf::Coroutine<void> execute = Execute();

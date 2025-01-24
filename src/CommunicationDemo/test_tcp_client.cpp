@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-20 姜安�?
+// 2024-6-20 姜安富
 #include "Communication/Impl/communication_include.h"
 #include "Interface/communication/i_serial_port.h"
 #include "Interface/communication/i_tcp_client.h"
@@ -28,17 +28,19 @@
 #include "global_thread_pool/global_thread_pool.h"
 #include "global_timer/co_sleep.h"
 #include "global_timer/global_timer.h"
-#include "unpack.h"
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
 #include "util/co_wait_notices.h"
-#include "gtest/gtest.h"
 #include <format>
 #include <functional>
 #include <list>
 #include <string>
+#include <iostream>
 
-TEST(tcp, tcp_client)
+namespace test_client
+{
+    
+void Test()
 {
     auto co_fun = []() -> jaf::CoroutineWithWait<void> {
         jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
@@ -95,4 +97,11 @@ TEST(tcp, tcp_client)
 
     auto co_test_co_await_time = co_fun();
     co_test_co_await_time.Wait();
+}
+
+}
+
+void TestClient()
+{
+    test_client::Test();
 }
