@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "comm_struct.h"
 #include "i_channel.h"
 #include "i_pack.h"
@@ -30,7 +30,7 @@ namespace jaf
 namespace comm
 {
 
-// ½ÓÊÕÊı¾İ»º´æ
+// æ¥æ”¶æ•°æ®ç¼“å­˜
 class IRecvBuffer
 {
 public:
@@ -38,27 +38,27 @@ public:
     virtual ~IRecvBuffer(){};
 
 public:
-    // ÉèÖÃ¶ÁÈ¡»º´æÅäÖÃ
-    // buff_len »º´æ´óĞ¡
-    // receive_min_buff_len Ò»´Î¶ÁÈ¡ĞèÒªµÄ×îĞ¡»º´æ´óĞ¡
+    // è®¾ç½®è¯»å–ç¼“å­˜é…ç½®
+    // buff_len ç¼“å­˜å¤§å°
+    // receive_min_buff_len ä¸€æ¬¡è¯»å–éœ€è¦çš„æœ€å°ç¼“å­˜å¤§å°
     virtual void SetRecvConfig(size_t buff_len, size_t receive_min_buff_len) = 0;
 
     virtual void Init() = 0;
 
-    // »ñÈ¡¶ÁÊı¾İÓÃµÄ»º´æ£¬ÓÃÓÚ¶ÁÈ¡Êı¾İ
+    // è·å–è¯»æ•°æ®ç”¨çš„ç¼“å­˜ï¼Œç”¨äºè¯»å–æ•°æ®
     virtual SData GetRecvBuff() = 0;
-    // ÒÑ¾­½ÓÊÕÁËlen³¤¶ÈµÄÊı¾İÔÚ»º´æÖĞ
+    // å·²ç»æ¥æ”¶äº†lené•¿åº¦çš„æ•°æ®åœ¨ç¼“å­˜ä¸­
     virtual void RecvData(size_t len) = 0;
 
-    // »ñÈ¡ÒÑ¾­½ÓÊÕµ½µÄÊı¾İ
+    // è·å–å·²ç»æ¥æ”¶åˆ°çš„æ•°æ®
     virtual SConstData GetRecvData() = 0;
 
-    // ´ÓÇ°ÃæÒÆ³ıÒ»¶ÎÊı¾İ
+    // ä»å‰é¢ç§»é™¤ä¸€æ®µæ•°æ®
     virtual void RemoveFront(size_t len) = 0;
-    // ½«start_indexÎ»ÖÃµÄlen³¤¶ÈÊı¾İ·â×°³Éµ¥¶ÀµÄÊı¾İ¶ÁÈ¡Æ÷
+    // å°†start_indexä½ç½®çš„lené•¿åº¦æ•°æ®å°è£…æˆå•ç‹¬çš„æ•°æ®è¯»å–å™¨
     virtual std::shared_ptr<IPack> GetPack(size_t start_index, size_t len) = 0;
 
-    // »ñÈ¡¶ÔÓ¦µÄÍ¨µÀ
+    // è·å–å¯¹åº”çš„é€šé“
     virtual std::shared_ptr<IChannel> GetChannel() = 0;
 };
 

@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-23 ½ª°²¸»
+// 2024-6-23 å§œå®‰å¯Œ
 #include "util/co_coroutine.h"
 #include <assert.h>
 #include <mutex>
@@ -28,7 +28,7 @@
 namespace jaf
 {
 
-// µÈ´ıËùÓĞÈÎÎñÍê³É
+// ç­‰å¾…æ‰€æœ‰ä»»åŠ¡å®Œæˆ
 class CoWaitAllTasksDone
 {
 public:
@@ -77,7 +77,7 @@ public:
         {
             return false;
         }
-        assert(!wait_flag_); // Ö»ÄÜµÈ´ıÒ»¸ö
+        assert(!wait_flag_); // åªèƒ½ç­‰å¾…ä¸€ä¸ª
         wait_flag_ = true;
 
         return true;
@@ -92,8 +92,8 @@ private:
     std::coroutine_handle<> handle_;
 
     std::mutex mutex_;
-    bool wait_flag_ = false; // µ±Ç°ÊÇ·ñÕıÔÚµÈ´ı×´Ì¬
-    uint64_t count_ = 0;     // ¼ÆÊı
+    bool wait_flag_ = false; // å½“å‰æ˜¯å¦æ­£åœ¨ç­‰å¾…çŠ¶æ€
+    uint64_t count_ = 0;     // è®¡æ•°
 };
 
 } // namespace jaf

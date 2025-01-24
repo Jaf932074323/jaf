@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "define_constant.h"
 #include "global_thread_pool/global_thread_pool.h"
 #include "init_socket.h"
@@ -36,7 +36,7 @@ int main(int argc, char** argv)
     std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
     jaf::log::CommonLogger::SetDefaultLogger(std::make_shared<jaf::log::Logger>(appender));
     jaf::log::CommonLogger::SetLogger(jaf::comm::LOG_NAME, std::make_shared<jaf::log::Logger>(appender));
-    LOG_INFO() << "ÈÕÖ¾³õÊ¼»¯Íê³É";
+    LOG_INFO() << "æ—¥å¿—åˆå§‹åŒ–å®Œæˆ";
 
     std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
     jaf::time::GlobalTimer::SetTimer(timer);

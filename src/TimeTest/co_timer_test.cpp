@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-8-59 ½ª°²¸»
+// 2024-8-59 å§œå®‰å¯Œ
 #include "global_timer/co_await_time.h"
 #include "global_timer/co_sleep.h"
 #include "global_timer/co_timer.h"
@@ -123,7 +123,7 @@ TEST(co_timer_test, co_await_time_stop)
 
 TEST(co_timer_test, release)
 {
-    // TODO: Ä¿Ç°¶¨Ê±Æ÷µÄÎö¹¹Ê±»ú¿ÉÄÜ»áµ¼ÖÂÎÊÌâ£¬ÒÔºóÔÙÓÅ»¯
+    // TODO: ç›®å‰å®šæ—¶å™¨çš„æžæž„æ—¶æœºå¯èƒ½ä¼šå¯¼è‡´é—®é¢˜ï¼Œä»¥åŽå†ä¼˜åŒ–
     auto co_fun = []() -> jaf::CoroutineWithWait<void> {
         //std::shared_ptr<jaf::time::Timer> timer = std::make_shared<jaf::time::Timer>();
         //jaf::Stopwatch stopwatch;

@@ -20,14 +20,14 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 
 namespace jaf
 {
 namespace buffer
 {
 
-// Êı¾İĞ´ÈëÆ÷
+// æ•°æ®å†™å…¥å™¨
 class IWriter
 {
 public:
@@ -35,20 +35,20 @@ public:
     virtual ~IWriter(){};
 
 public:
-    // ÉèÖÃ×ÜÈİÁ¿ÖÁÉÙÎªsize
+    // è®¾ç½®æ€»å®¹é‡è‡³å°‘ä¸ºsize
     virtual void Reserve(size_t size) = 0;
-    // À©Õ¹Î´Ê¹ÓÃÈİÁ¿µ½ÖÁÉÙsize
+    // æ‰©å±•æœªä½¿ç”¨å®¹é‡åˆ°è‡³å°‘size
     virtual void Extend(size_t size) = 0;
-    // »ñÈ¡×ÜÈİÁ¿
+    // è·å–æ€»å®¹é‡
     virtual size_t Capacity() = 0;
-    // »ñÈ¡Î´Ê¹ÓÃÈİÁ¿
+    // è·å–æœªä½¿ç”¨å®¹é‡
     virtual size_t UnusedCapacity() = 0;
 
     virtual const unsigned char* GetBuffer() const = 0;
     virtual size_t GetBufferLen() const            = 0;
 
 public:
-    // Ğ´ÈëÊı¾İ
+    // å†™å…¥æ•°æ®
     virtual bool Write(unsigned char* src, size_t len) = 0;
 };
 

@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-23 ½ª°²¸»
+// 2024-6-23 å§œå®‰å¯Œ
 #include "util/co_coroutine.h"
 #include <assert.h>
 #include <mutex>
@@ -28,7 +28,7 @@
 namespace jaf
 {
 
-// µÈ´ı¶à´ÎÍ¨Öª
+// ç­‰å¾…å¤šæ¬¡é€šçŸ¥
 struct CoWaitNotices
 {
     CoWaitNotices()
@@ -89,7 +89,7 @@ struct CoWaitNotices
         return;
     }
 
-    // ÖØÖÃÍ¨Öª´ÎÊı£¬ÖØÖÃÖ®ºóĞèÒªÖØĞÂÍ¨Öªtimes´Î
+    // é‡ç½®é€šçŸ¥æ¬¡æ•°ï¼Œé‡ç½®ä¹‹åéœ€è¦é‡æ–°é€šçŸ¥timesæ¬¡
     void Reset(size_t times)
     {
         assert(times != 0);
@@ -100,8 +100,8 @@ struct CoWaitNotices
         }
     }
 
-    // Í¨Öª
-    // ÒªÍ¨Öª¶à´Î²ÅÉúĞ§
+    // é€šçŸ¥
+    // è¦é€šçŸ¥å¤šæ¬¡æ‰ç”Ÿæ•ˆ
     void Notify()
     {
         {

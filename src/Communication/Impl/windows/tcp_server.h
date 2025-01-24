@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 
 #include "Interface/communication/i_tcp_server.h"
@@ -43,7 +43,7 @@ namespace jaf
 namespace comm
 {
 
-// TCP·şÎñ¶Ë
+// TCPæœåŠ¡ç«¯
 class TcpServer : public ITcpServer
 {
 public:
@@ -78,17 +78,17 @@ private:
 
     IGetCompletionPort* get_completion_port_ = nullptr;
     HANDLE completion_handle_                = nullptr;
-    SOCKET listen_socket_                    = 0; // ÕìÌıÌ×½Ó×Ö
+    SOCKET listen_socket_                    = 0; // ä¾¦å¬å¥—æ¥å­—
 
     std::string ip_ = "0.0.0.0";
     uint16_t port_  = 0;
 
-    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // ²Ù×÷Í¨µÀ
+    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // æ“ä½œé€šé“
     size_t accept_count_     = 5;
-    size_t max_client_count_ = SOMAXCONN; // ×î´ó¿Í»§¶ËÁ¬½ÓÊıÁ¿
+    size_t max_client_count_ = SOMAXCONN; // æœ€å¤§å®¢æˆ·ç«¯è¿æ¥æ•°é‡
 
-    std::mutex channels_mutex_;                                 // ËùÓĞÍ¨µÀµÄÍ¬²½Ëø
-    std::map<std::string, std::shared_ptr<IChannel>> channels_; // µ±Ç°Á¬½ÓµÄËùÓĞÍ¨µÀ keyÓÉIPºÍ¶Ë¿Ú
+    std::mutex channels_mutex_;                                 // æ‰€æœ‰é€šé“çš„åŒæ­¥é”
+    std::map<std::string, std::shared_ptr<IChannel>> channels_; // å½“å‰è¿æ¥çš„æ‰€æœ‰é€šé“ keyç”±IPå’Œç«¯å£
 };
 
 } // namespace comm

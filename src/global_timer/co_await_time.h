@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "global_timer.h"
 #include "Time/Interface/i_timer.h"
 #include "util/co_coroutine.h"
@@ -68,7 +68,7 @@ private:
     {
         {
             std::unique_lock<std::mutex> lock(wait_flag_mutex_);
-            assert(run_flag_ ? true : !wait_flag_); // Èç¹ûÃ»ÓĞÔËĞĞ£¬ÔòÒ»¶¨Ò²²»»áµÈ´ı
+            assert(run_flag_ ? true : !wait_flag_); // å¦‚æœæ²¡æœ‰è¿è¡Œï¼Œåˆ™ä¸€å®šä¹Ÿä¸ä¼šç­‰å¾…
             run_flag_ = false;
             if (!wait_flag_)
             {
@@ -93,7 +93,7 @@ public:
             timeout_flag_ = false;
             return false;
         }
-        assert(!wait_flag_); // ²»ÄÜÍ¬Ê±µÈ´ı¶à¸ö
+        assert(!wait_flag_); // ä¸èƒ½åŒæ—¶ç­‰å¾…å¤šä¸ª
         wait_flag_ = true;
 
         handle_ = co_handle;
@@ -131,7 +131,7 @@ private:
 
     STimerTask timeout_task_;
 
-    bool timeout_flag_ = false; // µÈ´ı½á¹û£¬µÈ´ıµ½Í¨ÖªÊ±Îªture£¬³¬Ê±Îªfalse
+    bool timeout_flag_ = false; // ç­‰å¾…ç»“æœï¼Œç­‰å¾…åˆ°é€šçŸ¥æ—¶ä¸ºtureï¼Œè¶…æ—¶ä¸ºfalse
 
     std::shared_ptr<ControlStartStop::Agent> agent_;
 };

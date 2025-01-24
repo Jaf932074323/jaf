@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-23 ½ª°²¸»
+// 2024-6-23 å§œå®‰å¯Œ
 #include "co_coroutine.h"
 #include "concurrent_queue.h"
 #include "latch.h"
@@ -30,7 +30,7 @@
 namespace jaf
 {
 
-// Ïß³ÌÖ´ĞĞ
+// çº¿ç¨‹æ‰§è¡Œ
 class ThreadsExec
 {
 public:
@@ -46,8 +46,8 @@ public:
         stop_ = false;
     }
 
-    // ÔËĞĞ,Ã¿µ÷ÓÃÒ»´ÎÔò¶àÒ»¸ö¹¤×÷Ïß³Ì
-    // »á×èÈûÖ±µ½Í£Ö¹
+    // è¿è¡Œ,æ¯è°ƒç”¨ä¸€æ¬¡åˆ™å¤šä¸€ä¸ªå·¥ä½œçº¿ç¨‹
+    // ä¼šé˜»å¡ç›´åˆ°åœæ­¢
     void Run()
     {
         WorkerRun();
@@ -61,7 +61,7 @@ public:
 
 
 public:
-    // ÇĞ»»Ïß³ÌµÄµÈ´ı¶ÔÏó
+    // åˆ‡æ¢çº¿ç¨‹çš„ç­‰å¾…å¯¹è±¡
     class SwitchAwaitable
     {
         friend ThreadsExec;
@@ -73,7 +73,7 @@ public:
     public:
         ~SwitchAwaitable() {}
 
-        // ½ûÖ¹¿½±´
+        // ç¦æ­¢æ‹·è´
         SwitchAwaitable(const SwitchAwaitable &) = delete;
         SwitchAwaitable &operator=(const SwitchAwaitable &) = delete;
 
@@ -104,7 +104,7 @@ public:
     };
 
 public:
-    // »ñÈ¡ÇĞ»»Ïß³ÌµÄµÈ´ı¶ÔÏó
+    // è·å–åˆ‡æ¢çº¿ç¨‹çš„ç­‰å¾…å¯¹è±¡
     SwitchAwaitable Switch()
     {
         assert(!stop_);
@@ -132,7 +132,7 @@ private:
             task();
         }
 
-        // ´¦ÀíµôÊ£ÓàµÄÈÎÎñ
+        // å¤„ç†æ‰å‰©ä½™çš„ä»»åŠ¡
         while (task_queue_.TryPop(task))
         {
             task();

@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "global_timer/co_await_time.h"
 #include "Time/Interface/i_timer.h"
 #include "util/co_coroutine.h"
@@ -32,8 +32,8 @@ namespace jaf
 namespace comm
 {
 
-// ÔËĞĞÖ±µ½³¬Ê±
-// AwaitObj ÊÇÒ»¸öĞ­³ÌÏà¹ØµÄ¿ÉµÈ´ı¶ÔÏó£¬²¢ÇÒÒªÓµÓĞÍ£Ö¹º¯ÊıStop()
+// è¿è¡Œç›´åˆ°è¶…æ—¶
+// AwaitObj æ˜¯ä¸€ä¸ªåç¨‹ç›¸å…³çš„å¯ç­‰å¾…å¯¹è±¡ï¼Œå¹¶ä¸”è¦æ‹¥æœ‰åœæ­¢å‡½æ•°Stop()
 template <typename AwaitObj>
 struct RunWithTimeout
 {
@@ -50,12 +50,12 @@ public:
     }
 
 public:
-    // ÊÇ·ñ³¬Ê±true³¬Ê±,falseÎ´³¬Ê±
+    // æ˜¯å¦è¶…æ—¶trueè¶…æ—¶,falseæœªè¶…æ—¶
     bool IsTimeout()
     {
         return timeout_flag_;
     }
-    // »ñÈ¡µÈ´ı½á¹û
+    // è·å–ç­‰å¾…ç»“æœ
     decltype(auto) Result()
     {
         return std::move(await_obj_result_);
@@ -90,12 +90,12 @@ private:
 
 private:
     jaf::ControlStartStop& control_start_stop_;
-    AwaitObj& await_obj_; // Ğ­³ÌÏà¹ØµÄ¿ÉµÈ´ıµÄ¶ÔÏó
-    uint64_t timeout_;    // ³¬Ê±Ê±¼ä ºÁÃë
+    AwaitObj& await_obj_; // åç¨‹ç›¸å…³çš„å¯ç­‰å¾…çš„å¯¹è±¡
+    uint64_t timeout_;    // è¶…æ—¶æ—¶é—´ æ¯«ç§’
     std::shared_ptr<jaf::time::ITimer> timer_;
 
-    bool timeout_flag_ = false;       // ÊÇ·ñ³¬Ê±true³¬Ê±,falseÎ´³¬Ê±
-    AwaitObjResult await_obj_result_; // µÈ´ı½á¹û
+    bool timeout_flag_ = false;       // æ˜¯å¦è¶…æ—¶trueè¶…æ—¶,falseæœªè¶…æ—¶
+    AwaitObjResult await_obj_result_; // ç­‰å¾…ç»“æœ
 };
 
 } // namespace comm

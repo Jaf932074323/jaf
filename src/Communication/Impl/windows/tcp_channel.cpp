@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 
 #include "tcp_channel.h"
@@ -42,8 +42,8 @@ std::string GetFormatMessage(DWORD dw);
 
 struct TcpChannel::AwaitableResult
 {
-    size_t len_ = 0; // ½ÓÊÕÊı¾İ³¤¶È Îª0Ê±±íÊ¾½ÓÊÕÊ§°Ü
-    int err_    = 0; // ´íÎó´úÂë
+    size_t len_ = 0; // æ¥æ”¶æ•°æ®é•¿åº¦ ä¸º0æ—¶è¡¨ç¤ºæ¥æ”¶å¤±è´¥
+    int err_    = 0; // é”™è¯¯ä»£ç 
 };
 class TcpChannel::ReadAwaitable
 {
@@ -59,7 +59,7 @@ public:
 
 private:
     TcpChannel* tcp_channel_ = nullptr;
-    SOCKET socket_           = 0; // ÊÕ·¢Êı¾İµÄÌ×½Ó×Ö
+    SOCKET socket_           = 0; // æ”¶å‘æ•°æ®çš„å¥—æ¥å­—
     AwaitableResult reslult_;
 
     IOCP_DATA iocp_data_;
@@ -67,7 +67,7 @@ private:
     WSABUF wsbuffer_;
 
     std::mutex mutex_;
-    bool callback_flag_ = false; // ÒÑ¾­»Øµ÷±ê¼Ç
+    bool callback_flag_ = false; // å·²ç»å›è°ƒæ ‡è®°
 };
 
 class TcpChannel::WriteAwaitable
@@ -83,7 +83,7 @@ public:
 
 private:
     TcpChannel* tcp_channel_ = nullptr;
-    SOCKET socket_           = 0; // ÊÕ·¢Êı¾İµÄÌ×½Ó×Ö
+    SOCKET socket_           = 0; // æ”¶å‘æ•°æ®çš„å¥—æ¥å­—
     AwaitableResult reslult_;
 
     IOCP_DATA iocp_data_;
@@ -93,7 +93,7 @@ private:
     DWORD dwBytes = 0;
 
     std::mutex mutex_;
-    bool callback_flag_ = false; // ÒÑ¾­»Øµ÷±ê¼Ç
+    bool callback_flag_ = false; // å·²ç»å›è°ƒæ ‡è®°
 };
 
 TcpChannel::TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)

@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-8-27 ½ª°²¸»
+// 2024-8-27 å§œå®‰å¯Œ
 #include <coroutine>
 #include <latch>
 #include <mutex>
@@ -101,7 +101,7 @@ struct CoroutineWithWait
             std::terminate();
         }
 
-        // ×èÈûµÈ´ı
+        // é˜»å¡ç­‰å¾…
         void Wait()
         {
             PromiseReturnWithWait<T>::latch_.wait();
@@ -166,7 +166,7 @@ struct CoroutineWithWait
         }
     }
 
-    // ×èÈûµÈ´ıĞ­³ÌÖ´ĞĞÍê³É
+    // é˜»å¡ç­‰å¾…åç¨‹æ‰§è¡Œå®Œæˆ
     void Wait()
     {
         handle.promise().Wait();

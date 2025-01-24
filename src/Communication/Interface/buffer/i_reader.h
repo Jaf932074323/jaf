@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include <memory>
 
 namespace jaf
@@ -28,7 +28,7 @@ namespace jaf
 namespace buffer
 {
 
-// Êı¾İ¶ÁÈ¡Æ÷
+// æ•°æ®è¯»å–å™¨
 class IReader
 {
 public:
@@ -36,17 +36,17 @@ public:
     virtual ~IReader(){};
 
 public:
-    // ¶ÁÈ¡Êı¾İ
+    // è¯»å–æ•°æ®
     virtual bool Read(const unsigned char* dst, size_t len) = 0;
 
-    // »ñÈ¡Î´¶ÁÈ¡Êı¾İµÄµØÖ·
+    // è·å–æœªè¯»å–æ•°æ®çš„åœ°å€
     virtual const unsigned char* GetNotReadData() = 0;
-    // »ñÈ¡Î´¶ÁÈ¡Êı¾İµÄ³¤¶È
+    // è·å–æœªè¯»å–æ•°æ®çš„é•¿åº¦
     virtual size_t GetNotReadLen() = 0;
 
-    // »ñÈ¡×ÜµÄÊı¾İµØÖ·,°üÀ¨ÒÑ¶ÁÈ¡²¿·Ö
+    // è·å–æ€»çš„æ•°æ®åœ°å€,åŒ…æ‹¬å·²è¯»å–éƒ¨åˆ†
     virtual const unsigned char* GetTotalData() = 0;
-    // »ñÈ¡×ÜµÄÊı¾İ³¤¶È,°üÀ¨ÒÑ¶ÁÈ¡²¿·Ö
+    // è·å–æ€»çš„æ•°æ®é•¿åº¦,åŒ…æ‹¬å·²è¯»å–éƒ¨åˆ†
     virtual size_t GetTotalLen() = 0;
 };
 

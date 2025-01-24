@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-23 ½ª°²¸»
+// 2024-6-23 å§œå®‰å¯Œ
 #include <assert.h>
 #include <atomic>
 
@@ -40,7 +40,7 @@ public:
     Latch(const Latch&)            = delete;
     Latch& operator=(const Latch&) = delete;
 
-    // Ôö¼ÓÖØÖÃ¹¦ÄÜ£¬ÈÃLatch¿ÉÒÔÖØ¸´Ê¹ÓÃ
+    // å¢žåŠ é‡ç½®åŠŸèƒ½ï¼Œè®©Latchå¯ä»¥é‡å¤ä½¿ç”¨
     void Reset()
     {
         counter_.store(expected_);

@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 
 #include "udp.h"
@@ -124,13 +124,13 @@ void Udp::Init(void)
         return;
     }
 
-    sockaddr_in addrSrv = {}; //¶¨ÒåsockSrv·¢ËÍºÍ½ÓÊÕÊı¾İ°üµÄµØÖ·
+    sockaddr_in addrSrv = {}; //å®šä¹‰sockSrvå‘é€å’Œæ¥æ”¶æ•°æ®åŒ…çš„åœ°å€
     inet_pton(AF_INET, local_ip_.c_str(), (void*) &addrSrv.sin_addr);
     addrSrv.sin_family = AF_INET;
     addrSrv.sin_port   = htons(local_port_);
 
-    //°ó¶¨Ì×½Ó×Ö, °ó¶¨µ½¶Ë¿Ú
-    ::bind(socket_, (SOCKADDR*) &addrSrv, sizeof(addrSrv)); //»á·µ»ØÒ»¸öSOCKET_ERROR
+    //ç»‘å®šå¥—æ¥å­—, ç»‘å®šåˆ°ç«¯å£
+    ::bind(socket_, (SOCKADDR*) &addrSrv, sizeof(addrSrv)); //ä¼šè¿”å›ä¸€ä¸ªSOCKET_ERROR
 }
 
 } // namespace comm

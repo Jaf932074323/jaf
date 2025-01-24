@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2025-1-18 ½ª°²¸»
+// 2025-1-18 å§œå®‰å¯Œ
 #ifdef _WIN32
 #include <string>
 #include <windows.h>
@@ -32,15 +32,15 @@ class InitSocket
 public:
     InitSocket(BYTE version_low = 2, BYTE version_high = 2)
     {
-        //WinSock°æ±¾ºÅ
+        //WinSockç‰ˆæœ¬å·
        WORD version = MAKEWORD(version_low, version_high);
 
-        // WinSock¿â³õÊ¼»¯
+        // WinSockåº“åˆå§‹åŒ–
         WSADATA wsa_data;
         int result = ::WSAStartup(version, &wsa_data);
-        if (result != 0) // WinSock¿â³õÊ¼»¯Ê§°Ü!
+        if (result != 0) // WinSockåº“åˆå§‹åŒ–å¤±è´¥!
         {
-            std::string err = "WinSock¿â³õÊ¼»¯Ê§°Ü,´íÎóºÅ:" + WSAGetLastError();
+            std::string err = "WinSockåº“åˆå§‹åŒ–å¤±è´¥,é”™è¯¯å·:" + WSAGetLastError();
             throw err;
         }
     }

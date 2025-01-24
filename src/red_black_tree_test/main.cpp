@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-8-16 ½ª°²¸»
+// 2024-8-16 å§œå®‰å¯Œ
 #include "util/red_black_tree.h"
 #include "gtest/gtest.h"
 #include <map>

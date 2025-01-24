@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "Interface/communication/i_pack.h"
 
 namespace jaf
@@ -28,7 +28,7 @@ namespace jaf
 namespace comm
 {
 
-// ´¦ÀíÍ¨ĞÅÍ¨µÀÍ¨ĞÅÍ¨µÀ ¸ºÔğ´ÓÍ¨µÀ¶ÁĞ´Êı¾İ
+// å¤„ç†é€šä¿¡é€šé“é€šä¿¡é€šé“ è´Ÿè´£ä»é€šé“è¯»å†™æ•°æ®
 class Pack : public IPack
 {
 public:
@@ -37,7 +37,7 @@ public:
     ;
 
 public:
-    // »ñÈ¡¶ÔÓ¦µÄÍ¨µÀ
+    // è·å–å¯¹åº”çš„é€šé“
     virtual std::shared_ptr<IChannel> GetChannel() override;
     virtual SConstData GetData() override;
 

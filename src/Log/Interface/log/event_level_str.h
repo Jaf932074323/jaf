@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include <map>
 
 namespace jaf
@@ -30,7 +30,7 @@ namespace log
 
 class LogLevelManage
 {
-    // µ¥ÀıÄ£Ê½
+    // å•ä¾‹æ¨¡å¼
     LogLevelManage()
         : event_levels_{
             {LOG_LEVEL_FATAL, "fatal"}, {LOG_LEVEL_ERROR, "error"}, {LOG_LEVEL_WARNING, "warning"}, {LOG_LEVEL_INFO, "info"}, {LOG_LEVEL_DEBUG, "debug"}, {LOG_LEVEL_TRANCE, "trance"}}
@@ -43,7 +43,7 @@ public:
     ~LogLevelManage() {}
     static LogLevelManage& Instance()
     {
-        static LogLevelManage instance; // µ¥ÀıÊµÀı
+        static LogLevelManage instance; // å•ä¾‹å®ä¾‹
         return instance;
     }
 
@@ -64,7 +64,7 @@ public:
     }
 
 private:
-    std::map<uint32_t, const char*> event_levels_; // keyÎªÈÕÖ¾µÈ¼¶£¬valueÎª¶ÔÓ¦µÄ×Ö·û´®
+    std::map<uint32_t, const char*> event_levels_; // keyä¸ºæ—¥å¿—ç­‰çº§ï¼Œvalueä¸ºå¯¹åº”çš„å­—ç¬¦ä¸²
 };
 
 

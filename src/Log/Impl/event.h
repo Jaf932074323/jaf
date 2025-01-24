@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "Interface/log/i_event.h"
 #include <string>
 
@@ -29,7 +29,7 @@ namespace jaf
 namespace log
 {
 
-// ÈÕÖ¾ÊÂ¼þ
+// æ—¥å¿—äº‹ä»¶
 class Event : public IEvent
 {
 public:

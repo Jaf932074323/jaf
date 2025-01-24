@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "common_logger.h"
 #include "empty_logger.h"
 #include <mutex>
@@ -35,7 +35,7 @@ struct CommonLogger::Impl
 {
     std::mutex logger_mutex_;
     std::shared_ptr<ILogger> default_logger_ = std::make_shared<EmptyLogger>();
-    std::unordered_map<std::string, std::shared_ptr<ILogger>> loggers_; // ÈÕÖ¾¼¯ºÏ
+    std::unordered_map<std::string, std::shared_ptr<ILogger>> loggers_; // æ—¥å¿—é›†åˆ
 };
 
 CommonLogger::CommonLogger()
@@ -79,7 +79,7 @@ std::shared_ptr<ILogger> CommonLogger::Logger(const std::string& log_name)
 
 CommonLogger& CommonLogger::Instance()
 {
-    static CommonLogger instance; // µ¥ÀıÊµÀı
+    static CommonLogger instance; // å•ä¾‹å®ä¾‹
     return instance;
 }
 

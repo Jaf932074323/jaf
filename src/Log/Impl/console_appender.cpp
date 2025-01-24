@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "console_appender.h"
 #include "filter.h"
 #include "log_format.h"
@@ -32,8 +32,8 @@ namespace log
 
 struct ConsoleAppender::Impl
 {
-    std::shared_ptr<IFilter> filter_; // ¹ıÂËÆ÷
-    std::shared_ptr<IFormat> format_; // ÈÕÖ¾¸ñÊ½»¯
+    std::shared_ptr<IFilter> filter_; // è¿‡æ»¤å™¨
+    std::shared_ptr<IFormat> format_; // æ—¥å¿—æ ¼å¼åŒ–
 };
 
 ConsoleAppender::ConsoleAppender(std::shared_ptr<IFormat> format, std::shared_ptr<IFilter> filter)

@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-8-16 ½ª°²¸»
+// 2024-8-16 å§œå®‰å¯Œ
 #include "util/red_black_tree.h"
 #include "gtest/gtest.h"
 #include <format>
@@ -58,7 +58,7 @@ public:
         {
             std::cout << "\t";
         }
-        std::cout << "  ©¸---\t";
+        std::cout << "  â””---\t";
         ShowNode(node->right_child_, depth + 1);
     }
     void CheckNodeRelation(Tree::Node* node, size_t total_count)
@@ -171,7 +171,7 @@ public:
         EXPECT_EQ(tree.Max(tree.GetRoot())->key_, (--tree.end()).GetKey());
     }
 
-    // »ñÈ¡Ò»ÌõÖ§Â·µÄºÚÉ«½ÚµãÊýÁ¿
+    // èŽ·å–ä¸€æ¡æ”¯è·¯çš„é»‘è‰²èŠ‚ç‚¹æ•°é‡
     uint32_t GetBranchBlackAmount(Tree::Node* root)
     {
         uint32_t branch_black_amount = 0;
@@ -296,9 +296,9 @@ TEST(red_black_tree, random)
     }
     test_red_black_tree.TestTree(arr.data(), amount);
 
-    // »ñÈ¡µ±Ç°²âÊÔÊµÀý
+    // èŽ·å–å½“å‰æµ‹è¯•å®žä¾‹
     const ::testing::UnitTest& unit_test = *::testing::UnitTest::GetInstance();
-    // ¼ì²éÊÇ·ñÓÐÊ§°ÜµÄ²âÊÔ
+    // æ£€æŸ¥æ˜¯å¦æœ‰å¤±è´¥çš„æµ‹è¯•
     if (unit_test.failed_test_count() > 0)
     {
         Show(arr.data(), amount);

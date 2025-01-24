@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 ½ª°²¸»
+// 2024-12-28 å§œå®‰å¯Œ
 #ifdef _WIN32
 #elif defined(__linux__)
 
@@ -39,7 +39,7 @@ namespace jaf
 namespace comm
 {
 
-// TCPÍ¨µÀ
+// TCPé€šé“
 class TcpChannelRead
 {
 public:
@@ -52,12 +52,12 @@ public:
     void OnRead(EpollData* data);
 private:
     void Read();
-    bool ReadImp(std::list<std::shared_ptr<ReadCommunData>>& finish_read_datas); // ¶ÁÈ¡Êı¾İ£¬½áÊøÊ±Èô»º´æÇø»¹ÓĞÊı¾İÔò·µ»Øtrue
+    bool ReadImp(std::list<std::shared_ptr<ReadCommunData>>& finish_read_datas); // è¯»å–æ•°æ®ï¼Œç»“æŸæ—¶è‹¥ç¼“å­˜åŒºè¿˜æœ‰æ•°æ®åˆ™è¿”å›true
 private:
-    int socket_   = 0;  // ÊÕ·¢Êı¾İµÄÌ×½Ó×Ö
+    int socket_   = 0;  // æ”¶å‘æ•°æ®çš„å¥—æ¥å­—
         
-    std::atomic<bool> run_flag_   = true;  // Ì×½Ó×ÖÊÇ·ñÒÑ¾­¹Ø±Õ±êÖ¾
-    std::atomic<bool> readable_flag_  = false; // ÊÇ·ñ¿É¶Á
+    std::atomic<bool> run_flag_   = true;  // å¥—æ¥å­—æ˜¯å¦å·²ç»å…³é—­æ ‡å¿—
+    std::atomic<bool> readable_flag_  = false; // æ˜¯å¦å¯è¯»
 
     std::list<std::shared_ptr<ReadCommunData>> ready_read_queue_;
     std::mutex ready_read_queue_mutex_;

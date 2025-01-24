@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 
 #include "serial_port_channel.h"
@@ -40,8 +40,8 @@ std::string GetFormatMessage(DWORD dw);
 
 struct SerialPortChannel::AwaitableResult
 {
-    size_t len_ = 0; // ½ÓÊÕÊı¾İ³¤¶È Îª0Ê±±íÊ¾½ÓÊÕÊ§°Ü
-    int err_    = 0; // ´íÎó´úÂë
+    size_t len_ = 0; // æ¥æ”¶æ•°æ®é•¿åº¦ ä¸º0æ—¶è¡¨ç¤ºæ¥æ”¶å¤±è´¥
+    int err_    = 0; // é”™è¯¯ä»£ç 
 };
 
 class SerialPortChannel::ReadAwaitable
@@ -67,7 +67,7 @@ private:
     DWORD dwBytes = 0;
 
     std::mutex mutex_;
-    bool callback_flag_ = false; // ÒÑ¾­»Øµ÷±ê¼Ç
+    bool callback_flag_ = false; // å·²ç»å›è°ƒæ ‡è®°
 };
 
 class SerialPortChannel::WriteAwaitable
@@ -95,7 +95,7 @@ private:
     DWORD dwBytes = 0;
 
     std::mutex mutex_;
-    bool callback_flag_ = false; // ÒÑ¾­»Øµ÷±ê¼Ç
+    bool callback_flag_ = false; // å·²ç»å›è°ƒæ ‡è®°
 };
 
 SerialPortChannel::SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle, std::shared_ptr<jaf::time::ITimer> timer)

@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "recv_buffer.h"
 #include "pack.h"
 #include <assert.h>
@@ -56,11 +56,11 @@ void RecvBuffer::RecvData(size_t len)
     recv_len_ += len;
     wait_recv_len_ -= len;
 
-    // ºóĞø¿Õ¼ä²»¹»ÔÙ½ÓÊÕÒ»´ÎÊı¾İ£¬ÔòÉêÇëĞÂµÄ»º´æ
+    // åç»­ç©ºé—´ä¸å¤Ÿå†æ¥æ”¶ä¸€æ¬¡æ•°æ®ï¼Œåˆ™ç”³è¯·æ–°çš„ç¼“å­˜
     if (wait_recv_len_ < receive_min_buff_len_)
     {
         SwitchNewRecvBuff();
-        assert(wait_recv_len_ >= receive_min_buff_len_); // ÒÑ½ÓÊÕÊı¾İÌ«¶àÃ»ÓĞ´¦Àí»á³öÏÖÎÊÌâ
+        assert(wait_recv_len_ >= receive_min_buff_len_); // å·²æ¥æ”¶æ•°æ®å¤ªå¤šæ²¡æœ‰å¤„ç†ä¼šå‡ºç°é—®é¢˜
     }
 }
 
@@ -87,7 +87,7 @@ std::shared_ptr<IChannel> RecvBuffer::GetChannel() { return channel_; }
 
 void RecvBuffer::SwitchNewRecvBuff()
 {
-    // TODO: µ±Ê£ÓàÊı¾İÌ«¶àÊ±£¬Ó¦µ±ÈçºÎ´¦Àí£¿
+    // TODO: å½“å‰©ä½™æ•°æ®å¤ªå¤šæ—¶ï¼Œåº”å½“å¦‚ä½•å¤„ç†ï¼Ÿ
     std::shared_ptr<unsigned char[]> new_recv_buff =
         std::make_shared<unsigned char[]>(total_buff_len_);
 

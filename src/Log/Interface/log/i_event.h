@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ╫╙╟╡╦╩
+// 2024-6-16 Е╖°Е╝┴Е╞▄
 #include "define_log_export.h"
 #include <memory>
 #include <thread>
@@ -30,14 +30,14 @@ namespace jaf
 namespace log
 {
 
-constexpr uint32_t LOG_LEVEL_FATAL   = 0; // жбцЭ╢МнС
-constexpr uint32_t LOG_LEVEL_ERROR   = 1; // ╢МнС
-constexpr uint32_t LOG_LEVEL_WARNING = 2; // ╬╞╦Ф
-constexpr uint32_t LOG_LEVEL_INFO    = 3; // пео╒
-constexpr uint32_t LOG_LEVEL_DEBUG   = 4; // ╣Вйтпео╒
-constexpr uint32_t LOG_LEVEL_TRANCE  = 5; // в╥выпео╒
+constexpr uint32_t LOG_LEVEL_FATAL   = 0; // Х┤╢Е▒╫И■≥Х╞╞
+constexpr uint32_t LOG_LEVEL_ERROR   = 1; // И■≥Х╞╞
+constexpr uint32_t LOG_LEVEL_WARNING = 2; // Х╜╕Е▒┼
+constexpr uint32_t LOG_LEVEL_INFO    = 3; // Д©║Ф│╞
+constexpr uint32_t LOG_LEVEL_DEBUG   = 4; // Х╟┐Х╞∙Д©║Ф│╞
+constexpr uint32_t LOG_LEVEL_TRANCE  = 5; // Х©╫Х╦╙Д©║Ф│╞
 
-// хуж╬йб╪Ч
+// Ф≈╔Е©≈Д╨▀Д╩╤
 class API_LOG_EXPORT IEvent
 {
 public:

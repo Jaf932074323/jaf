@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 ½ª°²¸»
+// 2024-12-28 å§œå®‰å¯Œ
 #ifdef _WIN32
 #elif defined(__linux__)
 
@@ -41,7 +41,7 @@ namespace jaf
 namespace comm
 {
 
-// TCP¿Í»§¶Ë
+// TCPå®¢æˆ·ç«¯
 class TcpClient : public ITcpClient
 {
 public:
@@ -50,9 +50,9 @@ public:
 
 public:
     virtual void SetAddr(const std::string& remote_ip, uint16_t remote_port, const std::string& local_ip = "0.0.0.0", uint16_t local_port = 0) override;
-    // ÉèÖÃÁ¬½ÓÊ±¼ä
-    // connect_timeout Á¬½Ó³¬Ê±Ê±¼ä
-    // reconnect_wait_time ÖØÁ¬µÈ´ıÊ±¼ä
+    // è®¾ç½®è¿æ¥æ—¶é—´
+    // connect_timeout è¿æ¥è¶…æ—¶æ—¶é—´
+    // reconnect_wait_time é‡è¿ç­‰å¾…æ—¶é—´
     virtual void SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time) override;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
     virtual jaf::Coroutine<void> Run() override;
@@ -73,20 +73,20 @@ private:
     std::shared_ptr<jaf::time::ITimer> timer_;
     jaf::ControlStartStop control_start_stop_;
 
-    int epoll_fd_ = -1;         // epollÃèÊö·û
-    IGetEpollFd* get_epoll_fd_; // »ñÈ¡epoll¶ÔÏó
+    int epoll_fd_ = -1;         // epollæè¿°ç¬¦
+    IGetEpollFd* get_epoll_fd_; // è·å–epollå¯¹è±¡
     int connect_socket_ = -1;
 
     std::string local_ip_ = "0.0.0.0";
     uint16_t local_port_  = 0;
     std::string remote_ip_;
     uint16_t remote_port_         = 0;
-    uint64_t connect_timeout_     = 5000; // Á¬½ÓµÈ´ıÊ±¼ä
-    uint64_t reconnect_wait_time_ = 5000; // ÖØÁ¬µÈ´ıÊ±¼ä
+    uint64_t connect_timeout_     = 5000; // è¿æ¥ç­‰å¾…æ—¶é—´
+    uint64_t reconnect_wait_time_ = 5000; // é‡è¿ç­‰å¾…æ—¶é—´
 
     std::string error_info_;
 
-    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // ²Ù×÷Í¨µÀ
+    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // æ“ä½œé€šé“
 
     ConnectAwaitable* connect_awaitable_ = nullptr;
 

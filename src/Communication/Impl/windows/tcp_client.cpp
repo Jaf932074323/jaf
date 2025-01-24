@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 
 #include "tcp_client.h"
@@ -84,8 +84,8 @@ private:
     char buf_[1]   = {0};
     DWORD dwBytes_ = 0;
 
-    std::mutex mutex_;           // ³¬Ê±Ê¹ÓÃµÄÍ¬²½
-    bool callback_flag_ = false; // ÒÑ¾­»Øµ÷±ê¼Ç
+    std::mutex mutex_;           // è¶…æ—¶ä½¿ç”¨çš„åŒæ­¥
+    bool callback_flag_ = false; // å·²ç»å›è°ƒæ ‡è®°
 };
 
 TcpClient::TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
@@ -170,7 +170,7 @@ void TcpClient::Init(void)
 
 jaf::Coroutine<void> TcpClient::Execute()
 {
-    SOCKET connect_socket = INVALID_SOCKET; // Á¬½ÓÌ×½Ó×Ö
+    SOCKET connect_socket = INVALID_SOCKET; // è¿æ¥å¥—æ¥å­—
 
     while (run_flag_)
     {
@@ -193,7 +193,7 @@ jaf::Coroutine<void> TcpClient::Execute()
         }
         if (!result.success)
         {
-            LOG_WARNING() << std::format("TCPÁ¬½ÓÊ§°Ü,±¾µØ{}:{},Ô¶³Ì{}:{},{}",
+            LOG_WARNING() << std::format("TCPè¿æ¥å¤±è´¥,æœ¬åœ°{}:{},è¿œç¨‹{}:{},{}",
                 local_ip_, local_port_,
                 remote_ip_, remote_port_,
                 result.error_info_);
@@ -227,12 +227,12 @@ jaf::Coroutine<void> TcpClient::Execute()
 
 SOCKET TcpClient::CreationSocket()
 {
-    SOCKET connect_socket = INVALID_SOCKET; // Á¬½ÓÌ×½Ó×Ö
+    SOCKET connect_socket = INVALID_SOCKET; // è¿æ¥å¥—æ¥å­—
     connect_socket        = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (INVALID_SOCKET == connect_socket)
     {
         DWORD dw    = GetLastError();
-        error_info_ = std::format("TCPÁ¬½Ó´´½¨Ì×½Ó×ÖÊ§°Ü,±¾µØ{}:{},Ô¶³Ì{}:{},code:{},:{}",
+        error_info_ = std::format("TCPè¿æ¥åˆ›å»ºå¥—æ¥å­—å¤±è´¥,æœ¬åœ°{}:{},è¿œç¨‹{}:{},code:{},:{}",
             local_ip_, local_port_,
             remote_ip_, remote_port_,
             dw, GetFormatMessage(dw));
@@ -244,11 +244,11 @@ SOCKET TcpClient::CreationSocket()
     bind_addr.sin_family = AF_INET;
     bind_addr.sin_port   = htons(local_port_);
 
-    //°ó¶¨Ì×½Ó×Ö, °ó¶¨µ½¶Ë¿Ú
+    //ç»‘å®šå¥—æ¥å­—, ç»‘å®šåˆ°ç«¯å£
     if (SOCKET_ERROR == ::bind(connect_socket, (SOCKADDR*) &bind_addr, sizeof(bind_addr)))
     {
         DWORD dw    = GetLastError();
-        error_info_ = std::format("TCPÁ¬½Ó´´½¨Ì×½Ó×ÖÊ§°Ü,±¾µØ{}:{},Ô¶³Ì{}:{},code:{},:{}",
+        error_info_ = std::format("TCPè¿æ¥åˆ›å»ºå¥—æ¥å­—å¤±è´¥,æœ¬åœ°{}:{},è¿œç¨‹{}:{},code:{},:{}",
             local_ip_, local_port_,
             remote_ip_, remote_port_,
             dw, GetFormatMessage(dw));
@@ -260,7 +260,7 @@ SOCKET TcpClient::CreationSocket()
     if (CreateIoCompletionPort((HANDLE) connect_socket, completion_handle_, 0, 0) == 0)
     {
         DWORD dw    = GetLastError();
-        error_info_ = std::format("TCPÁ¬½Ó´´½¨Ì×½Ó×ÖÊ§°Ü,±¾µØ{}:{},Ô¶³Ì{}:{},code:{},:{}",
+        error_info_ = std::format("TCPè¿æ¥åˆ›å»ºå¥—æ¥å­—å¤±è´¥,æœ¬åœ°{}:{},è¿œç¨‹{}:{},code:{},:{}",
             local_ip_, local_port_,
             remote_ip_, remote_port_,
             dw, GetFormatMessage(dw));

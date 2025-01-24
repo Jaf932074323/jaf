@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "define_log_export.h"
 #include "Interface/log/i_filter.h"
 #include "Interface/log/i_format.h"
@@ -31,7 +31,7 @@ namespace jaf
 namespace log
 {
 
-// ¿ØÖÆÌ¨ÈÕÖ¾Êä³öÆ÷
+// æ§åˆ¶å°æ—¥å¿—è¾“å‡ºå™¨
 class API_LOG_EXPORT ConsoleAppender : public IAppender
 {
 public:
@@ -39,7 +39,7 @@ public:
     virtual ~ConsoleAppender();
 
 public:
-    // ´¦ÀíÈÕÖ¾ÊÂ¼ş
+    // å¤„ç†æ—¥å¿—äº‹ä»¶
     virtual void OnLogEvent(const IEvent& log_event) override;
 
 protected:

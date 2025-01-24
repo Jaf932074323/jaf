@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 
 #define LOG_FATAL(...) jaf::log::CreateLogEvent(jaf::log::LOG_LEVEL_FATAL, __FILE__, __LINE__, __FUNCTION__, jaf::log::GetLog(__VA_ARGS__))
 #define LOG_ERROR(...) jaf::log::CreateLogEvent(jaf::log::LOG_LEVEL_ERROR, __FILE__, __LINE__, __FUNCTION__, jaf::log::GetLog(__VA_ARGS__))

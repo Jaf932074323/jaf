@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-8-59 ╫╙╟╡╦╩
+// 2024-8-59 Е╖°Е╝┴Е╞▄
 #include "global_timer/co_await_time.h"
 #include "global_timer/co_timer.h"
 #include "global_timer/global_timer.h"
@@ -80,7 +80,7 @@ TEST(run_with_timeout, sleep)
         jaf::SimpleThreadExec& simple_thread_exec_;
 
         std::mutex mutex_;
-        bool callback_flag_ = false; // ря╬╜╩ь╣В╠Й╪г
+        bool callback_flag_ = false; // Е╥╡Г╩▐Е⌡·Х╟┐Ф═┤Х╝╟
     };
 
 

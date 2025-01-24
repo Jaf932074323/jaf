@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-23 ½ª°²¸»
+// 2024-6-23 å§œå®‰å¯Œ
 #include "i_thread_pool.h"
 #include <condition_variable>
 #include <mutex>
@@ -30,7 +30,7 @@
 namespace jaf
 {
 
-// ¼òÒ×Ïß³Ì³Ø
+// ç®€æ˜“çº¿ç¨‹æ± 
 class SimpleThreadPool : public IThreadPool
 {
 public:
@@ -102,7 +102,7 @@ private:
 private:
     bool stop_ = false;
 
-    size_t thread_count_; // Ïß³Ì¸öÊý
+    size_t thread_count_; // çº¿ç¨‹ä¸ªæ•°
     std::vector<std::thread> workers_;
 
     std::mutex queue_mutex_;

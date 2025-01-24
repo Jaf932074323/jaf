@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 
 #include "Interface/communication/i_serial_port.h"
@@ -40,7 +40,7 @@ namespace jaf
 namespace comm
 {
 
-// ´®¿Ú
+// ä¸²å£
 class SerialPort : public ISerialPort
 {
 public:
@@ -66,15 +66,15 @@ private:
     IGetCompletionPort* get_completion_port_ = nullptr;
     HANDLE completion_handle_                = nullptr;
 
-    std::string comm_;   //´®¿Ú
-    uint32_t baud_rate_; // ²¨ÌØÂÊ
-    uint8_t data_bit_;   // Êı¾İÎ»
-    uint8_t stop_bit_;   // Í£Ö¹Î»
-    uint8_t parity_;     //Ğ£ÑéÎ»
+    std::string comm_;   //ä¸²å£
+    uint32_t baud_rate_; // æ³¢ç‰¹ç‡
+    uint8_t data_bit_;   // æ•°æ®ä½
+    uint8_t stop_bit_;   // åœæ­¢ä½
+    uint8_t parity_;     //æ ¡éªŒä½
 
     HANDLE comm_handle_;
 
-    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // ²Ù×÷Í¨µÀ
+    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // æ“ä½œé€šé“
     std::mutex channel_mutex_;
     std::atomic<bool> run_flag_        = false;
     std::shared_ptr<IChannel> channel_ = std::make_shared<EmptyChannel>();

@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "log_head.h"
 #include "util/red_black_tree.h"
 #include "util/stopwatch.h"
@@ -29,11 +29,11 @@
 
 void shuffle(std::vector<int> &nums)
 {
-    srand((unsigned)time(NULL)); // ÐèÒªÖØÉèËæ»úÊýÖÖ×Ó
+    srand((unsigned)time(NULL)); // éœ€è¦é‡è®¾éšæœºæ•°ç§å­
     int n = nums.size();
     for (int i = n - 1; i > 0; i--)
     {
-        // ×îºóÒ»¸öÔªËØ²»ÐèÒª½»»»ÁË
+        // æœ€åŽä¸€ä¸ªå…ƒç´ ä¸éœ€è¦äº¤æ¢äº†
         int randIdx = rand() % i;
         // cout << "randIdx" << randIdx << endl;
         std::swap(nums[i], nums[randIdx]);

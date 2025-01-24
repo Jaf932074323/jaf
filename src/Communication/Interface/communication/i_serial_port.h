@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 Ω™∞≤∏ª
+// 2024-6-16 ÂßúÂÆâÂØå
 #include "Interface/communication/i_unpack.h"
 #include "util/co_coroutine.h"
 #include <functional>
@@ -32,7 +32,7 @@ namespace jaf
 namespace comm
 {
 
-// ¥Æø⁄
+// ‰∏≤Âè£
 class ISerialPort
 {
 public:

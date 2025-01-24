@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ������
+// 2024-6-16 姜安富
 #include "util/co_coroutine.h"
 #include <stdint.h>
 #include <string>
@@ -30,27 +30,27 @@ namespace jaf
 namespace comm
 {
 
-// ͨ��ͨ��ִ�н��
+// 通信通道执行结果
 struct SChannelResult
 {
     enum class EState
     {
-        CRS_SUCCESS              = 0, // �ɹ�
-        CRS_CHANNEL_END          = 1, // ͨ����������
-        CRS_FAIL                 = 2, // ʧ��,�������ԭ����code_��ʾ
-        CRS_CHANNEL_DISCONNECTED = 3, // ͨ���Ͽ�����
-        CRS_TIMEOUT              = 4, // ��ʱ
-        CRS_EMPTY                = 5, // ��ͨ��
-        CRS_UNKNOWN,                  // δ֪����
+        CRS_SUCCESS              = 0, // 成功
+        CRS_CHANNEL_END          = 1, // 通道结束运行
+        CRS_FAIL                 = 2, // 失败,具体错误原因由code_表示
+        CRS_CHANNEL_DISCONNECTED = 3, // 通道断开连接
+        CRS_TIMEOUT              = 4, // 超时
+        CRS_EMPTY                = 5, // 空通道
+        CRS_UNKNOWN,                  // 未知错误
     };
 
     EState state = EState::CRS_UNKNOWN;
-    size_t len   = 0;  // ��������
-    int code_    = 0;  // ������� stateΪCRS_FAILʱ��Ч
-    std::string error; // ��ʧ����δ��ʱ��ʧ��ԭ��
+    size_t len   = 0;  // 处理长度
+    int code_    = 0;  // 错误代码 state为CRS_FAIL时有效
+    std::string error; // 当失败且未超时，失败原因
 };
 
-// ͨ��ͨ��
+// 通信通道
 class IChannel
 {
 public:

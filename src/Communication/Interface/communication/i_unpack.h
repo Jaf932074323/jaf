@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ╫╙╟╡╦╩
+// 2024-6-16 Е╖°Е╝┴Е╞▄
 #include "i_channel.h"
 #include "util/co_coroutine.h"
 #include <functional>
@@ -31,7 +31,7 @@ namespace jaf
 namespace comm
 {
 
-// ╢╕юМм╗пем╗╣юм╗пем╗╣ю ╦╨тП╢см╗╣ю╤ап╢йЩ╬щ
+// Е╓└Г░├И─ Д©║И─ И│⌠И─ Д©║И─ И│⌠ Х╢÷Х╢ёД╩▌И─ И│⌠Х╞╩Е├≥Ф∙╟Ф█╝
 class IUnpack
 {
 public:

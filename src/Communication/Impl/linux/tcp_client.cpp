@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 ½ª°²¸»
+// 2024-12-28 å§œå®‰å¯Œ
 #ifdef _WIN32
 #elif defined(__linux__)
 
@@ -143,7 +143,7 @@ private:
         bind_addr.sin_addr.s_addr = inet_addr(tcp_client_->local_ip_.c_str());
         bind_addr.sin_port        = htons(tcp_client_->local_port_);
 
-        //°ó¶¨Ì×½Ó×Ö, °ó¶¨µ½¶Ë¿Ú
+        //ç»‘å®šå¥—æ¥å­—, ç»‘å®šåˆ°ç«¯å£
         if (::bind(connect_socket, (sockaddr*) &bind_addr, sizeof(bind_addr)) < 0)
         {
             int error   = errno;
@@ -155,7 +155,7 @@ private:
             return -1;
         }
 
-        //ÉèÖÃ connect µÄ socket Îª·Ç×èÈû
+        //è®¾ç½® connect çš„ socket ä¸ºéé˜»å¡
         long on = 1L;
         if (ioctl(connect_socket, (int) FIONBIO, (char*) &on))
         {
@@ -177,7 +177,7 @@ private:
             {
                 FINALLY(tcp_client_->timer_->StopTask(&timeout_task_););
 
-                //¿´¿´ socket ÊÇ²»ÊÇÁ´½Ó³É¹¦ÁË
+                //çœ‹çœ‹ socket æ˜¯ä¸æ˜¯é“¾æ¥æˆåŠŸäº†
                 int result;
                 socklen_t result_len = sizeof(result);
                 if (getsockopt(connect_socket_, SOL_SOCKET, SO_ERROR, &result, &result_len) < 0 || result != 0)
@@ -235,7 +235,7 @@ public:
 
     std::string error_info_;
 
-    EpollData connect_epoll_data_; // Á¬½ÓÊ±ÓÃµÄÍ¨Ñ¶Êı¾İ
+    EpollData connect_epoll_data_; // è¿æ¥æ—¶ç”¨çš„é€šè®¯æ•°æ®
 
 private:
     std::coroutine_handle<> handle_;
@@ -331,7 +331,7 @@ jaf::Coroutine<void> TcpClient::Execute()
         const ConnectResult& connect_result = connect_awaitable.connect_result_;
         if (!connect_result.success)
         {
-            LOG_WARNING() << std::format("TCPÁ¬½ÓÊ§°Ü,±¾µØ{}:{},Ô¶³Ì{}:{},{}",
+            LOG_WARNING() << std::format("TCPè¿æ¥å¤±è´¥,æœ¬åœ°{}:{},è¿œç¨‹{}:{},{}",
                 local_ip_, local_port_,
                 remote_ip_, remote_port_,
                 connect_result.error_info_);

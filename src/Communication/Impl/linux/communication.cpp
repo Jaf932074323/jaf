@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 ������
+// 2024-12-28 姜安富
 #ifdef _WIN32
 #elif defined(__linux__)
 
@@ -136,7 +136,7 @@ bool Communication::CreateEpoll()
         return false;
     }
 
-    // ����ֹͣ�¼���������������ֹͣʱֹ֪ͨͣ
+    // 创建停止事件描述符，用于在停止时通知停止
     stop_fd_ = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
     if (stop_fd_ < 0)
     {
@@ -153,7 +153,7 @@ bool Communication::CreateEpoll()
         return false;
     }
 
-    // ����ִ�й����¼�������
+    // 创建执行功能事件描述符
     funs_fd_ = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     if (funs_fd_ < 0)
     {
@@ -187,7 +187,7 @@ void Communication::WorkThreadRun()
     epoll_event events[events_size];
     while (run_flag_)
     {
-        //��ȡ�Ѿ�׼���õ��������¼�
+        //获取已经准备好的描述符事件
         int events_wait_count = epoll_wait(epoll_fd_, events, events_size, -1);
         if (events_wait_count < 0)
         {

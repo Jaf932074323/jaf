@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "comm_struct.h"
 #include "i_channel.h"
 #include <memory>
@@ -30,7 +30,7 @@ namespace jaf
 namespace comm
 {
 
-// ´¦ÀíÍ¨ĞÅÍ¨µÀÍ¨ĞÅÍ¨µÀ ¸ºÔğ´ÓÍ¨µÀ¶ÁĞ´Êı¾İ
+// å¤„ç†é€šä¿¡é€šé“é€šä¿¡é€šé“ è´Ÿè´£ä»é€šé“è¯»å†™æ•°æ®
 class IPack
 {
 public:
@@ -38,7 +38,7 @@ public:
     virtual ~IPack(){};
 
 public:
-    // »ñÈ¡¶ÔÓ¦µÄÍ¨µÀ
+    // è·å–å¯¹åº”çš„é€šé“
     virtual std::shared_ptr<IChannel> GetChannel() = 0;
     virtual SConstData GetData()                   = 0;
 };

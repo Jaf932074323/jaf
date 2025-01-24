@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-20 ½ª°²¸»
+// 2024-6-20 å§œå®‰å¯Œ
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
 #include "util/multi_threads_exec.h"
@@ -42,24 +42,24 @@ public:
 public:
     jaf::CoroutineWithWait<void> Test()
     {
-        // ²âÊÔ·½Ê½£º
-        // ½«²âÊÔÊı×éÖĞµÄÔªËØÈ«²¿ÖÃ0
-        // È»ºóÔÚÖ´ĞĞÈÎÎñÊ±£¬Ã¿¸öÈÎÎñÉèÖÃ²âÊÔÊı×éÖĞÒ»¸öÔªËØµÄÖµ¼ÓÉÏÆäÏÂ±ê
-        // ÈÎÎñÈ«²¿Ö´ĞĞÍê³Éºó£¬¼ì²é²âÊÔÊı×éµÄµÄÃ¿ÏîÔªËØÖµÊÇ·ñ¸´ºÏÔ¤ÆÚ
+        // æµ‹è¯•æ–¹å¼ï¼š
+        // å°†æµ‹è¯•æ•°ç»„ä¸­çš„å…ƒç´ å…¨éƒ¨ç½®0
+        // ç„¶ååœ¨æ‰§è¡Œä»»åŠ¡æ—¶ï¼Œæ¯ä¸ªä»»åŠ¡è®¾ç½®æµ‹è¯•æ•°ç»„ä¸­ä¸€ä¸ªå…ƒç´ çš„å€¼åŠ ä¸Šå…¶ä¸‹æ ‡
+        // ä»»åŠ¡å…¨éƒ¨æ‰§è¡Œå®Œæˆåï¼Œæ£€æŸ¥æµ‹è¯•æ•°ç»„çš„çš„æ¯é¡¹å…ƒç´ å€¼æ˜¯å¦å¤åˆé¢„æœŸ
 
         main_thread_id_ = std::this_thread::get_id();
 
         std::vector<jaf::Coroutine<void>> co_coroutines;
         co_coroutines.reserve(deal_time);
 
-        // ×¼±¸²âÊÔÊı×é
+        // å‡†å¤‡æµ‹è¯•æ•°ç»„
         test_numbers_.resize(deal_time);
         for (int64_t i = 0; i < deal_time; ++i)
         {
             test_numbers_[i] = 0;
         }
 
-        // Ö´ĞĞ´¦ÀíÈÎÎñ
+        // æ‰§è¡Œå¤„ç†ä»»åŠ¡
         for (int64_t i = 0; i < deal_time; ++i)
         {
             co_coroutines.push_back(Deal(i));
@@ -69,10 +69,10 @@ public:
             co_await co_coroutine;
         }
 
-        // ¼ì²é
+        // æ£€æŸ¥
         for (int64_t i = 0; i < deal_time; ++i)
         {
-            EXPECT_EQ(test_numbers_[i], i) << std::format("µÚ{}ÏîÊı×Ö´¦Àí´íÎó£¬Ô¤¼Æ={},Êµ¼ÊÖµ={}", i, i, test_numbers_[i]);
+            EXPECT_EQ(test_numbers_[i], i) << std::format("ç¬¬{}é¡¹æ•°å­—å¤„ç†é”™è¯¯ï¼Œé¢„è®¡={},å®é™…å€¼={}", i, i, test_numbers_[i]);
         }
 
         co_return;
@@ -81,7 +81,7 @@ public:
 private:
     jaf::Coroutine<void> Deal(size_t number)
     {
-        co_await multi_thread_exec_.Switch(); // ÇĞ»»Ïß³ÌÖ´ĞĞ
+        co_await multi_thread_exec_.Switch(); // åˆ‡æ¢çº¿ç¨‹æ‰§è¡Œ
 
         EXPECT_NE(main_thread_id_, std::this_thread::get_id());
 
@@ -93,8 +93,8 @@ private:
 private:
     const int64_t deal_time = 10000;
     jaf::MultiThreadsExec multi_thread_exec_{10};
-    std::vector<int64_t> test_numbers_; // ²âÊÔÊı×é£¬ÓÃÓÚ¼ì²éÊÇ·ñÓĞÖØ¸´ºÍÒÅÂ©
-    std::thread::id main_thread_id_;    // Ö÷Ïß³Ìid£¬ÓÃÓÚ¼ì²éÊÇ·ñÕæµÄÇĞ»»µ½×ÓÏß³ÌÖ´ĞĞ
+    std::vector<int64_t> test_numbers_; // æµ‹è¯•æ•°ç»„ï¼Œç”¨äºæ£€æŸ¥æ˜¯å¦æœ‰é‡å¤å’Œé—æ¼
+    std::thread::id main_thread_id_;    // ä¸»çº¿ç¨‹idï¼Œç”¨äºæ£€æŸ¥æ˜¯å¦çœŸçš„åˆ‡æ¢åˆ°å­çº¿ç¨‹æ‰§è¡Œ
 };
 
 TEST(multi_threads_exec, usual)

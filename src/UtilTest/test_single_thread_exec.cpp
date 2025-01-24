@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-20 ½ª°²¸»
+// 2024-6-20 å§œå®‰å¯Œ
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
 #include "util/single_thread_exec.h"
@@ -41,19 +41,19 @@ public:
 public:
     jaf::CoroutineWithWait<void> Test()
     {
-        // ×¼±¸
+        // å‡†å¤‡
         latch.Reset();
         number_                = 0;
         simple_thread_exec_id_ = simple_thread_exec_.GetThreadId();
 
-        // Æô¶¯¶à¸öÏß³Ì
+        // å¯åŠ¨å¤šä¸ªçº¿ç¨‹
         for (int64_t i = 0; i < thread_number_; ++i)
         {
             std::thread run_thread([this, i]() { ThreadRun(i); });
             run_thread.join();
         }
 
-        // µÈ´ı¶àÏß³ÌÖ´ĞĞ½áÊø
+        // ç­‰å¾…å¤šçº¿ç¨‹æ‰§è¡Œç»“æŸ
         latch.Wait();
 
         EXPECT_EQ(number_, thread_number_ * thread_add_time_);
@@ -83,11 +83,11 @@ private:
     jaf::Coroutine<void> Add(int64_t thread_number, int64_t thread_add_time)
     {
         auto co_switch = simple_thread_exec_.Switch();
-        co_await co_switch; // ÇĞ»»µ½µ¥Ïß³ÌÖ´ĞĞ
+        co_await co_switch; // åˆ‡æ¢åˆ°å•çº¿ç¨‹æ‰§è¡Œ
 
         EXPECT_EQ(simple_thread_exec_id_, std::this_thread::get_id());
 
-        number_ = number_ + 1; // ÒÑ¾­ÇĞ»»µ½µ¥¸öÏß³ÌÁË£¬²»ĞèÒª¼ÓËø
+        number_ = number_ + 1; // å·²ç»åˆ‡æ¢åˆ°å•ä¸ªçº¿ç¨‹äº†ï¼Œä¸éœ€è¦åŠ é”
     }
 
 private:

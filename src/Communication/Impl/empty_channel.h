@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ������
+// 2024-6-16 姜安富
 #include "Interface/communication/i_channel.h"
 
 namespace jaf
@@ -28,8 +28,8 @@ namespace jaf
 namespace comm
 {
 
-// �յ�ͨ��ͨ��
-// ��ͨѶ�ӿڻ�ȡͨ��ʱ����û������ʱ���أ������п�
+// 空的通信通道
+// 在通讯接口获取通道时，若没有连接时返回，避免判空
 class EmptyChannel: public IChannel
 {
 public:

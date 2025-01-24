@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "timer.h"
 #include "get_time_tick.h"
 #include "util/red_black_tree.h"
@@ -101,7 +101,7 @@ void Timer::Work()
 {
     std::list<std::shared_ptr<STimerParaInter>> need_execute_tasks;
     std::list<std::shared_ptr<STimerParaInter>> need_stop_tasks;
-    uint64_t min_wait_time = 0xffffffffffffffff; // ËùÓĞÈÎÎñÖĞ×îĞ¡µÄµÈ´ıÊ±¼ä£¬ÓÃÓÚ¼ÆËãÏÂÒ»´ÎÖ´ĞĞĞèÒª¶à¾Ã
+    uint64_t min_wait_time = 0xffffffffffffffff; // æ‰€æœ‰ä»»åŠ¡ä¸­æœ€å°çš„ç­‰å¾…æ—¶é—´ï¼Œç”¨äºè®¡ç®—ä¸‹ä¸€æ¬¡æ‰§è¡Œéœ€è¦å¤šä¹…
 
     {
         std::unique_lock<std::mutex> ul(tasks_mutex_);
@@ -144,7 +144,7 @@ void Timer::Work()
         GainNeedExecuteTasks(need_execute_tasks, need_stop_tasks);
     }
 
-    // ´¦ÀíÊ£ÓàµÄËùÓĞ¶¨Ê±ÈÎÎñ
+    // å¤„ç†å‰©ä½™çš„æ‰€æœ‰å®šæ—¶ä»»åŠ¡
     TimerTree residue_tasks_time_time;
     {
         std::unique_lock<std::mutex> ul(tasks_mutex_);

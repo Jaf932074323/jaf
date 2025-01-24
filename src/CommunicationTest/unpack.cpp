@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "unpack.h"
 #include "log_head.h"
 #include <assert.h>
@@ -32,7 +32,7 @@ Unpack::Unpack(std::function<void(std::shared_ptr<jaf::comm::IPack>pack)> fun_de
 
 jaf::Coroutine<void> Unpack::Run(std::shared_ptr<jaf::comm::IChannel> channel)
 {
-    jaf::comm::RecvBuffer recv_buffer(channel); // ½ÓÊÕÊı¾İ»º´æ
+    jaf::comm::RecvBuffer recv_buffer(channel); // æ¥æ”¶æ•°æ®ç¼“å­˜
     recv_buffer.Init();
 
     while (true)

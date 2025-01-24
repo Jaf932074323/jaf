@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-8-19 ½ª°²¸»
+// 2024-8-19 å§œå®‰å¯Œ
 #include "Interface/i_get_time.h"
 #include "Interface/i_timer.h"
 #include "util/red_black_tree.h"
@@ -35,8 +35,8 @@ namespace jaf
 namespace time
 {
 
-// ¶¨Ê±Æ÷
-// Ê¹ÓÃ×Ô¶¨ÒåºìºÚÊ÷´æ´¢Ã¿¸ö¶¨Ê±ÈÎÎñ
+// å®šæ—¶å™¨
+// ä½¿ç”¨è‡ªå®šä¹‰çº¢é»‘æ ‘å­˜å‚¨æ¯ä¸ªå®šæ—¶ä»»åŠ¡
 class Timer : public ITimer
 {
 public:
@@ -44,65 +44,65 @@ public:
     virtual ~Timer();
 
 public:
-    // »ñÈ¡Ö´ĞĞÈÎÎñµÄÌáÇ°Á¿£¬Ã¿¸öÈÎÎñ¿ÉÒÔÌáÇ°Ö´ĞĞµÄÊ±¼ä(ºÁÃë)
+    // è·å–æ‰§è¡Œä»»åŠ¡çš„æå‰é‡ï¼Œæ¯ä¸ªä»»åŠ¡å¯ä»¥æå‰æ‰§è¡Œçš„æ—¶é—´(æ¯«ç§’)
     uint64_t GetLeadTime()
     {
         return lead_time_;
     }
-    // ÉèÖÃÖ´ĞĞÈÎÎñµÄÌáÇ°Á¿£¬Ã¿¸öÈÎÎñ¿ÉÒÔÌáÇ°Ö´ĞĞµÄÊ±¼ä(ºÁÃë)
+    // è®¾ç½®æ‰§è¡Œä»»åŠ¡çš„æå‰é‡ï¼Œæ¯ä¸ªä»»åŠ¡å¯ä»¥æå‰æ‰§è¡Œçš„æ—¶é—´(æ¯«ç§’)
     void SetLeadTime(uint64_t lead_time)
     {
         lead_time_ = lead_time;
     }
 
 public:
-    // Æô¶¯Ò»¸ö¶¨Ê±ÈÎÎñ
-    // task ¶¨Ê±ÈÎÎñĞÅÏ¢£¬ÔÚ¶¨Ê±ÈÎÎñ½áÊøÖ®Ç°£¬ĞèÒª±£Ö¤taskÓĞĞ§£¬·ñÔòÔÚ¶¨Ê±»Øµ÷Ê±£¬¿ÉÄÜ»áÒòÎªtaskÎŞĞ§¶ø±ÀÀ£
-    // ·µ»ØÊÇ·ñ³É¹¦
-    // µ±StartTask³É¹¦ºó£¬paraÖĞµÄ¶¨Ê±Ö´ĞĞº¯ÊıÒ»¶¨ÒªÖ´ĞĞÒ»´Î£¬ÇÒÖ»»áÖ´ĞĞÒ»´Î
+    // å¯åŠ¨ä¸€ä¸ªå®šæ—¶ä»»åŠ¡
+    // task å®šæ—¶ä»»åŠ¡ä¿¡æ¯ï¼Œåœ¨å®šæ—¶ä»»åŠ¡ç»“æŸä¹‹å‰ï¼Œéœ€è¦ä¿è¯taskæœ‰æ•ˆï¼Œå¦åˆ™åœ¨å®šæ—¶å›è°ƒæ—¶ï¼Œå¯èƒ½ä¼šå› ä¸ºtaskæ— æ•ˆè€Œå´©æºƒ
+    // è¿”å›æ˜¯å¦æˆåŠŸ
+    // å½“StartTaskæˆåŠŸåï¼Œparaä¸­çš„å®šæ—¶æ‰§è¡Œå‡½æ•°ä¸€å®šè¦æ‰§è¡Œä¸€æ¬¡ï¼Œä¸”åªä¼šæ‰§è¡Œä¸€æ¬¡
     virtual bool StartTask(STimerTask* task);
-    // Í£Ö¹Ò»¸ö¶¨Ê±ÈÎÎñ
-    // task ¶¨Ê±ÈÎÎñĞÅÏ¢
+    // åœæ­¢ä¸€ä¸ªå®šæ—¶ä»»åŠ¡
+    // task å®šæ—¶ä»»åŠ¡ä¿¡æ¯
     virtual void StopTask(STimerTask* task);
 
 private:
     struct STimerParaInter;
     using TimerTree = jaf::RedBlackTree<uint64_t, std::shared_ptr<STimerParaInter>>;
 
-    // ÄÚ²¿Ê¹ÓÃµÄ¶¨Ê±ÈÎÎñ²ÎÊı
+    // å†…éƒ¨ä½¿ç”¨çš„å®šæ—¶ä»»åŠ¡å‚æ•°
     struct STimerParaInter
     {
         STimerTask* timer_task = nullptr;
-        std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // ¶¨Ê±Ö´ĞĞº¯Êı
-        uint64_t time;                                                           // ¶¨Ê±ÈÎÎñµÄÖ´ĞĞÊ±¼äµã
-        Timer* timer_               = nullptr;                                   // ËùÊô¶¨Ê±Æ÷
-        bool timing_flag_           = false;                                     // µ±Ç°ÊÇ·ñ´¦ÓÚÕıÔÚ¶¨Ê±×´Ì¬
-        TimerTree::Node* timer_node = nullptr;                                   // ¶¨Ê±Æ÷ÈÎÎñµÄÊ÷½Úµã
+        std::function<void(ETimerResultType result_type, STimerTask* task)> fun; // å®šæ—¶æ‰§è¡Œå‡½æ•°
+        uint64_t time;                                                           // å®šæ—¶ä»»åŠ¡çš„æ‰§è¡Œæ—¶é—´ç‚¹
+        Timer* timer_               = nullptr;                                   // æ‰€å±å®šæ—¶å™¨
+        bool timing_flag_           = false;                                     // å½“å‰æ˜¯å¦å¤„äºæ­£åœ¨å®šæ—¶çŠ¶æ€
+        TimerTree::Node* timer_node = nullptr;                                   // å®šæ—¶å™¨ä»»åŠ¡çš„æ ‘èŠ‚ç‚¹
     };
 
 public:
-    // ¶¨Ê±Æ÷¹¤×÷Ïß³ÌÖ´ĞĞº¯Êı
+    // å®šæ—¶å™¨å·¥ä½œçº¿ç¨‹æ‰§è¡Œå‡½æ•°
     virtual void Work();
 
 private:
-    // Ö´ĞĞ´ïµ½Ê±¼äµÄÈÎÎñ
+    // æ‰§è¡Œè¾¾åˆ°æ—¶é—´çš„ä»»åŠ¡
     virtual void GainNeedExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks, std::list<std::shared_ptr<STimerParaInter>>& need_stop_tasks);
     virtual void ExecuteTasks(std::list<std::shared_ptr<STimerParaInter>>& need_execute_tasks, ETimerResultType result_type);
 
 private:
     std::shared_ptr<IGetTime> get_time_;
 
-    std::atomic<bool> run_flag_ = true; // ¹¤×÷Ïß³ÌÔËĞĞ±êÖ¾
+    std::atomic<bool> run_flag_ = true; // å·¥ä½œçº¿ç¨‹è¿è¡Œæ ‡å¿—
 
-    uint64_t next_task_id_ = 1; // ÏÂÒ»¸ö¶¨Ê±ÈÎÎñID
+    uint64_t next_task_id_ = 1; // ä¸‹ä¸€ä¸ªå®šæ—¶ä»»åŠ¡ID
 
-    std::atomic<uint64_t> lead_time_ = 5; // Ö´ĞĞÈÎÎñµÄÌáÇ°Á¿£¬Ã¿¸öÈÎÎñ¿ÉÒÔÌáÇ°lead_time_ºÁÃëÖ´ĞĞ
+    std::atomic<uint64_t> lead_time_ = 5; // æ‰§è¡Œä»»åŠ¡çš„æå‰é‡ï¼Œæ¯ä¸ªä»»åŠ¡å¯ä»¥æå‰lead_time_æ¯«ç§’æ‰§è¡Œ
 
     std::thread run_thread_;
-    std::condition_variable_any m_workCondition;             // ¶¨Ê±ÓÃÌõ¼ş±äÁ¿£¬ÓÃÆä³¬Ê±ÌØĞÔÀ´¶¨Ê±£¬ÔÚ¶¨Ê±µÄ¹ı³ÌÖĞÒ²ÄÜËæÊ±»½ĞÑ
-    std::mutex tasks_mutex_;                                 // ¶¨Ê±ÈÎÎñËø
-    TimerTree tasks_time_;                                   // ¶¨Ê±ÈÎÎñ¼¯ºÏ keyÎª¶¨Ê±ÈÎÎñµÄÖ´ĞĞÊ±¼äµã
-    std::list<std::shared_ptr<STimerParaInter>> tasks_stop_; // Ö÷¶¯Í£Ö¹µÄ¶¨Ê±ÈÎÎñ¼¯ºÏ
+    std::condition_variable_any m_workCondition;             // å®šæ—¶ç”¨æ¡ä»¶å˜é‡ï¼Œç”¨å…¶è¶…æ—¶ç‰¹æ€§æ¥å®šæ—¶ï¼Œåœ¨å®šæ—¶çš„è¿‡ç¨‹ä¸­ä¹Ÿèƒ½éšæ—¶å”¤é†’
+    std::mutex tasks_mutex_;                                 // å®šæ—¶ä»»åŠ¡é”
+    TimerTree tasks_time_;                                   // å®šæ—¶ä»»åŠ¡é›†åˆ keyä¸ºå®šæ—¶ä»»åŠ¡çš„æ‰§è¡Œæ—¶é—´ç‚¹
+    std::list<std::shared_ptr<STimerParaInter>> tasks_stop_; // ä¸»åŠ¨åœæ­¢çš„å®šæ—¶ä»»åŠ¡é›†åˆ
 };
 
 } // namespace time

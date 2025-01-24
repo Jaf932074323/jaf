@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "Interface/communication/i_unpack.h"
 #include "util/co_coroutine.h"
 #include <functional>
@@ -32,7 +32,7 @@ namespace jaf
 namespace comm
 {
 
-// TCP¿Í»§¶Ë
+// TCPå®¢æˆ·ç«¯
 class ITcpClient
 {
 public:
@@ -40,9 +40,9 @@ public:
 
 public:
     virtual void SetAddr(const std::string& remote_ip, uint16_t remote_port, const std::string& local_ip = "0.0.0.0", uint16_t local_port = 0) = 0;
-    // ÉèÖÃÁ¬½ÓÊ±¼ä
-    // connect_timeout Á¬½Ó³¬Ê±Ê±¼ä
-    // reconnect_wait_time ÖØÁ¬µÈ´ıÊ±¼ä
+    // è®¾ç½®è¿æ¥æ—¶é—´
+    // connect_timeout è¿æ¥è¶…æ—¶æ—¶é—´
+    // reconnect_wait_time é‡è¿ç­‰å¾…æ—¶é—´
     virtual void SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time)                             = 0;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) = 0;
     virtual jaf::Coroutine<void> Run()                                                                              = 0;

@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-8-16 ½ª°²¸»
+// 2024-8-16 å§œå®‰å¯Œ
 #include <assert.h>
 #include <stddef.h>
 #include <utility>
@@ -28,10 +28,10 @@
 namespace jaf
 {
 
-// ºìºÚÊ÷
-// ¼ü¿ÉÒÔÖØ¸´
-// ¶ÔÓÚÆäÖĞµÄÃ¿¸ö½Úµã£¬ÔÚ²åÈëÖ®ºó£¬É¾³ıÖ®Ç°£¬¶¼±£³Ö½ÚµãµØÖ·ÓĞĞ§²»±ä
-// TODO:ÓĞºÜ¶àÏ¸½Ú»¹ĞèÒªÒÔºóÍêÉÆ
+// çº¢é»‘æ ‘
+// é”®å¯ä»¥é‡å¤
+// å¯¹äºå…¶ä¸­çš„æ¯ä¸ªèŠ‚ç‚¹ï¼Œåœ¨æ’å…¥ä¹‹åï¼Œåˆ é™¤ä¹‹å‰ï¼Œéƒ½ä¿æŒèŠ‚ç‚¹åœ°å€æœ‰æ•ˆä¸å˜
+// TODO:æœ‰å¾ˆå¤šç»†èŠ‚è¿˜éœ€è¦ä»¥åå®Œå–„
 template <typename Key, typename Value>
 class RedBlackTree
 {
@@ -66,12 +66,12 @@ public:
         Iterator(RedBlackTree* tree, Node* cur);
         inline Iterator& operator++();
         inline Iterator& operator--();
-        //ÖØÔØ==ÔËËã·û
+        //é‡è½½==è¿ç®—ç¬¦
         inline bool operator==(const Iterator& other) const
         {
             return other.cur_ == cur_;
         }
-        //ÖØÔØ!=ÔËËã·û
+        //é‡è½½!=è¿ç®—ç¬¦
         inline bool operator!=(const Iterator& that) const
         {
             return !(*this == that);
@@ -98,7 +98,7 @@ public:
         }
 
     private:
-        Node* cur_; // µ±Ç°½Úµã
+        Node* cur_; // å½“å‰èŠ‚ç‚¹
         RedBlackTree* tree_;
     };
 
@@ -106,8 +106,8 @@ public:
 public:
     RedBlackTree()                               = default;
     ~RedBlackTree()                              = default;
-    RedBlackTree(const RedBlackTree&)            = delete; // ¿½±´½ÏÎª¸´ÔÓ£¬Ä¿Ç°ÏÈ½ûÖ¹
-    RedBlackTree& operator=(const RedBlackTree&) = delete; // ¿½±´½ÏÎª¸´ÔÓ£¬Ä¿Ç°ÏÈ½ûÖ¹
+    RedBlackTree(const RedBlackTree&)            = delete; // æ‹·è´è¾ƒä¸ºå¤æ‚ï¼Œç›®å‰å…ˆç¦æ­¢
+    RedBlackTree& operator=(const RedBlackTree&) = delete; // æ‹·è´è¾ƒä¸ºå¤æ‚ï¼Œç›®å‰å…ˆç¦æ­¢
 public:
     inline size_t Size()
     {
@@ -121,15 +121,15 @@ public:
     void Erase(const Key& key);
     Iterator Erase(Node* node);
     Iterator Erase(Iterator& it);
-    Iterator Erase(Iterator& first, Iterator& last); // ÒÆ³ı[first,last)
+    Iterator Erase(Iterator& first, Iterator& last); // ç§»é™¤[first,last)
 
     Iterator Find(const Key& key);
-    Iterator LowerBound(const Key& key); // »ñÈ¡µÚÒ»¸ö´óÓÚµÈÓÚkey½ÚµãµÄµü´úÆ÷,²»´æÔÚÊ±·µ»Øend()
-    Iterator UpperBound(const Key& key); // »ñÈ¡µÚÒ»¸ö´óÓÚkey½ÚµãµÄµü´úÆ÷,²»´æÔÚÊ±·µ»Øend()
+    Iterator LowerBound(const Key& key); // è·å–ç¬¬ä¸€ä¸ªå¤§äºç­‰äºkeyèŠ‚ç‚¹çš„è¿­ä»£å™¨,ä¸å­˜åœ¨æ—¶è¿”å›end()
+    Iterator UpperBound(const Key& key); // è·å–ç¬¬ä¸€ä¸ªå¤§äºkeyèŠ‚ç‚¹çš„è¿­ä»£å™¨,ä¸å­˜åœ¨æ—¶è¿”å›end()
 
 private:
-    Node* LowerBoundNode(const Key& key); // »ñÈ¡µÚÒ»¸ö´óÓÚµÈÓÚkeyµÄ½Úµã,²»´æÔÚÊ±·µ»Øend()
-    Node* UpperBoundNode(const Key& key); // »ñÈ¡µÚÒ»¸ö´óÓÚkeyµÄ½Úµã,²»´æÔÚÊ±·µ»Øend()
+    Node* LowerBoundNode(const Key& key); // è·å–ç¬¬ä¸€ä¸ªå¤§äºç­‰äºkeyçš„èŠ‚ç‚¹,ä¸å­˜åœ¨æ—¶è¿”å›end()
+    Node* UpperBoundNode(const Key& key); // è·å–ç¬¬ä¸€ä¸ªå¤§äºkeyçš„èŠ‚ç‚¹,ä¸å­˜åœ¨æ—¶è¿”å›end()
 
     Node* NestNode(Node* cur_node);
     Node* LastNode(Node* cur_node);
@@ -142,33 +142,33 @@ private:
     }
 
 private:
-    void AdjustAfterInsert(Node* node);      // ²åÈëÔªËØºóµ÷Õû
-    void AdjusBeforeDelete(Node* dele_node); // É¾³ıÔªËØÖ®Ç°µ÷Õû
-    inline void LeftRotate(Node* node);      // ×óĞı
-    inline void RightRotate(Node* node);     // ÓÒĞı
-    inline Node* SeekFormer(Node* node);     // ËÑË÷½ôÁÚµÄÇ°Ò»¸öÔªËØ
-    inline Node* SeekLater(Node* node);      // ËÑË÷½ôÁÚµÄºóÒ»¸öÔªËØ
-    inline static Node* Min(Node* node);     // ËÑË÷nodeÏÂµÄ×îĞ¡½Úµã
-    inline static Node* Max(Node* node);     // ËÑË÷nodeÏÂµÄ×î×î´ó½Úµã
+    void AdjustAfterInsert(Node* node);      // æ’å…¥å…ƒç´ åè°ƒæ•´
+    void AdjusBeforeDelete(Node* dele_node); // åˆ é™¤å…ƒç´ ä¹‹å‰è°ƒæ•´
+    inline void LeftRotate(Node* node);      // å·¦æ—‹
+    inline void RightRotate(Node* node);     // å³æ—‹
+    inline Node* SeekFormer(Node* node);     // æœç´¢ç´§é‚»çš„å‰ä¸€ä¸ªå…ƒç´ 
+    inline Node* SeekLater(Node* node);      // æœç´¢ç´§é‚»çš„åä¸€ä¸ªå…ƒç´ 
+    inline static Node* Min(Node* node);     // æœç´¢nodeä¸‹çš„æœ€å°èŠ‚ç‚¹
+    inline static Node* Max(Node* node);     // æœç´¢nodeä¸‹çš„æœ€æœ€å¤§èŠ‚ç‚¹
 
-    // ÊÇ·ñÊÇ×óº¢×Ó
+    // æ˜¯å¦æ˜¯å·¦å­©å­
     inline static bool IsLeftChild(Node* node)
     {
         assert(node->parent_ != nullptr);
         return node->parent_->left_child_ == node;
     }
-    // ÊÇ·ñÊÇÓÒº¢×Ó
+    // æ˜¯å¦æ˜¯å³å­©å­
     inline static bool IsRightChild(Node* node)
     {
         assert(node->parent_ != nullptr);
         return node->parent_->right_child_ == node;
     }
-    // ÊÇ·ñÊÇºìÉ«½Úµã
+    // æ˜¯å¦æ˜¯çº¢è‰²èŠ‚ç‚¹
     inline static bool IsRed(Node* node)
     {
         return node != nullptr && node->color_ == Color::COLOR_RED;
     }
-    // ÊÇ·ñÊÇºÚÉ«½Úµã
+    // æ˜¯å¦æ˜¯é»‘è‰²èŠ‚ç‚¹
     inline static bool IsBlack(Node* node)
     {
         return node == nullptr || node->color_ == Color::COLOR_BLACK;
@@ -187,7 +187,7 @@ public:
         return Iterator(this, nullptr);
     }
 
-    // ¿ÉÑ¡£ºÌá¹©Ò»¸ö³ÉÔ±º¯ÊıÀ´µ÷ÓÃÉÏÃæ¶¨ÒåµÄÓÑÔªº¯Êı
+    // å¯é€‰ï¼šæä¾›ä¸€ä¸ªæˆå‘˜å‡½æ•°æ¥è°ƒç”¨ä¸Šé¢å®šä¹‰çš„å‹å…ƒå‡½æ•°
     void Swap(RedBlackTree& other) noexcept
     {
         std::swap(root_, other.root_);
@@ -197,9 +197,9 @@ public:
     }
 
 private:
-    Node* root_  = nullptr; // ¸ù½Úµã
-    Node* min_   = nullptr; // ×îĞ¡½Úµã
-    Node* max_   = nullptr; // ×î´ó½Úµã
+    Node* root_  = nullptr; // æ ¹èŠ‚ç‚¹
+    Node* min_   = nullptr; // æœ€å°èŠ‚ç‚¹
+    Node* max_   = nullptr; // æœ€å¤§èŠ‚ç‚¹
     size_t size_ = 0;
 };
 
@@ -217,7 +217,7 @@ auto RedBlackTree<Key, Value>::Insert(const Key& key, const Value& value) -> cla
 
     Node* new_node = nullptr;
 
-    // ÏÈ²åÈë½Úµã,²åÈë½ÚµãÖ»»áÊÇÒ¶×Ó½Úµã
+    // å…ˆæ’å…¥èŠ‚ç‚¹,æ’å…¥èŠ‚ç‚¹åªä¼šæ˜¯å¶å­èŠ‚ç‚¹
     Node* parent = root_;
     while (true)
     {
@@ -251,7 +251,7 @@ auto RedBlackTree<Key, Value>::Insert(const Key& key, const Value& value) -> cla
         }
     }
 
-    // ÔÙµ÷Õû
+    // å†è°ƒæ•´
     AdjustAfterInsert(new_node);
     ++size_;
     return Iterator(this, new_node);
@@ -336,7 +336,7 @@ auto RedBlackTree<Key, Value>::Find(const Key& key) -> class RedBlackTree<Key, V
             node = node->right_child_;
         }
 
-        // ²»´æÔÚ¶ÔÓ¦¼üµÄ½Úµã
+        // ä¸å­˜åœ¨å¯¹åº”é”®çš„èŠ‚ç‚¹
         if (node == nullptr)
         {
             return Iterator(this, nullptr);
@@ -407,7 +407,7 @@ auto RedBlackTree<Key, Value>::UpperBoundNode(const Key& key) -> struct RedBlack
 template <typename Key, typename Value>
 auto RedBlackTree<Key, Value>::NestNode(Node* cur_node) -> RedBlackTree<Key, Value>::Node*
 {
-    assert(cur_node != nullptr); // endµü´úÆ÷²»¿ÉÒÔÔÚÔö¼Ó
+    assert(cur_node != nullptr); // endè¿­ä»£å™¨ä¸å¯ä»¥åœ¨å¢åŠ 
 
     if (cur_node->right_child_ != nullptr)
     {
@@ -458,18 +458,18 @@ auto RedBlackTree<Key, Value>::LastNode(Node* cur_node) -> RedBlackTree<Key, Val
 template <typename Key, typename Value>
 void RedBlackTree<Key, Value>::AdjustAfterInsert(Node* node)
 {
-    Node* parent      = nullptr; // ¸¸½Úµã
-    Node* grandparent = nullptr; // ×æ¸¸½Úµã
-    Node* uncle_node  = nullptr; // ÊåÊå½Úµã
+    Node* parent      = nullptr; // çˆ¶èŠ‚ç‚¹
+    Node* grandparent = nullptr; // ç¥–çˆ¶èŠ‚ç‚¹
+    Node* uncle_node  = nullptr; // å”å”èŠ‚ç‚¹
 
     while (true)
     {
-        assert(node->parent_ != nullptr); // node²»¿ÉÄÜÊÇ¸ù½Úµã
+        assert(node->parent_ != nullptr); // nodeä¸å¯èƒ½æ˜¯æ ¹èŠ‚ç‚¹
         if (node->parent_->color_ == Color::COLOR_BLACK)
         {
             return;
         }
-        assert(node->parent_->parent_ != nullptr); // µ±¸¸½ÚµãÊÇºìÉ«Ê±£¬¸¸½ÚµãÒ²²»¿ÉÄÜÊÇ¸ù½Úµã
+        assert(node->parent_->parent_ != nullptr); // å½“çˆ¶èŠ‚ç‚¹æ˜¯çº¢è‰²æ—¶ï¼Œçˆ¶èŠ‚ç‚¹ä¹Ÿä¸å¯èƒ½æ˜¯æ ¹èŠ‚ç‚¹
 
         parent      = node->parent_;
         grandparent = parent->parent_;
@@ -480,19 +480,19 @@ void RedBlackTree<Key, Value>::AdjustAfterInsert(Node* node)
             break;
         }
 
-        // ÊåÊå½ÚµãÊÇºìÉ«Ê±
+        // å”å”èŠ‚ç‚¹æ˜¯çº¢è‰²æ—¶
         parent->color_     = Color::COLOR_BLACK;
         uncle_node->color_ = Color::COLOR_BLACK;
         if (grandparent->parent_ == nullptr)
         {
-            // ×æ¸¸½ÚµãÎª¸ù½ÚµãÊ±£¬¾Í±íÊ¾ÒÑ¾­µ÷Õûµ½Î»
+            // ç¥–çˆ¶èŠ‚ç‚¹ä¸ºæ ¹èŠ‚ç‚¹æ—¶ï¼Œå°±è¡¨ç¤ºå·²ç»è°ƒæ•´åˆ°ä½
             return;
         }
         grandparent->color_ = Color::COLOR_RED;
         node                = grandparent;
     }
 
-    // ÊåÊå½ÚµãÊÇºÚÉ«Ê±
+    // å”å”èŠ‚ç‚¹æ˜¯é»‘è‰²æ—¶
     if (IsLeftChild(parent))
     {
         if (IsLeftChild(node))
@@ -533,9 +533,9 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
     assert(dele_node != nullptr);
     if (dele_node->left_child_ != nullptr && dele_node->right_child_ != nullptr)
     {
-        // É¾³ı½ÚµãÓĞ2¸ö×Ó½ÚµãÊ±
+        // åˆ é™¤èŠ‚ç‚¹æœ‰2ä¸ªå­èŠ‚ç‚¹æ—¶
 
-        // ²éÕÒÇ°Ò»¸ö½Úµã×÷ÎªÌæ´ú½Úµã
+        // æŸ¥æ‰¾å‰ä¸€ä¸ªèŠ‚ç‚¹ä½œä¸ºæ›¿ä»£èŠ‚ç‚¹
         Node* replace_node = dele_node->left_child_;
         if (replace_node->right_child_ == nullptr)
         {
@@ -600,12 +600,12 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         }
     }
 
-    // ÕâÊ±ºòÒªÉ¾³ıµÄ½Úµã×î¶àÖ»ÓĞÒ»¸ö×Ó½Úµã
+    // è¿™æ—¶å€™è¦åˆ é™¤çš„èŠ‚ç‚¹æœ€å¤šåªæœ‰ä¸€ä¸ªå­èŠ‚ç‚¹
     assert(dele_node->left_child_ == nullptr || dele_node->right_child_ == nullptr);
 
     if (IsRed(dele_node))
     {
-        // É¾³ı½ÚµãÎªºìÉ«Ê±£¬¿ÉÒÔÖ±½ÓÉ¾³ı
+        // åˆ é™¤èŠ‚ç‚¹ä¸ºçº¢è‰²æ—¶ï¼Œå¯ä»¥ç›´æ¥åˆ é™¤
         assert(dele_node->left_child_ == nullptr);
         assert(dele_node->right_child_ == nullptr);
         if (IsLeftChild(dele_node))
@@ -627,10 +627,10 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         return;
     }
 
-    // É¾³ı½Úµã´æÔÚÒ»¸ö×Ó½ÚµãµÄÇé¿ö
+    // åˆ é™¤èŠ‚ç‚¹å­˜åœ¨ä¸€ä¸ªå­èŠ‚ç‚¹çš„æƒ…å†µ
     if (dele_node->left_child_ != nullptr)
     {
-        // É¾³ı½ÚµãµÄ×ó×Ó½Úµã²»Îª¿Õ
+        // åˆ é™¤èŠ‚ç‚¹çš„å·¦å­èŠ‚ç‚¹ä¸ä¸ºç©º
         assert(dele_node->right_child_ == nullptr);
 
         Node* child = dele_node->left_child_;
@@ -666,7 +666,7 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
     }
     else if (dele_node->right_child_ != nullptr)
     {
-        // É¾³ı½ÚµãµÄÓÒ×Ó½Úµã²»Îª¿Õ
+        // åˆ é™¤èŠ‚ç‚¹çš„å³å­èŠ‚ç‚¹ä¸ä¸ºç©º
         assert(dele_node->left_child_ == nullptr);
 
         Node* child = dele_node->right_child_;
@@ -700,11 +700,11 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         return;
     }
 
-    // ÕâÊ±£¬É¾³ı½ÚµãÎªºÚÉ«£¬ÎŞ×Ó½Úµã
+    // è¿™æ—¶ï¼Œåˆ é™¤èŠ‚ç‚¹ä¸ºé»‘è‰²ï¼Œæ— å­èŠ‚ç‚¹
     assert(dele_node->left_child_ == nullptr);
     assert(dele_node->right_child_ == nullptr);
 
-    // É¾³ı½ÚµãÎª¸ù½ÚµãÊ±
+    // åˆ é™¤èŠ‚ç‚¹ä¸ºæ ¹èŠ‚ç‚¹æ—¶
     if (dele_node->parent_ == nullptr)
     {
         assert(root_ == dele_node);
@@ -714,13 +714,13 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         return;
     }
 
-    // ÕâÊ±£¬É¾³ı½ÚµãÎªºÚÉ«£¬ÎŞ×Ó½Úµã£¬²»Îª¸ù½Úµã
+    // è¿™æ—¶ï¼Œåˆ é™¤èŠ‚ç‚¹ä¸ºé»‘è‰²ï¼Œæ— å­èŠ‚ç‚¹ï¼Œä¸ä¸ºæ ¹èŠ‚ç‚¹
 
     Node* parent  = dele_node->parent_;
     Node* brother = GetBrother(dele_node);
     assert(brother != nullptr);
 
-    // ĞÖµÜÊÇºìÉ«Ê±
+    // å…„å¼Ÿæ˜¯çº¢è‰²æ—¶
     if (IsRed(brother))
     {
         parent->color_  = Color::COLOR_RED;
@@ -739,11 +739,11 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         brother = GetBrother(dele_node);
     }
 
-    // ÕâÊ±£¬É¾³ı½ÚµãÎªºÚÉ«£¬ÎŞ×Ó½Úµã£¬²»Îª¸ù½Úµã,ĞÖµÜÊÇºÚÉ«
+    // è¿™æ—¶ï¼Œåˆ é™¤èŠ‚ç‚¹ä¸ºé»‘è‰²ï¼Œæ— å­èŠ‚ç‚¹ï¼Œä¸ä¸ºæ ¹èŠ‚ç‚¹,å…„å¼Ÿæ˜¯é»‘è‰²
 
     if (IsRed(brother->left_child_))
     {
-        // ĞÖµÜ×ó×Ó½ÚµãÊÇºìÉ«
+        // å…„å¼Ÿå·¦å­èŠ‚ç‚¹æ˜¯çº¢è‰²
         if (IsLeftChild(dele_node))
         {
             RightRotate(brother);
@@ -775,7 +775,7 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
     }
     else if (IsRed(brother->right_child_))
     {
-        // ĞÖµÜÓÒ×Ó½ÚµãÊÇºìÉ«
+        // å…„å¼Ÿå³å­èŠ‚ç‚¹æ˜¯çº¢è‰²
         if (IsLeftChild(dele_node))
         {
             LeftRotate(parent);
@@ -830,7 +830,7 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         return;
     }
 
-    // ÕâÊ±£¬É¾³ı½Úµã¡¢¸¸½Úµã¡¢ĞÖµÜ½Úµã¡¢ĞÖµÜµÄ×óÓÒ×Ó½Úµã¶¼ÊÇºÚÉ«
+    // è¿™æ—¶ï¼Œåˆ é™¤èŠ‚ç‚¹ã€çˆ¶èŠ‚ç‚¹ã€å…„å¼ŸèŠ‚ç‚¹ã€å…„å¼Ÿçš„å·¦å³å­èŠ‚ç‚¹éƒ½æ˜¯é»‘è‰²
     brother->color_ = Color::COLOR_RED;
     if (IsLeftChild(dele_node))
     {
@@ -849,19 +849,19 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         }
     }
 
-    // ÕâÊ±£¬Õâ¸ö·ÖÖ§µÄÃ¿Ìõ×Ó·ÖÖ§µÄºÚÉ«½ÚµãµÄÊıÁ¿±ÈÆäËü·ÖÖ§ÉÙ1£¬ĞèÒªµ÷Õû
+    // è¿™æ—¶ï¼Œè¿™ä¸ªåˆ†æ”¯çš„æ¯æ¡å­åˆ†æ”¯çš„é»‘è‰²èŠ‚ç‚¹çš„æ•°é‡æ¯”å…¶å®ƒåˆ†æ”¯å°‘1ï¼Œéœ€è¦è°ƒæ•´
     Node* need_adjust_node = parent;
     while (true)
     {
         parent = need_adjust_node->parent_;
         if (parent == nullptr)
         {
-            // ¸ù½ÚµãÊ±£¬ÒÑ¾­µ÷Õûµ½Î»
+            // æ ¹èŠ‚ç‚¹æ—¶ï¼Œå·²ç»è°ƒæ•´åˆ°ä½
             return;
         }
 
         brother = GetBrother(need_adjust_node);
-        // ĞÖµÜÊÇºìÉ«Ê±
+        // å…„å¼Ÿæ˜¯çº¢è‰²æ—¶
         if (IsRed(brother))
         {
             parent->color_  = Color::COLOR_RED;
@@ -882,7 +882,7 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
 
         if (IsRed(brother->left_child_))
         {
-            // ĞÖµÜ×ó×Ó½ÚµãÊÇºìÉ«
+            // å…„å¼Ÿå·¦å­èŠ‚ç‚¹æ˜¯çº¢è‰²
             if (IsLeftChild(need_adjust_node))
             {
                 RightRotate(brother);
@@ -904,7 +904,7 @@ void RedBlackTree<Key, Value>::AdjusBeforeDelete(Node* dele_node)
         }
         else if (IsRed(brother->right_child_))
         {
-            // ĞÖµÜÓÒ×Ó½ÚµãÊÇºìÉ«
+            // å…„å¼Ÿå³å­èŠ‚ç‚¹æ˜¯çº¢è‰²
             if (IsLeftChild(need_adjust_node))
             {
                 LeftRotate(parent);
@@ -1083,7 +1083,7 @@ RedBlackTree<Key, Value>::Iterator::Iterator(RedBlackTree* tree, Node* cur)
 template <typename Key, typename Value>
 auto RedBlackTree<Key, Value>::Iterator::operator++() -> class RedBlackTree<Key, Value>::Iterator&
 {
-    assert(cur_ != nullptr); // endµü´úÆ÷²»¿ÉÒÔÔÚÔö¼Ó
+    assert(cur_ != nullptr); // endè¿­ä»£å™¨ä¸å¯ä»¥åœ¨å¢åŠ 
 
     cur_ = tree_->NestNode(cur_);
     return *this;

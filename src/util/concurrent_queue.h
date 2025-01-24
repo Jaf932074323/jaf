@@ -20,12 +20,12 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-23 ½ª°²¸»
+// 2024-6-23 å§œå®‰å¯Œ
 #include <queue>
 #include <mutex>
 #include <condition_variable>
 
-// Í¬²½¶ÓÁĞ
+// åŒæ­¥é˜Ÿåˆ—
 template<typename Data>
 class ConcurrentQueue
 {
@@ -58,7 +58,7 @@ public:
 		return true;
 	}
 
-	// µ±Ã»ÓĞÊı¾İÊ±¾Í×èÈûµÈ´ı Ö±µ½ÓĞÊı¾İ»òÕß±»Í¨ÖªÍË³ö
+	// å½“æ²¡æœ‰æ•°æ®æ—¶å°±é˜»å¡ç­‰å¾… ç›´åˆ°æœ‰æ•°æ®æˆ–è€…è¢«é€šçŸ¥é€€å‡º
 	bool WaitAndPop(Data& data)
 	{
 		std::unique_lock<std::mutex> lg(data_queue_mutex_);
@@ -76,7 +76,7 @@ public:
 		return true;		
 	}
 	
-	// µ±×èÈûµÈ´ıÊ±£¬Òì²½Í¨ÖªÍË³öµÈ´ı
+	// å½“é˜»å¡ç­‰å¾…æ—¶ï¼Œå¼‚æ­¥é€šçŸ¥é€€å‡ºç­‰å¾…
 	void QuitAllWait()
 	{
 		{
@@ -96,12 +96,12 @@ public:
 	{
 		std::unique_lock<std::mutex> lg(data_queue_mutex_);
 		quit_wait_ = false;
-		swap(std::queue<Data>(), data_queue_); // Çå¿Õ
+		swap(std::queue<Data>(), data_queue_); // æ¸…ç©º
 	}
 
 private:
 	std::condition_variable data_queue_cv_; // 
-	std::mutex data_queue_mutex_; // Í¬²½»¥³âÁ¿
-	std::queue<Data> data_queue_; // Êı¾İ¶ÓÁĞ
+	std::mutex data_queue_mutex_; // åŒæ­¥äº’æ–¥é‡
+	std::queue<Data> data_queue_; // æ•°æ®é˜Ÿåˆ—
 	bool quit_wait_ = false;
 };

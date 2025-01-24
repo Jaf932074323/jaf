@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "Interface/communication/i_recv_buffer.h"
 
 namespace jaf
@@ -28,7 +28,7 @@ namespace jaf
 namespace comm
 {
 
-// ½ÓÊÕÊı¾İ»º´æ
+// æ¥æ”¶æ•°æ®ç¼“å­˜
 class RecvBuffer : public IRecvBuffer
 {
 public:
@@ -36,45 +36,45 @@ public:
     virtual ~RecvBuffer();
 
 public:
-    // ÉèÖÃ¶ÁÈ¡»º´æÅäÖÃ
-    // buff_len »º´æ´óĞ¡
-    // receive_min_buff_len Ò»´Î¶ÁÈ¡ĞèÒªµÄ×îĞ¡»º´æ´óĞ¡
+    // è®¾ç½®è¯»å–ç¼“å­˜é…ç½®
+    // buff_len ç¼“å­˜å¤§å°
+    // receive_min_buff_len ä¸€æ¬¡è¯»å–éœ€è¦çš„æœ€å°ç¼“å­˜å¤§å°
     virtual void SetRecvConfig(size_t buff_len, size_t receive_min_buff_len) override;
 
     virtual void Init() override;
 
-    // »ñÈ¡¶ÁÊı¾İÓÃµÄ»º´æ£¬ÓÃÓÚ¶ÁÈ¡Êı¾İ
+    // è·å–è¯»æ•°æ®ç”¨çš„ç¼“å­˜ï¼Œç”¨äºè¯»å–æ•°æ®
     virtual SData GetRecvBuff() override;
-    // ÒÑ¾­½ÓÊÕÁËlen³¤¶ÈµÄÊı¾İÔÚ»º´æÖĞ
+    // å·²ç»æ¥æ”¶äº†lené•¿åº¦çš„æ•°æ®åœ¨ç¼“å­˜ä¸­
     virtual void RecvData(size_t len) override;
 
-    // »ñÈ¡ÒÑ¾­½ÓÊÕµ½µÄÊı¾İ
+    // è·å–å·²ç»æ¥æ”¶åˆ°çš„æ•°æ®
     virtual SConstData GetRecvData() override;
 
-    // ´ÓÇ°ÃæÒÆ³ıÒ»¶ÎÊı¾İ
+    // ä»å‰é¢ç§»é™¤ä¸€æ®µæ•°æ®
     virtual void RemoveFront(size_t len) override;
-    // ½«start_indexÎ»ÖÃµÄlen³¤¶ÈÊı¾İ·â×°³Éµ¥¶ÀµÄÊı¾İ¶ÁÈ¡Æ÷
+    // å°†start_indexä½ç½®çš„lené•¿åº¦æ•°æ®å°è£…æˆå•ç‹¬çš„æ•°æ®è¯»å–å™¨
     virtual std::shared_ptr<IPack> GetPack(size_t start_index, size_t len) override;
 
-    // »ñÈ¡¶ÔÓ¦µÄÍ¨µÀ
+    // è·å–å¯¹åº”çš„é€šé“
     virtual std::shared_ptr<IChannel> GetChannel() override;
 
 private:
-    // ÇĞ»»ÎªĞÂµÄ½ÓÊÕÊı¾İ»º´æ
+    // åˆ‡æ¢ä¸ºæ–°çš„æ¥æ”¶æ•°æ®ç¼“å­˜
     void SwitchNewRecvBuff();
 
 private:
     std::shared_ptr<IChannel> channel_;
 
-    size_t total_buff_len_       = 10 * 1024 * 1024; // ×Ü»º´æ´óĞ¡
-    size_t receive_min_buff_len_ = 1024 * 1024;      // Ò»´Î¶ÁÈ¡ĞèÒªµÄ×îĞ¡»º´æ´óĞ¡
+    size_t total_buff_len_       = 10 * 1024 * 1024; // æ€»ç¼“å­˜å¤§å°
+    size_t receive_min_buff_len_ = 1024 * 1024;      // ä¸€æ¬¡è¯»å–éœ€è¦çš„æœ€å°ç¼“å­˜å¤§å°
 
-    std::shared_ptr<unsigned char[]> buff_ = nullptr; // »º´æ°üº¬3¸ö²¿·Ö£¬1.Ç°ÃæÒÑ¾­±»ÒÆ³ıµÄÊı¾İ£¬2.ÒÑ¾­½ÓÊÕµÄÊı¾İ£¬3.µÈ´ı½ÓÊÕÊı¾İµÄ²¿·Ö
-    size_t curr_buff_len_                  = 0;       // µ±Ç°»º´æ´óĞ¡
+    std::shared_ptr<unsigned char[]> buff_ = nullptr; // ç¼“å­˜åŒ…å«3ä¸ªéƒ¨åˆ†ï¼Œ1.å‰é¢å·²ç»è¢«ç§»é™¤çš„æ•°æ®ï¼Œ2.å·²ç»æ¥æ”¶çš„æ•°æ®ï¼Œ3.ç­‰å¾…æ¥æ”¶æ•°æ®çš„éƒ¨åˆ†
+    size_t curr_buff_len_                  = 0;       // å½“å‰ç¼“å­˜å¤§å°
 
-    unsigned char* recv_data_ = nullptr; // ½ÓÊÕÊı¾İµÄÆğÊ¼µØÖ· Ö¸ÏòÒÑ¾­½ÓÊÕÁËÊı¾İµÄ²¿·Ö
-    size_t recv_len_          = 0;       // ÒÑ½ÓÊÕÊı¾İµÄ»º´æ³¤¶È
-    size_t wait_recv_len_     = 0;       // µÈ´ı½ÓÊÕÊı¾İµÄ»º´æ³¤¶È
+    unsigned char* recv_data_ = nullptr; // æ¥æ”¶æ•°æ®çš„èµ·å§‹åœ°å€ æŒ‡å‘å·²ç»æ¥æ”¶äº†æ•°æ®çš„éƒ¨åˆ†
+    size_t recv_len_          = 0;       // å·²æ¥æ”¶æ•°æ®çš„ç¼“å­˜é•¿åº¦
+    size_t wait_recv_len_     = 0;       // ç­‰å¾…æ¥æ”¶æ•°æ®çš„ç¼“å­˜é•¿åº¦
 };
 
 } // namespace comm

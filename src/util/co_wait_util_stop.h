@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-23 ������
+// 2024-6-23 姜安富
 #include "util/co_coroutine.h"
 #include <assert.h>
 #include <mutex>
@@ -28,7 +28,7 @@
 namespace jaf
 {
 
-// �ȴ�֪ͨ
+// 等待通知
 class CoWaitUtilStop
 {
 public:
@@ -48,7 +48,7 @@ public:
 
     jaf::Coroutine<void> Wait()
     {
-        assert(!wait_flag_); // ͬʱֻ�ܵȴ�һ��
+        assert(!wait_flag_); // 同时只能等待一个
         wait_flag_ = true;
 
         co_await awaitable_;

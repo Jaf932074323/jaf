@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "Impl/communication_include.h"
 #include "Interface/communication/i_pack.h"
 #include "Interface/communication/i_serial_port.h"
@@ -32,7 +32,7 @@
 #include "util/latch.h"
 #include <memory>
 
-// ´¦ÀíÍ¨ĞÅÍ¨µÀÍ¨ĞÅÍ¨µÀ ¸ºÔğ´ÓÍ¨µÀ¶ÁĞ´Êı¾İ
+// å¤„ç†é€šä¿¡é€šé“é€šä¿¡é€šé“ è´Ÿè´£ä»é€šé“è¯»å†™æ•°æ®
 class Main
 {
 public:
@@ -41,7 +41,7 @@ public:
 
     jaf::Coroutine<void> Run();
     void Stop();
-    void WaitFinish(); // ×èÈûµÈ´ıRun½áÊø
+    void WaitFinish(); // é˜»å¡ç­‰å¾…Runç»“æŸ
 
 private:
     void Init();

@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 
 #include "serial_port.h"
@@ -130,7 +130,7 @@ bool SerialPort::OpenSerialPort()
         return false;
     }
 
-    // TODO:ÕâÐ©²ÎÊýµÄÉèÖÃ»áÓ°Ïì¶ÁÐ´Ð§¹û£¬ºóÐøÐèÒªÌá¹©½Ó¿ÚÈÃÓÃ»§ÅäÖÃ
+    // TODO:è¿™äº›å‚æ•°çš„è®¾ç½®ä¼šå½±å“è¯»å†™æ•ˆæžœï¼ŒåŽç»­éœ€è¦æä¾›æŽ¥å£è®©ç”¨æˆ·é…ç½®
     // timeout
     COMMTIMEOUTS timeouts;
     GetCommTimeouts(comm_handle, &timeouts);

@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 
 namespace jaf
 {
@@ -29,7 +29,7 @@ namespace log
 
 struct Logger::Impl
 {
-    std::shared_ptr<IAppender> appender_; // ÈÕÖ¾Êä³öÆ÷
+    std::shared_ptr<IAppender> appender_; // æ—¥å¿—è¾“å‡ºå™¨
 };
 
 Logger::Logger(std::shared_ptr<IAppender> appender)

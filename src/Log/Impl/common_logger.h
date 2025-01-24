@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "define_log_export.h"
 #include "Interface/log/i_logger.h"
 #include <memory>
@@ -31,7 +31,7 @@ namespace jaf
 namespace log
 {
 
-// ¹«ÓÃÈÕÖ¾
+// å…¬ç”¨æ—¥å¿—
 class API_LOG_EXPORT CommonLogger
 {
     CommonLogger();

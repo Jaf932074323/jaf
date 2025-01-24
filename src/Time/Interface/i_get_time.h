@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ������
+// 2024-6-16 姜安富
 #include <stdint.h>
 
 namespace jaf
@@ -28,14 +28,14 @@ namespace jaf
 namespace time
 {
 
-// ������
+// 过滤器
 class IGetTime
 {
 public:
     virtual ~IGetTime(){};
 
 public:
-    // ��ȡ��ǰʱ�䣬��ͬ�ķ�ʽ��ȡ��ʱ�䣬�õ��Ķ�ʱ���Ȳ���ͬ
+    // 获取当前时间，不同的方式获取的时间，得到的定时精度不相同
     virtual uint64_t GetNowTime() = 0;
 };
 

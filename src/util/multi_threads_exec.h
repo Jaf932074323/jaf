@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-23 ½ª°²¸»
+// 2024-6-23 å§œå®‰å¯Œ
 #include "co_wait_util_stop.h"
 #include "threads_exec.h"
 #include <thread>
@@ -29,7 +29,7 @@
 namespace jaf
 {
 
-// ¶àÏß³ÌÖ´ĞĞ
+// å¤šçº¿ç¨‹æ‰§è¡Œ
 class MultiThreadsExec
 {
 public:
@@ -77,14 +77,14 @@ public:
         }
     }
 
-    // »ñÈ¡ÇĞ»»Ïß³ÌµÄµÈ´ı¶ÔÏó
+    // è·å–åˆ‡æ¢çº¿ç¨‹çš„ç­‰å¾…å¯¹è±¡
     auto Switch()
     {
         assert(runing_);
         return threads_exec_.Switch();
     }
 
-    // Ö±½ÓÍ¶µİÒªÖ´ĞĞµÄÈÎÎñ£¬²»Ê¹ÓÃĞ­³Ì¹¦ÄÜ
+    // ç›´æ¥æŠ•é€’è¦æ‰§è¡Œçš„ä»»åŠ¡ï¼Œä¸ä½¿ç”¨åç¨‹åŠŸèƒ½
     void Post(std::function<void()> fun)
     {
         threads_exec_.Post(fun);

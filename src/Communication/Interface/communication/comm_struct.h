@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include <functional>
 
 namespace jaf
@@ -28,14 +28,14 @@ namespace jaf
 namespace comm
 {
 
-// Êı¾İ
+// æ•°æ®
 struct SData
 {
     unsigned char* buff = nullptr;
     size_t len          = 0;
 };
 
-// ÒÑ¶ÁÈ¡Êı¾İ
+// å·²è¯»å–æ•°æ®
 struct SConstData
 {
     const unsigned char* buff = nullptr;

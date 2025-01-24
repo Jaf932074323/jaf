@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 
 #include "Interface/communication/i_udp.h"
@@ -61,7 +61,7 @@ private:
 private:
     IGetCompletionPort* get_completion_port_ = nullptr;
     HANDLE completion_handle_                = nullptr;
-    SOCKET socket_                           = 0; // ÕìÌıÌ×½Ó×Ö
+    SOCKET socket_                           = 0; // ä¾¦å¬å¥—æ¥å­—
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
@@ -70,7 +70,7 @@ private:
     std::string remote_ip_ = "0.0.0.0";
     uint16_t remote_port_  = 0;
 
-    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // ²Ù×÷Í¨µÀ
+    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // æ“ä½œé€šé“
     std::mutex channel_mutex_;
     std::atomic<bool> run_flag_        = false;
     std::shared_ptr<IChannel> channel_ = std::make_shared<EmptyChannel>();

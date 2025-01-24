@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 
 #include "Interface/communication/comm_struct.h"
@@ -38,7 +38,7 @@ namespace jaf
 namespace comm
 {
 
-// TCPÍ¨µÀ
+// TCPé€šé“
 class UdpChannel : public IChannel
 {
     struct AwaitableResult;
@@ -62,7 +62,7 @@ private:
     std::shared_ptr<jaf::time::ITimer> timer_;
 
     HANDLE completion_handle_ = nullptr;
-    SOCKET socket_            = 0; // ÊÕ·¢Êı¾İµÄÌ×½Ó×Ö
+    SOCKET socket_            = 0; // æ”¶å‘æ•°æ®çš„å¥—æ¥å­—
     std::string remote_ip_;
     uint16_t remote_port_ = 0;
     std::string local_ip_;

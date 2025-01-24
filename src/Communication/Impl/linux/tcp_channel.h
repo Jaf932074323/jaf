@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-12-28 ½ª°²¸»
+// 2024-12-28 å§œå®‰å¯Œ
 #ifdef _WIN32
 #elif defined(__linux__)
 
@@ -41,7 +41,7 @@ namespace jaf
 namespace comm
 {
 
-// TCPÍ¨µÀ
+// TCPé€šé“
 class TcpChannel : public IChannel
 {
     struct AwaitableResult;
@@ -67,8 +67,8 @@ private:
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
-    int socket_   = 0;  // ÊÕ·¢Êı¾İµÄÌ×½Ó×Ö
-    int epoll_fd_ = -1; // epollÃèÊö·û
+    int socket_   = 0;  // æ”¶å‘æ•°æ®çš„å¥—æ¥å­—
+    int epoll_fd_ = -1; // epollæè¿°ç¬¦
     std::string remote_ip_;
     uint16_t remote_port_ = 0;
     std::string local_ip_;
@@ -77,10 +77,10 @@ private:
     jaf::ControlStartStop control_start_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;
 
-    EpollData epoll_data_; // Á¬½ÓÊ±ÓÃµÄÍ¨Ñ¶Êı¾İ
+    EpollData epoll_data_; // è¿æ¥æ—¶ç”¨çš„é€šè®¯æ•°æ®
 
-    std::atomic<bool> close_flag_   = true;  // Ì×½Ó×ÖÊÇ·ñÒÑ¾­¹Ø±Õ±êÖ¾
-    std::atomic<bool> write_status_ = false; // ÊÇ·ñ¿ÉĞ´
+    std::atomic<bool> close_flag_   = true;  // å¥—æ¥å­—æ˜¯å¦å·²ç»å…³é—­æ ‡å¿—
+    std::atomic<bool> write_status_ = false; // æ˜¯å¦å¯å†™
 
     TcpChannelRead tcp_channel_read_;
     TcpChannelWrite tcp_channel_write_;

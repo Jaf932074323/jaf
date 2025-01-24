@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-9-27 ½ª°²¸»
+// 2024-9-27 å§œå®‰å¯Œ
 #include "util/control_start_stop.h"
 #include <assert.h>
 #include <memory>
@@ -29,7 +29,7 @@
 namespace jaf
 {
 
-// µÈ´ıÖ±µ½±»¿ØÖÆÍ£Ö¹
+// ç­‰å¾…ç›´åˆ°è¢«æ§åˆ¶åœæ­¢
 struct CoWaitUtilControlledStop
 {
     CoWaitUtilControlledStop(ControlStartStop& control_start_stop)
@@ -61,7 +61,7 @@ private:
     {
         {
             std::unique_lock<std::mutex> lock(mutex_);
-            assert(run_flag_ ? true : !wait_flag_); // Èç¹ûÃ»ÓĞÔËĞĞ£¬ÔòÒ»¶¨Ò²²»»áµÈ´ı
+            assert(run_flag_ ? true : !wait_flag_); // å¦‚æœæ²¡æœ‰è¿è¡Œï¼Œåˆ™ä¸€å®šä¹Ÿä¸ä¼šç­‰å¾…
             run_flag_ = false;
             if (!wait_flag_)
             {
@@ -102,7 +102,7 @@ public:
             {
                 return false;
             }
-            assert(!wait_flag_); // ²»ÄÜÍ¬Ê±µÈ´ı¶à´Î
+            assert(!wait_flag_); // ä¸èƒ½åŒæ—¶ç­‰å¾…å¤šæ¬¡
             wait_flag_ = true;
         }
 
@@ -121,8 +121,8 @@ private:
     std::shared_ptr<ControlStartStop::Agent> agent_;
 
     std::mutex mutex_;
-    bool run_flag_  = true;  // µ±Ç°ÊÇ·ñÕıÔÚÔËĞĞ
-    bool wait_flag_ = false; // µ±Ç°ÊÇ·ñÓĞµÈ´ı¶ÔÏó
+    bool run_flag_  = true;  // å½“å‰æ˜¯å¦æ­£åœ¨è¿è¡Œ
+    bool wait_flag_ = false; // å½“å‰æ˜¯å¦æœ‰ç­‰å¾…å¯¹è±¡
 };
 
 } // namespace jaf

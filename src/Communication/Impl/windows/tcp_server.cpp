@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #ifdef _WIN32
 
 #include "tcp_server.h"
@@ -72,7 +72,7 @@ static LPFN_ACCEPTEX GetAcceptEx(SOCKET a_socket)
 struct TcpServer::AcceptAwaitableResult
 {
     SOCKET sock_{INVALID_SOCKET};
-    int err_ = 0; // ´íÎó´úÂë
+    int err_ = 0; // é”™è¯¯ä»£ç 
 };
 
 class TcpServer::AcceptAwaitable
@@ -88,7 +88,7 @@ public:
     void Stop();
 
 private:
-    SOCKET listen_socket_ = 0; // ÕìÌıÌ×½Ó×Ö
+    SOCKET listen_socket_ = 0; // ä¾¦å¬å¥—æ¥å­—
     IOCP_DATA iocp_data_;
     std::coroutine_handle<> handle_;
 
@@ -97,7 +97,7 @@ private:
     DWORD dwBytes_ = 0;
 
     std::mutex mutex_;
-    bool callback_flag_ = false; // ÒÑ¾­»Øµ÷±ê¼Ç
+    bool callback_flag_ = false; // å·²ç»å›è°ƒæ ‡è®°
 };
 
 TcpServer::TcpServer(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
@@ -178,7 +178,7 @@ void TcpServer::Stop()
 
 Coroutine<void> TcpServer::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
-    std::map<std::string, std::shared_ptr<IChannel>> channels; // µ±Ç°Á¬½ÓµÄËùÓĞÍ¨µÀ keyÓÉIPºÍ¶Ë¿Ú
+    std::map<std::string, std::shared_ptr<IChannel>> channels; // å½“å‰è¿æ¥çš„æ‰€æœ‰é€šé“ keyç”±IPå’Œç«¯å£
     {
         std::unique_lock<std::mutex> ul(channels_mutex_);
         channels = channels_;
@@ -282,7 +282,7 @@ jaf::Coroutine<void> TcpServer::RunSocket(SOCKET socket)
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
-    // »ñÈ¡µ½Ô¶¶ËºÍ±¾µØµÄ¶Ë¿ÚµØÖ·
+    // è·å–åˆ°è¿œç«¯å’Œæœ¬åœ°çš„ç«¯å£åœ°å€
     if (setsockopt(socket, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*) &listen_socket_, sizeof(listen_socket_)) == SOCKET_ERROR)
     {
         errno = WSAGetLastError();
@@ -307,7 +307,7 @@ jaf::Coroutine<void> TcpServer::RunSocket(SOCKET socket)
     if (CreateIoCompletionPort((HANDLE) socket, completion_handle_, 0, 0) == 0)
     {
         DWORD dw            = GetLastError();
-        std::string str_err = std::format("°ó¶¨Íê³É¶Ë¿ÚÊ§°Ü,±¾µØ{}:{},Ô¶³Ì{}:{},code:{},{}",
+        std::string str_err = std::format("ç»‘å®šå®Œæˆç«¯å£å¤±è´¥,æœ¬åœ°{}:{},è¿œç¨‹{}:{},code:{},{}",
             local_ip, local_port,
             remote_ip, remote_port,
             dw, GetFormatMessage(dw));

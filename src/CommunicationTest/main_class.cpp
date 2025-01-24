@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 #include "main_class.h"
 #include "log_head.h"
 #include "unpack.h"
@@ -104,6 +104,6 @@ void Main::Deal(std::shared_ptr<jaf::comm::IPack> pack)
 {
     auto [buff, len] = pack->GetData();
     std::string str((const char*) buff, len);
-    LOG_INFO() << "½ÓÊÕ:" << str;
+    LOG_INFO() << "æŽ¥æ”¶:" << str;
     pack->GetChannel()->Write(buff, len, 1000);
 }

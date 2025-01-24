@@ -19,7 +19,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-10-19 ½ª°²¸»
+// 2024-10-19 å§œå®‰å¯Œ
 #include "Communication/Impl/communication_include.h"
 #include "Interface/communication/i_serial_port.h"
 #include "Interface/communication/i_tcp_client.h"
@@ -43,7 +43,7 @@ TEST(serial, usual)
         jaf::Coroutine<void> communication_run = communication.Run();
 
         std::string str = "hello world!";
-        jaf::CoWaitNotices wait_recv; // µÈ´ý½ÓÊÕÍ¨Öª
+        jaf::CoWaitNotices wait_recv; // ç­‰å¾…æŽ¥æ”¶é€šçŸ¥
 
         auto fun_deal = [&](std::shared_ptr<jaf::comm::IPack> pack) -> jaf::CoroutineWithWait<void> {
             auto [buff, len] = pack->GetData();

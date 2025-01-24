@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 ½ª°²¸»
+// 2024-6-16 å§œå®‰å¯Œ
 
 #ifdef _WIN32
 
@@ -37,7 +37,7 @@ namespace jaf
 namespace comm
 {
 
-// windowsÆ½Ì¨ÏÂµÄÍ¨Ñ¶Àà
+// windowså¹³å°ä¸‹çš„é€šè®¯ç±»
 class Communication : public ICommunication
 {
 public:
@@ -56,9 +56,9 @@ public:
     virtual std::shared_ptr<ISerialPort> CreateSerialPort() override;
 
 private:
-    // ´´½¨¹¤×÷Ïß³Ì
+    // åˆ›å»ºå·¥ä½œçº¿ç¨‹
     void CreateWorkThread();
-    // ¹¤×÷Ïß³ÌÖ´ĞĞ
+    // å·¥ä½œçº¿ç¨‹æ‰§è¡Œ
     void WorkThreadRun();
 
 private:
@@ -86,16 +86,16 @@ private:
 
 private:
     HANDLE m_completionPort = 0;
-    CompletionPort get_completion_port_; // »ñÈ¡Íê³É¶Ë¿Ú¶ÔÏó
+    CompletionPort get_completion_port_; // è·å–å®Œæˆç«¯å£å¯¹è±¡
 
-    bool run_flag_ = false; // ÔËĞĞ±êÖ¾
+    bool run_flag_ = false; // è¿è¡Œæ ‡å¿—
 
     size_t work_thread_count_ = 1;
     std::shared_ptr<IThreadPool> thread_pool_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
-    CoWaitNotices wait_work_thread_finish_; // µÈ´ı¹¤×÷Ïß³Ì½áÊø
+    CoWaitNotices wait_work_thread_finish_; // ç­‰å¾…å·¥ä½œçº¿ç¨‹ç»“æŸ
 
     CoWaitUtilStop wait_stop_;
 };
