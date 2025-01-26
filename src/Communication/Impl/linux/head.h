@@ -24,6 +24,7 @@
 #ifdef _WIN32
 #elif defined(__linux__)
 
+#include "Interface/communication/i_channel.h"
 #include "Time/Interface/i_timer.h"
 #include <functional>
 #include <mutex>
@@ -46,12 +47,11 @@ struct WSABUF
     char* buf;    /* the pointer to the buffer */
 };
 
-struct ReadCommunData
+template <typename AppendData>
+struct CommunData
 {
     std::function<void(void)> call_;
-    uint32_t need_len_         = 0;
-    unsigned char* result_buf_ = nullptr;
-    
+
     std::mutex mutex_;
 
     jaf::time::STimerTask timeout_task_;
@@ -60,23 +60,10 @@ struct ReadCommunData
     bool finish_flag_  = false;
 
     SChannelResult result;
+    AppendData append_data_;
 };
 
-struct WriteCommunData
-{
-    std::function<void(void)> call_;
-    uint32_t need_len_         = 0;
-    const unsigned char* result_buf_ = nullptr;
-    
-    std::mutex mutex_;
 
-    jaf::time::STimerTask timeout_task_;
-
-    bool timeout_flag_ = false;
-    bool finish_flag_  = false;
-
-    SChannelResult result;
-};
 
 } // namespace comm
 } // namespace jaf

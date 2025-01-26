@@ -28,13 +28,12 @@
 #include "Interface/communication/i_channel.h"
 #include "global_timer/co_await_time.h"
 #include "head.h"
-#include "tcp_channel_read.h"
+#include "tcp_channel_read_write_helper.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
 #include <functional>
 #include <memory>
 #include <string>
-#include "tcp_channel_write.h"
 
 namespace jaf
 {
@@ -82,8 +81,28 @@ private:
     std::atomic<bool> close_flag_   = true;  // 套接字是否已经关闭标志
     std::atomic<bool> write_status_ = false; // 是否可写
 
-    TcpChannelRead tcp_channel_read_;
-    TcpChannelWrite tcp_channel_write_;
+    struct ReadAppendata
+    {
+        uint32_t need_len_         = 0;
+        unsigned char* result_buf_ = nullptr;
+    };
+    class TcpChannelReadHelper : public TcpChannelReadWriteHelper<ReadAppendata>
+    {
+        virtual void Operate(CommunData<ReadAppendata>* data) override;
+    };
+
+    struct WriteAppendata
+    {
+        uint32_t need_len_               = 0;
+        const unsigned char* result_buf_ = nullptr;
+    };
+    class TcpChannelWriteHelper : public TcpChannelReadWriteHelper<WriteAppendata>
+    {
+        virtual void Operate(CommunData<WriteAppendata>* data) override;
+    };
+
+    TcpChannelReadHelper tcp_channel_read_;
+    TcpChannelWriteHelper tcp_channel_write_;
 };
 
 

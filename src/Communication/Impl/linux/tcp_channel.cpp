@@ -27,11 +27,11 @@
 #include "Impl/tool/run_with_timeout.h"
 #include "Log/log_head.h"
 #include "head.h"
+#include "tcp_channel_read_write_helper.ipp"
 #include "util/co_wait_util_controlled_stop.h"
 #include "util/finally.h"
 #include <assert.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <format>
 #include <memory.h>
 #include <string.h>
@@ -57,13 +57,13 @@ public:
         , buff_(buff)
         , buff_size_(buff_size)
     {
-        std::shared_ptr<ReadCommunData> read_data = std::make_shared<ReadCommunData>();
-        read_data_                            = read_data;
+        std::shared_ptr<CommunData<ReadAppendata>> read_data = std::make_shared<CommunData<ReadAppendata>>();
+        read_data_                                           = read_data;
 
-        ReadCommunData* p_read_data  = read_data_.get();
-        p_read_data->call_       = [this]() { IoCallback(); };
-        p_read_data->need_len_   = buff_size;
-        p_read_data->result_buf_ = buff;
+        CommunData<ReadAppendata>* p_read_data = read_data_.get();
+        p_read_data->call_                     = [this]() { IoCallback(); };
+        p_read_data->append_data_.need_len_    = buff_size;
+        p_read_data->append_data_.result_buf_  = buff;
 
         p_read_data->timeout_task_.interval = timeout;
         p_read_data->timeout_task_.fun      = [this, read_data](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) {
@@ -84,7 +84,7 @@ public:
     bool await_suspend(std::coroutine_handle<> co_handle)
     {
         handle_ = co_handle;
-        tcp_channel_->tcp_channel_read_.AddReadData(read_data_);
+        tcp_channel_->tcp_channel_read_.AddOperateData(read_data_);
         tcp_channel_->timer_->StartTask(&read_data_->timeout_task_);
         return true;
     }
@@ -100,7 +100,7 @@ public:
         handle_.resume();
     }
 
-    void OnTimeout(ReadCommunData* p_read_data)
+    void OnTimeout(CommunData<ReadAppendata>* p_read_data)
     {
         {
             std::unique_lock<std::mutex> lock(p_read_data->mutex_);
@@ -118,7 +118,7 @@ public:
         handle_.resume();
     }
 
-    const ReadCommunData* ReadData()
+    const CommunData<ReadAppendata>* ReadData()
     {
         return read_data_.get();
     }
@@ -132,7 +132,7 @@ private:
     unsigned char* buff_;
     size_t buff_size_;
 
-    std::shared_ptr<ReadCommunData> read_data_;
+    std::shared_ptr<CommunData<ReadAppendata>> read_data_;
 };
 
 class TcpChannel::WriteAwaitable
@@ -142,14 +142,14 @@ public:
         : tcp_channel_(tcp_channel)
         , buff_(buff)
         , buff_size_(buff_size)
-    {        
-        std::shared_ptr<WriteCommunData> write_data = std::make_shared<WriteCommunData>();
-        write_data_                            = write_data;
+    {
+        std::shared_ptr<CommunData<WriteAppendata>> write_data = std::make_shared<CommunData<WriteAppendata>>();
+        write_data_                                            = write_data;
 
-        WriteCommunData* p_write_data  = write_data_.get();
-        p_write_data->call_       = [this]() { IoCallback(); };
-        p_write_data->need_len_   = buff_size;
-        p_write_data->result_buf_ = buff;
+        CommunData<WriteAppendata>* p_write_data = write_data_.get();
+        p_write_data->call_                      = [this]() { IoCallback(); };
+        p_write_data->append_data_.need_len_     = buff_size;
+        p_write_data->append_data_.result_buf_   = buff;
 
         p_write_data->timeout_task_.interval = timeout;
         p_write_data->timeout_task_.fun      = [this, write_data](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) {
@@ -157,7 +157,7 @@ public:
             write_data->timeout_task_.fun = [](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) {};
         };
     }
-    
+
     ~WriteAwaitable()
     {
     }
@@ -168,9 +168,9 @@ public:
     }
 
     bool await_suspend(std::coroutine_handle<> co_handle)
-    {        
+    {
         handle_ = co_handle;
-        tcp_channel_->tcp_channel_write_.AddWriteData(write_data_);
+        tcp_channel_->tcp_channel_write_.AddOperateData(write_data_);
         tcp_channel_->timer_->StartTask(&write_data_->timeout_task_);
         return true;
     }
@@ -185,8 +185,8 @@ public:
         tcp_channel_->timer_->StopTask(&write_data_->timeout_task_);
         handle_.resume();
     }
-    
-    void OnTimeout(WriteCommunData* p_write_data)
+
+    void OnTimeout(CommunData<WriteAppendata>* p_write_data)
     {
         {
             std::unique_lock<std::mutex> lock(p_write_data->mutex_);
@@ -204,13 +204,13 @@ public:
         handle_.resume();
     }
 
-    const WriteCommunData* ReadData()
+    const CommunData<WriteAppendata>* ReadData()
     {
         return write_data_.get();
     }
 
 
-private:    
+private:
     TcpChannel* tcp_channel_ = nullptr;
 
     EpollData iocp_data_;
@@ -219,7 +219,7 @@ private:
     const unsigned char* buff_;
     size_t buff_size_;
 
-    std::shared_ptr<WriteCommunData> write_data_;
+    std::shared_ptr<CommunData<WriteAppendata>> write_data_;
 };
 
 TcpChannel::TcpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
@@ -232,8 +232,6 @@ TcpChannel::TcpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t
     , timer_(timer)
 {
     close_flag_ = false;
-    int flags   = fcntl(socket, F_GETFL);
-    fcntl(socket, F_SETFL, flags | O_NONBLOCK);
 }
 
 TcpChannel::~TcpChannel() {}
@@ -286,7 +284,7 @@ Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size
     ReadAwaitable read_awaitable(this, buff, buff_size, timeout);
     co_await read_awaitable;
 
-    const ReadCommunData* read_data = read_awaitable.ReadData();
+    const CommunData<ReadAppendata>* read_data = read_awaitable.ReadData();
 
     if (read_data->result.state == SChannelResult::EState::CRS_SUCCESS)
     {
@@ -302,7 +300,7 @@ Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size
 }
 
 Coroutine<SChannelResult> TcpChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
-{    
+{
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
@@ -314,7 +312,7 @@ Coroutine<SChannelResult> TcpChannel::Write(const unsigned char* buff, size_t bu
     WriteAwaitable write_awaitable(this, buff, buff_size, timeout);
     co_await write_awaitable;
 
-    const WriteCommunData* write_data = write_awaitable.ReadData();
+    const CommunData<WriteAppendata>* write_data = write_awaitable.ReadData();
 
     if (write_data->result.state == SChannelResult::EState::CRS_SUCCESS)
     {
@@ -340,13 +338,24 @@ void TcpChannel::OnEpoll(EpollData* data)
             Stop();
             return;
         }
-        tcp_channel_read_.OnRead(data);
+        tcp_channel_read_.OnOperate(data);
     }
 
     if (data->events_ & EPOLLOUT)
     {
-        tcp_channel_write_.OnWrite(data);
+        tcp_channel_write_.OnOperate(data);
     }
+}
+
+void TcpChannel::TcpChannelReadHelper::Operate(CommunData<ReadAppendata>* data)
+{
+    data->result.len = ::read(socket_, data->append_data_.result_buf_, data->append_data_.need_len_);
+}
+
+
+void TcpChannel::TcpChannelWriteHelper::Operate(CommunData<WriteAppendata>* data)
+{
+    data->result.len = ::write(socket_, data->append_data_.result_buf_, data->append_data_.need_len_);
 }
 
 } // namespace comm

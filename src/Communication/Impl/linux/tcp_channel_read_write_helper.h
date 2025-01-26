@@ -27,12 +27,12 @@
 #include "Interface/communication/comm_struct.h"
 #include "Interface/communication/i_channel.h"
 #include "global_timer/co_await_time.h"
+#include "head.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
 #include <functional>
 #include <memory>
 #include <string>
-#include "head.h"
 
 namespace jaf
 {
@@ -40,29 +40,37 @@ namespace comm
 {
 
 // TCP通道
-class TcpChannelWrite
+template <typename AppendData>
+class TcpChannelReadWriteHelper
 {
 public:
-    TcpChannelWrite();
-    virtual ~TcpChannelWrite();
+    TcpChannelReadWriteHelper();
+    virtual ~TcpChannelReadWriteHelper();
 
-    void Start(int socket_);
+    void Start(int socket);
     void Stop();
-    void AddWriteData(std::shared_ptr<WriteCommunData> write_data);
-    void OnWrite(EpollData* data);
-private:
-    void Write();
-    bool WriteImp(std::list<std::shared_ptr<WriteCommunData>>& finish_write_datas); // 读取数据，结束时若缓存区还有数据则返回true
-private:
-    int socket_   = 0;  // 收发数据的套接字
-        
-    std::atomic<bool> run_flag_   = true;  // 套接字是否已经关闭标志
-    std::atomic<bool> writeable_flag_  = false; // 是否可写
 
-    std::list<std::shared_ptr<WriteCommunData>> ready_write_queue_;
-    std::mutex ready_write_queue_mutex_;
-    std::list<std::shared_ptr<WriteCommunData>> write_queue_;
-    std::mutex write_mutex_;
+    void AddOperateData(std::shared_ptr<CommunData<AppendData>> data);
+    void OnOperate(EpollData* data);
+
+protected:
+    virtual void Operate(CommunData<AppendData>* data) = 0;
+
+private:
+    void DoOperate();
+    // 读取数据，结束时若缓存区还有数据则返回true
+    bool DoOperateImp(std::list<std::shared_ptr<CommunData<AppendData>>>& finish_operate_datas);
+
+protected:
+    int socket_ = 0; // 收发数据的套接字
+
+    std::atomic<bool> run_flag_         = true;  // 套接字是否已经关闭标志
+    std::atomic<bool> operateable_flag_ = false; // 是否可读/写
+
+    std::list<std::shared_ptr<CommunData<AppendData>>> ready_operate_queue_;
+    std::mutex ready_operate_queue_mutex_;
+    std::list<std::shared_ptr<CommunData<AppendData>>> operate_queue_;
+    std::mutex operate_mutex_;
 };
 
 

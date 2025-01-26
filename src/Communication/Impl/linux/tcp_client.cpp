@@ -30,6 +30,7 @@
 #include "util/finally.h"
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <format>
 #include <netinet/in.h>
 #include <string.h>
@@ -64,7 +65,7 @@ public:
     {
         handle_ = co_handle;
 
-        timeout_flag_ = false;
+        timeout_flag_  = false;
         callback_flag_ = false;
 
         epoll_fd_ = tcp_client_->get_epoll_fd_->Get();
@@ -156,12 +157,8 @@ private:
         }
 
         //设置 connect 的 socket 为非阻塞
-        long on = 1L;
-        if (ioctl(connect_socket, (int) FIONBIO, (char*) &on))
-        {
-            perror("ioctl FIONBIO call failed\n");
-            return -1;
-        }
+        int flags = fcntl(connect_socket, F_GETFL);
+        fcntl(connect_socket, F_SETFL, flags | O_NONBLOCK);
 
         return connect_socket;
     }
@@ -224,7 +221,7 @@ public:
 
     ConnectResult connect_result_;
     std::mutex mutex_;
-    bool timeout_flag_    = false;
+    bool timeout_flag_  = false;
     bool callback_flag_ = false;
 
     int connect_socket_ = -1;

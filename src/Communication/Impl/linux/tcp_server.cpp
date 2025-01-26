@@ -31,6 +31,7 @@
 #include "util/finally.h"
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <format>
 #include <netinet/in.h>
 #include <string.h>
@@ -148,12 +149,8 @@ bool TcpServer::Init(void)
     }
 
     //设置 listen 的 socket 为非阻塞
-    long on = 1L;
-    if (ioctl(listen_socket_, (int) FIONBIO, (char*) &on))
-    {
-        perror("ioctl FIONBIO call failed\n");
-        return false;
-    }
+    int flags = fcntl(listen_socket_, F_GETFL);
+    fcntl(listen_socket_, F_SETFL, flags | O_NONBLOCK);
 
     sockaddr_in server{};
     server.sin_port   = htons(port_);
@@ -199,7 +196,7 @@ void TcpServer::OnListen(EpollData* data)
 
     sockaddr_in client_addr{};
     socklen_t client_addr_length = sizeof(client_addr);
-    int client_socket = accept(listen_socket_, (sockaddr*) &client_addr, &client_addr_length);
+    int client_socket            = accept(listen_socket_, (sockaddr*) &client_addr, &client_addr_length);
     //接受来自socket连接
     if (client_socket < 0)
     {
@@ -214,7 +211,7 @@ jaf::Coroutine<void> TcpServer::RunSocket(int socket)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
-    
+
     // 获取到远端和本地的端口地址
     sockaddr_in remote_addr;
     sockaddr_in locade_addr;
@@ -228,7 +225,7 @@ jaf::Coroutine<void> TcpServer::RunSocket(int socket)
     uint16_t local_port   = ntohs(locade_addr.sin_port);
 
     std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(socket, epoll_fd_, remote_ip, remote_port, local_ip, local_port, timer_);
-    const std::string channel_key = std::format("{}:{}", local_ip, local_port);
+    const std::string channel_key       = std::format("{}:{}", local_ip, local_port);
 
     bool run_flag;
     {
