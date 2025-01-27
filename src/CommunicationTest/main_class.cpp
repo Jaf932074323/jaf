@@ -96,7 +96,7 @@ void Main::Init()
     udp_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
     serial_port_ = communication_->CreateSerialPort();
-    serial_port_->SetAddr(11, 9600, 8, 0, 0);
+    // serial_port_->SetAddr(11, 9600, 8, 0, 0);
     serial_port_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 }
 

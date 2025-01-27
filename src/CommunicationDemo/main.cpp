@@ -32,6 +32,7 @@
 void TestClient();
 void TestServer();
 void TestUdp();
+void TestSerialPort();
 
 int main(int argc, char** argv)
 {
@@ -47,7 +48,7 @@ int main(int argc, char** argv)
 
     InitSocket init_socket;
 
-    TestServer();
+    TestSerialPort();
 
     return 0;
 }

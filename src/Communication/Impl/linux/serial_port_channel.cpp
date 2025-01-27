@@ -23,7 +23,7 @@
 #ifdef _WIN32
 #elif defined(__linux__)
 
-#include "udp_channel.h"
+#include "serial_port_channel.h"
 #include "Impl/tool/run_with_timeout.h"
 #include "Log/log_head.h"
 #include "head.h"
@@ -42,22 +42,16 @@ namespace jaf
 namespace comm
 {
 
-UdpChannel::UdpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
+SerialPortChannel::SerialPortChannel(int socket, int epoll_fd, std::shared_ptr<jaf::time::ITimer> timer)
     : socket_(socket)
     , epoll_fd_(epoll_fd)
-    , remote_ip_(remote_ip)
-    , remote_port_(remote_port)
-    , local_ip_(local_ip)
-    , local_port_(local_port)
-    , remote_addr_(remote_ip, remote_port)
     , timer_(timer)
 {
-    close_flag_ = false;
 }
 
-UdpChannel::~UdpChannel() {}
+SerialPortChannel::~SerialPortChannel() {}
 
-Coroutine<void> UdpChannel::Run()
+Coroutine<void> SerialPortChannel::Run()
 {
     stop_flag_ = false;
 
@@ -69,30 +63,32 @@ Coroutine<void> UdpChannel::Run()
     int ret     = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket_, &ev);
     if (ret == -1)
     {
+        close(socket_);
         std::string str = std::format("epoll_ctl(): error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
         stop_flag_      = true;
-        close(socket_);
         co_return;
     }
 
     read_helper_.Start(socket_);
     write_helper_.Start(socket_);
 
-    control_start_stop_.Start();
-    co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
+    wait_stop_.Start();
+    co_await wait_stop_.Wait();
+
+    stop_flag_ = true;
+    close(socket_);
+    write_helper_.Stop();
+    read_helper_.Stop();
+
     co_await wait_all_tasks_done_;
 }
 
-void UdpChannel::Stop()
+void SerialPortChannel::Stop()
 {
-    stop_flag_ = true;
-    close(socket_);
-    read_helper_.Stop();
-    write_helper_.Stop();
-    control_start_stop_.Stop();
+    wait_stop_.Stop();
 }
 
-Coroutine<SChannelResult> UdpChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
+Coroutine<SChannelResult> SerialPortChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
@@ -129,94 +125,7 @@ Coroutine<SChannelResult> UdpChannel::Read(unsigned char* buff, size_t buff_size
     co_return read_data->result;
 }
 
-Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
-{
-    wait_all_tasks_done_.CountUp();
-    FINALLY(wait_all_tasks_done_.CountDown(););
-
-    if (stop_flag_)
-    {
-        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
-    }
-
-    struct WriteCommunData : public CommunData
-    {
-        WriteCommunData(Addr& remote_addr)
-            : remote_addr_(remote_addr)
-        {
-        }
-        // 执行通讯功能
-        virtual void DoOperate(int file)
-        {
-            result.len = ::sendto(file, operate_buf_, need_len_, 0, (sockaddr*) &remote_addr_.client_addr_, addr_len_);
-        }
-
-        Addr& remote_addr_;        
-        socklen_t addr_len_ = sizeof(remote_addr_);
-    };
-    std::shared_ptr<WriteCommunData> write_data = std::make_shared<WriteCommunData>(remote_addr_);
-    write_data->need_len_                       = buff_size;
-    write_data->operate_buf_                    = (unsigned char*) buff;
-
-    RWAwaitable write_awaitable(write_helper_, timer_, write_data, timeout);
-    co_await write_awaitable;
-
-    if (write_data->result.state == SChannelResult::EState::CRS_SUCCESS)
-    {
-        co_return write_data->result;
-    }
-
-    if (stop_flag_)
-    {
-        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
-    }
-
-    co_return write_data->result;
-}
-
-Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
-{
-    wait_all_tasks_done_.CountUp();
-    FINALLY(wait_all_tasks_done_.CountDown(););
-
-    if (stop_flag_)
-    {
-        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
-    }
-
-    struct ReadCommunData : public CommunData
-    {
-        virtual void DoOperate(int file)
-        {
-            result.len = ::recvfrom(file, operate_buf_, need_len_, MSG_DONTWAIT, (sockaddr*) &client_addr_, &addr_len_);
-        }
-
-        struct sockaddr_in client_addr_;
-        socklen_t addr_len_ = sizeof(client_addr_);
-    };
-    std::shared_ptr<ReadCommunData> read_data = std::make_shared<ReadCommunData>();
-    read_data->need_len_                      = buff_size;
-    read_data->operate_buf_                   = buff;
-
-    RWAwaitable read_awaitable(read_helper_, timer_, read_data, timeout);
-    co_await read_awaitable;
-
-    addr->client_addr_ = read_data->client_addr_;
-
-    if (read_data->result.state == SChannelResult::EState::CRS_SUCCESS)
-    {
-        co_return read_data->result;
-    }
-
-    if (stop_flag_)
-    {
-        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
-    }
-
-    co_return read_data->result;
-}
-
-Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
+Coroutine<SChannelResult> SerialPortChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
@@ -231,14 +140,10 @@ Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t 
         // 执行通讯功能
         virtual void DoOperate(int file)
         {
-            result.len = ::sendto(file, operate_buf_, need_len_, 0, (sockaddr*) &client_addr_, addr_len_);
+            result.len = ::write(file, operate_buf_, need_len_);
         }
-
-        struct sockaddr_in client_addr_;
-        socklen_t addr_len_ = sizeof(client_addr_);
     };
     std::shared_ptr<WriteCommunData> write_data = std::make_shared<WriteCommunData>();
-    write_data->client_addr_                    = addr->client_addr_;
     write_data->need_len_                       = buff_size;
     write_data->operate_buf_                    = (unsigned char*) buff;
 
@@ -258,7 +163,7 @@ Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t 
     co_return write_data->result;
 }
 
-void UdpChannel::OnEpoll(EpollData* data)
+void SerialPortChannel::OnEpoll(EpollData* data)
 {
     if (data->events_ & EPOLLIN)
     {

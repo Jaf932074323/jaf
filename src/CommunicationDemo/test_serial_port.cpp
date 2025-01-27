@@ -19,70 +19,68 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-10-19 姜安富
+// 2024-6-20 姜安富
 #include "Communication/Impl/communication_include.h"
-#include "Interface/communication/i_serial_port.h"
-#include "Interface/communication/i_tcp_client.h"
-#include "Interface/communication/i_tcp_server.h"
 #include "Interface/communication/i_udp.h"
 #include "global_thread_pool/global_thread_pool.h"
 #include "global_timer/co_sleep.h"
 #include "global_timer/global_timer.h"
-#include "unpack.h"
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
 #include "util/co_wait_notices.h"
-#include "gtest/gtest.h"
 #include <format>
+#include <functional>
 #include <list>
+#include <string>
+#include <iostream>
 
-TEST(serial, usual)
+namespace test_serial_port
+{
+    
+void Test()
 {
     auto co_fun = []() -> jaf::CoroutineWithWait<void> {
         jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
         jaf::Coroutine<void> communication_run = communication.Run();
 
         std::string str = "hello world!";
-        jaf::CoWaitNotices wait_recv; // 等待接收通知
-
-        auto fun_deal = [&](std::shared_ptr<jaf::comm::IPack> pack) -> jaf::CoroutineWithWait<void> {
-            auto [buff, len] = pack->GetData();
-            std::string recv_str((const char*) buff, len);
-            EXPECT_TRUE(recv_str == str);
-            wait_recv.Notify();
-
-            auto result = co_await pack->GetChannel()->Write((const unsigned char*) str.data(), str.length(), 1000);
-            co_return;
-        };
-        std::shared_ptr<Unpack> unpack = std::make_shared<Unpack>(fun_deal);
 
         auto fun_deal_client_channel = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
-            auto unpack_run = unpack->Run(channel);
-            auto result = co_await channel->Write((const unsigned char*) str.data(), str.length(), 1000);
-            co_await unpack_run;
+            unsigned char buff[1024] = "";
+            while (true)
+            {
+                auto read_result = co_await channel->Read(buff, 1024, 5000);
+                std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff), (int) read_result.state, read_result.error) << std::endl;
+                if (read_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
+                {
+                    break;
+                }
+                if (read_result.state != jaf::comm::SChannelResult::EState::CRS_SUCCESS)
+                {
+                    continue;
+                }
+
+                auto write_result = co_await channel->Write(buff, 1024, 5000);
+                std::cout << std::format("write {}, state {}, error {}", std::string((char*) buff), (int) write_result.state, write_result.error) << std::endl;
+                if (write_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
+                {
+                    break;
+                }
+                buff[0] = '\0';
+            }
         };
 
-        std::shared_ptr<jaf::comm::ISerialPort> serial_port_1 = communication.CreateSerialPort();
-        // serial_port_1->SetAddr(11, 9600, 8, 0, 0);
-        serial_port_1->SetHandleChannel(fun_deal_client_channel);
+        std::shared_ptr<jaf::comm::ISerialPort> serial_port = communication.CreateSerialPort();
+        serial_port->SetAddr("/dev/ttyS0", 9600, 8, 0, 0);
+        serial_port->SetHandleChannel(fun_deal_client_channel);
 
-        std::shared_ptr<jaf::comm::ISerialPort> serial_port_2 = communication.CreateSerialPort();
-        // serial_port_2->SetAddr(21, 9600, 8, 0, 0);
-        serial_port_2->SetHandleChannel(fun_deal_client_channel);
-        //serial_port_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
+        jaf::Coroutine<void> serial_port_run = serial_port->Run();
 
-        wait_recv.Start(10);
+        getchar();
 
-        jaf::Coroutine<void> run_1 = serial_port_1->Run();
-        jaf::Coroutine<void> run_2 = serial_port_2->Run();
+        serial_port->Stop();
 
-        co_await wait_recv;
-
-        serial_port_1->Stop();
-        serial_port_2->Stop();
-
-        co_await run_1;
-        co_await run_2;
+        co_await serial_port_run;
 
         communication.Stop();
         co_await communication_run;
@@ -90,4 +88,11 @@ TEST(serial, usual)
 
     auto co_test_co_await_time = co_fun();
     co_test_co_await_time.Wait();
+}
+
+}
+
+void TestSerialPort()
+{
+    test_serial_port::Test();
 }

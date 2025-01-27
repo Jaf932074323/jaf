@@ -30,6 +30,7 @@
 #include "tcp_client.h"
 #include "tcp_server.h"
 #include "udp.h"
+#include "serial_port.h"
 #include "util/finally.h"
 #include "util/simple_thread_pool.h"
 #include <assert.h>
@@ -121,13 +122,14 @@ std::shared_ptr<ITcpClient> Communication::CreateTcpClient()
 
 std::shared_ptr<IUdp> Communication::CreateUdp()
 {
-    std::shared_ptr<Udp> client = std::make_shared<Udp>(&get_epoll_fd_, timer_);
-    return std::static_pointer_cast<IUdp>(client);
+    std::shared_ptr<Udp> udp = std::make_shared<Udp>(&get_epoll_fd_, timer_);
+    return std::static_pointer_cast<IUdp>(udp);
 }
 
 std::shared_ptr<ISerialPort> Communication::CreateSerialPort()
 {
-    return nullptr;
+    std::shared_ptr<SerialPort> serial_port = std::make_shared<SerialPort>(&get_epoll_fd_, timer_);
+    return std::static_pointer_cast<ISerialPort>(serial_port);
 }
 
 bool Communication::CreateEpoll()
