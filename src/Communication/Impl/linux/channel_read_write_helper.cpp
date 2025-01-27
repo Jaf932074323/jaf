@@ -61,6 +61,7 @@ void ChannelReadWriteHelper::Start(int socket)
 void ChannelReadWriteHelper::Stop()
 {
     run_flag_ = false;
+    EndAllOperate();
 }
 
 
@@ -101,30 +102,7 @@ void ChannelReadWriteHelper::DoOperate()
 
     if (!run_flag_)
     {
-        std::list<std::shared_ptr<CommunData>> operate_queue;
-        {
-            std::unique_lock<std::mutex> lock(operate_mutex_);
-            {
-                operate_queue.swap(operate_queue_);
-                std::unique_lock<std::mutex> lock_ready_operate_queue(ready_operate_queue_mutex_);
-                operate_queue.splice(operate_queue.end(), ready_operate_queue_);
-            }
-        }
-
-        for (std::shared_ptr<CommunData>& operate_data : operate_queue)
-        {
-            {
-                std::unique_lock<std::mutex> lock_index(operate_data->mutex_);
-                if (operate_data->timeout_flag_)
-                {
-                    continue;
-                }
-                operate_data->finish_flag_ = true;
-            }
-            operate_data->result.error = std::format("The socket was disconnected.");
-            operate_data->result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
-            operate_data->call_();
-        }
+        EndAllOperate();
     }
 }
 
@@ -181,6 +159,34 @@ bool ChannelReadWriteHelper::DoOperateImp(std::list<std::shared_ptr<CommunData>>
         {
             return false;
         }
+    }
+}
+
+void ChannelReadWriteHelper::EndAllOperate()
+{
+    std::list<std::shared_ptr<CommunData>> operate_queue;
+    {
+        std::unique_lock<std::mutex> lock(operate_mutex_);
+        {
+            operate_queue.swap(operate_queue_);
+            std::unique_lock<std::mutex> lock_ready_operate_queue(ready_operate_queue_mutex_);
+            operate_queue.splice(operate_queue.end(), ready_operate_queue_);
+        }
+    }
+
+    for (std::shared_ptr<CommunData>& operate_data : operate_queue)
+    {
+        {
+            std::unique_lock<std::mutex> lock_index(operate_data->mutex_);
+            if (operate_data->timeout_flag_)
+            {
+                continue;
+            }
+            operate_data->finish_flag_ = true;
+        }
+        operate_data->result.error = std::format("The socket was disconnected.");
+        operate_data->result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
+        operate_data->call_();
     }
 }
 

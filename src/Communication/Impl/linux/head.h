@@ -52,11 +52,10 @@ struct CommunData
     std::function<void(void)> call_;
 
     std::mutex mutex_;
-
-    jaf::time::STimerTask timeout_task_;
-
     bool timeout_flag_ = false;
     bool finish_flag_  = false;
+
+    jaf::time::STimerTask timeout_task_;
 
     int need_len_ = 0;
     unsigned char* operate_buf_ = nullptr;

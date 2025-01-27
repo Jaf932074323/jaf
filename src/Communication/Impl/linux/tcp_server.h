@@ -68,8 +68,8 @@ private:
 
 private:
     std::atomic<bool> run_flag_ = false;
+    CoWaitUtilStop wait_stop_;
 
-    jaf::ControlStartStop control_start_stop_;
     CoWaitAllTasksDone wait_all_tasks_done_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;

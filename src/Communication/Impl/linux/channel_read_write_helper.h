@@ -54,8 +54,10 @@ public:
 
 private:
     void DoOperate();
-    // 读取数据，结束时若缓存区还有数据则返回true
+    // 操作数据，结束时若缓存区还有数据则返回true
     bool DoOperateImp(std::list<std::shared_ptr<CommunData>>& finish_operate_datas);
+    // 结束所有操作
+    void EndAllOperate();
 
 protected:
     int socket_ = 0; // 收发数据的套接字

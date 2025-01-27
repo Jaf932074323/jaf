@@ -47,7 +47,7 @@ int main(int argc, char** argv)
 
     InitSocket init_socket;
 
-    TestUdp();
+    TestServer();
 
     return 0;
 }

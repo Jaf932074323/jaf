@@ -50,6 +50,15 @@ struct TcpClient::ConnectResult
 
 class TcpClient::ConnectAwaitable
 {
+    struct ConnectData
+    {
+        std::mutex mutex_;
+        bool timeout_flag_  = false;
+        bool callback_flag_ = false;
+
+        jaf::time::STimerTask timeout_task_;
+    };
+
 public:
     ConnectAwaitable(TcpClient* tcp_client)
         : tcp_client_(tcp_client)
@@ -64,9 +73,6 @@ public:
     bool await_suspend(std::coroutine_handle<> co_handle)
     {
         handle_ = co_handle;
-
-        timeout_flag_  = false;
-        callback_flag_ = false;
 
         epoll_fd_ = tcp_client_->get_epoll_fd_->Get();
         Connect();
@@ -109,8 +115,15 @@ private:
             }
         }
 
-        timeout_task_.fun      = [this](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) { OnConnectTimeout(); };
-        timeout_task_.interval = tcp_client_->connect_timeout_;
+        std::shared_ptr<ConnectData> connect_data = std::make_shared<ConnectData>();
+        connect_data_                             = connect_data;
+        ConnectData* p_connect_data               = connect_data.get();
+
+        p_connect_data->timeout_task_.interval = tcp_client_->connect_timeout_;
+        p_connect_data->timeout_task_.fun      = [this, connect_data](jaf::time::ETimerResultType result_type, jaf::time::STimerTask* task) {
+            OnConnectTimeout(connect_data.get());
+            connect_data->timeout_task_.fun = std::function<void(jaf::time::ETimerResultType result_type, jaf::time::STimerTask * task)>();
+        };
 
         struct epoll_event connect_event;
         connect_event.events   = EPOLLIN | EPOLLOUT | EPOLLRDHUP | EPOLLET;
@@ -123,7 +136,7 @@ private:
             return;
         }
 
-        tcp_client_->timer_->StartTask(&timeout_task_);
+        tcp_client_->timer_->StartTask(&p_connect_data->timeout_task_);
     }
 
     int CreationSocket()
@@ -165,70 +178,65 @@ private:
 
     void OnConnect(EpollData* data)
     {
+        assert(connect_data_ != nullptr);
         int ret = epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, connect_socket_, nullptr);
 
         {
-            std::unique_lock<std::mutex> lock(mutex_);
-
-            if (!timeout_flag_)
+            std::unique_lock<std::mutex> lock(connect_data_->mutex_);
+            if (connect_data_->timeout_flag_)
             {
-                FINALLY(tcp_client_->timer_->StopTask(&timeout_task_););
-
-                //看看 socket 是不是链接成功了
-                int result;
-                socklen_t result_len = sizeof(result);
-                if (getsockopt(connect_socket_, SOL_SOCKET, SO_ERROR, &result, &result_len) < 0 || result != 0)
-                {
-                    connect_result_.success     = false;
-                    connect_result_.error_info_ = std::format("OnConnect(): connect error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
-                    close(connect_socket_);
-                    return;
-                }
-
-                callback_flag_          = true;
-                connect_result_.success = true;
+                close(connect_socket_);
                 return;
             }
-
-            close(connect_socket_);
-            connect_socket_ = -1;
+            connect_data_->callback_flag_ = true;
         }
 
+        tcp_client_->timer_->StopTask(&connect_data_->timeout_task_);
+
+        //看看 socket 是不是链接成功了
+        int result;
+        socklen_t result_len = sizeof(result);
+        if (getsockopt(connect_socket_, SOL_SOCKET, SO_ERROR, &result, &result_len) < 0 || result != 0)
+        {
+            connect_result_.success     = false;
+            connect_result_.error_info_ = std::format("OnConnect(): connect error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+            close(connect_socket_);
+            connect_socket_ = -1;
+
+            handle_.resume();
+            return;
+        }
+
+        connect_result_.success = true;
         handle_.resume();
     }
 
-    void OnConnectTimeout()
+    void OnConnectTimeout(ConnectData* connect_data)
     {
         {
-            std::unique_lock<std::mutex> lock(mutex_);
-            if (!callback_flag_)
+            std::unique_lock<std::mutex> lock(connect_data->mutex_);
+            if (connect_data->callback_flag_)
             {
-                timeout_flag_ = true;
-
-                connect_result_.success     = false;
-                connect_result_.error_info_ = std::format("Connect timeout");
-
-                shutdown(connect_socket_, SHUT_RDWR);
                 return;
             }
+            connect_data->timeout_flag_ = true;
         }
 
+        connect_result_.success     = false;
+        connect_result_.error_info_ = std::format("Connect timeout");
+
+        shutdown(connect_socket_, SHUT_RDWR);
         handle_.resume();
     }
 
 public:
     TcpClient* tcp_client_;
 
+    std::shared_ptr<ConnectData> connect_data_;
     ConnectResult connect_result_;
-    std::mutex mutex_;
-    bool timeout_flag_  = false;
-    bool callback_flag_ = false;
 
     int connect_socket_ = -1;
-
-    int epoll_fd_ = -1;
-
-    jaf::time::STimerTask timeout_task_;
+    int epoll_fd_       = -1;
 
     std::string error_info_;
 
@@ -274,25 +282,26 @@ jaf::Coroutine<void> TcpClient::Run()
         co_return;
     }
     run_flag_ = true;
+    control_start_stop_.Start();
     wait_stop_.Start();
 
-    epoll_fd_ = get_epoll_fd_->Get();
-
+    epoll_fd_                    = get_epoll_fd_->Get();
     jaf::Coroutine<void> execute = Execute();
 
     co_await wait_stop_.Wait();
 
     run_flag_ = false;
 
+
+    std::shared_ptr<IChannel> channel;
     {
         std::unique_lock<std::mutex> lock(channel_mutex_);
-        channel_->Stop();
+        channel = channel_;
     }
-
+    channel->Stop();
     control_start_stop_.Stop();
 
     co_await execute;
-
     co_return;
 }
 

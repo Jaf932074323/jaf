@@ -31,6 +31,7 @@
 #include "head.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
+#include "util/co_wait_util_stop.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -57,7 +58,8 @@ private:
     void OnEpoll(EpollData* data);
 
 private:
-    std::atomic<bool> stop_flag_ = false;
+    std::atomic<bool> stop_flag_ = true;
+    CoWaitUtilStop wait_stop_;
     std::string finish_reason_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
@@ -69,25 +71,9 @@ private:
     std::string local_ip_;
     uint16_t local_port_ = 0;
 
-    jaf::ControlStartStop control_start_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;
 
     EpollData epoll_data_; // 连接时用的通讯数据
-
-    std::atomic<bool> close_flag_   = true;  // 套接字是否已经关闭标志
-    std::atomic<bool> write_status_ = false; // 是否可写
-
-    struct ReadAppendata
-    {
-        uint32_t need_len_         = 0;
-        unsigned char* result_buf_ = nullptr;
-    };
-
-    struct WriteAppendata
-    {
-        uint32_t need_len_               = 0;
-        const unsigned char* result_buf_ = nullptr;
-    };
 
     ChannelReadWriteHelper read_helper_;
     ChannelReadWriteHelper write_helper_;

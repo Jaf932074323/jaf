@@ -88,19 +88,22 @@ jaf::Coroutine<void> TcpServer::Run()
         co_return;
     }
     run_flag_ = true;
-    control_start_stop_.Start();
+    wait_stop_.Start();
 
     epoll_fd_ = get_epoll_fd_->Get();
     Init();
 
-    co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
+    co_await wait_stop_.Wait();
+    run_flag_ = false;
 
+    std::map<std::string, std::shared_ptr<IChannel>> channels; // 当前连接的所有通道 key由IP和端口组成
     {
         std::unique_lock<std::mutex> ul(channels_mutex_);
-        for (auto& [key, channel] : channels_)
-        {
-            channel->Stop();
-        }
+        channels.swap(channels_);
+    }
+    for (auto& [key, channel] : channels)
+    {
+        channel->Stop();
     }
 
     co_await wait_all_tasks_done_;
@@ -114,8 +117,7 @@ jaf::Coroutine<void> TcpServer::Run()
 
 void TcpServer::Stop()
 {
-    run_flag_ = false;
-    control_start_stop_.Stop();
+    wait_stop_.Stop();
 }
 
 Coroutine<void> TcpServer::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
@@ -156,6 +158,15 @@ bool TcpServer::Init(void)
     server.sin_port   = htons(port_);
     server.sin_family = AF_INET;
     inet_pton(AF_INET, ip_.c_str(), (void*) &server.sin_addr);
+
+	int flag = 1;
+	if (setsockopt(listen_socket_, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag)) < 0)
+	{
+        int error   = errno;
+        error_info_ = std::format("Failed to bind listen socket, addr {}:{},code:{},:{}", ip_, port_, error, strerror(error));
+        close(listen_socket_);
+        return false;
+	}
 
     if (::bind(listen_socket_, (sockaddr*) &server, sizeof(server)) < 0)
     {

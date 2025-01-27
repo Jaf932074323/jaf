@@ -51,7 +51,6 @@ TcpChannel::TcpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t
     , local_port_(local_port)
     , timer_(timer)
 {
-    close_flag_ = false;
 }
 
 TcpChannel::~TcpChannel() {}
@@ -77,18 +76,20 @@ Coroutine<void> TcpChannel::Run()
     read_helper_.Start(socket_);
     write_helper_.Start(socket_);
 
-    control_start_stop_.Start();
-    co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
+    wait_stop_.Start();
+    co_await wait_stop_.Wait();
+
+    stop_flag_ = true;
+    close(socket_);
+    write_helper_.Stop();
+    read_helper_.Stop();
+
     co_await wait_all_tasks_done_;
 }
 
 void TcpChannel::Stop()
 {
-    stop_flag_ = true;
-    close(socket_);
-    read_helper_.Stop();
-    write_helper_.Stop();
-    control_start_stop_.Stop();
+    wait_stop_.Stop();
 }
 
 Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
@@ -110,7 +111,7 @@ Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size
     };
     std::shared_ptr<ReadCommunData> read_data = std::make_shared<ReadCommunData>();
     read_data->need_len_                      = buff_size;
-    read_data->operate_buf_                    = buff;
+    read_data->operate_buf_                   = buff;
 
     RWAwaitable read_awaitable(read_helper_, timer_, read_data, timeout);
     co_await read_awaitable;
@@ -147,10 +148,10 @@ Coroutine<SChannelResult> TcpChannel::Write(const unsigned char* buff, size_t bu
         }
     };
     std::shared_ptr<WriteCommunData> write_data = std::make_shared<WriteCommunData>();
-    write_data->need_len_                      = buff_size;
-    write_data->operate_buf_                    = (unsigned char*)buff;
+    write_data->need_len_                       = buff_size;
+    write_data->operate_buf_                    = (unsigned char*) buff;
 
-    RWAwaitable write_awaitable(read_helper_, timer_, write_data, timeout);
+    RWAwaitable write_awaitable(write_helper_, timer_, write_data, timeout);
     co_await write_awaitable;
 
     if (write_data->result.state == SChannelResult::EState::CRS_SUCCESS)
