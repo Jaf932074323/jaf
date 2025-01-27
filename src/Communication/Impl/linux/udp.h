@@ -52,10 +52,10 @@ public:
 
 public:
     virtual void SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port) override;
-    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
+    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IUdpChannel> channel)> handle_channel) override;
     virtual Coroutine<void> Run() override;
     virtual void Stop() override;
-    virtual std::shared_ptr<IChannel> GetChannel() override;
+    virtual std::shared_ptr<IUdpChannel> GetChannel() override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
@@ -75,10 +75,10 @@ private:
     
     std::string error_info_;  
 
-    std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
+    std::function<Coroutine<void>(std::shared_ptr<IUdpChannel> channel)> handle_channel_; // 操作通道
     std::mutex channel_mutex_;
     std::atomic<bool> run_flag_        = false;
-    std::shared_ptr<IChannel> channel_ = std::make_shared<EmptyChannel>();
+    std::shared_ptr<IUdpChannel> channel_ = std::make_shared<EmptyUdpChannel>();
 };
 
 } // namespace comm

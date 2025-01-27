@@ -35,14 +35,14 @@ namespace comm
 class IUdp
 {
 public:
-    virtual ~IUdp(){};
+    virtual ~IUdp() {};
 
 public:
     virtual void SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port) = 0;
-    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel)            = 0;
+    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IUdpChannel> channel)> handle_channel)         = 0;
     virtual Coroutine<void> Run()                                                                                              = 0;
     virtual void Stop()                                                                                                        = 0;
-    virtual std::shared_ptr<IChannel> GetChannel()                                                                             = 0;
+    virtual std::shared_ptr<IUdpChannel> GetChannel()                                                                          = 0;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)                     = 0;
 };
 

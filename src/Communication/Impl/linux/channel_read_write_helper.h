@@ -40,26 +40,22 @@ namespace comm
 {
 
 // TCP通道
-template <typename AppendData>
-class TcpChannelReadWriteHelper
+class ChannelReadWriteHelper
 {
 public:
-    TcpChannelReadWriteHelper();
-    virtual ~TcpChannelReadWriteHelper();
+    ChannelReadWriteHelper();
+    virtual ~ChannelReadWriteHelper();
 
     void Start(int socket);
     void Stop();
 
-    void AddOperateData(std::shared_ptr<CommunData<AppendData>> data);
+    void AddOperateData(std::shared_ptr<CommunData> data);
     void OnOperate(EpollData* data);
-
-protected:
-    virtual void Operate(CommunData<AppendData>* data) = 0;
 
 private:
     void DoOperate();
     // 读取数据，结束时若缓存区还有数据则返回true
-    bool DoOperateImp(std::list<std::shared_ptr<CommunData<AppendData>>>& finish_operate_datas);
+    bool DoOperateImp(std::list<std::shared_ptr<CommunData>>& finish_operate_datas);
 
 protected:
     int socket_ = 0; // 收发数据的套接字
@@ -67,10 +63,34 @@ protected:
     std::atomic<bool> run_flag_         = true;  // 套接字是否已经关闭标志
     std::atomic<bool> operateable_flag_ = false; // 是否可读/写
 
-    std::list<std::shared_ptr<CommunData<AppendData>>> ready_operate_queue_;
+    std::list<std::shared_ptr<CommunData>> ready_operate_queue_;
     std::mutex ready_operate_queue_mutex_;
-    std::list<std::shared_ptr<CommunData<AppendData>>> operate_queue_;
+    std::list<std::shared_ptr<CommunData>> operate_queue_;
     std::mutex operate_mutex_;
+};
+
+class RWAwaitable
+{
+public:
+    RWAwaitable(ChannelReadWriteHelper& helper, std::shared_ptr<jaf::time::ITimer> timer, std::shared_ptr<CommunData> data, uint32_t timeout);
+    ~RWAwaitable();
+
+    bool await_ready();
+    bool await_suspend(std::coroutine_handle<> co_handle);
+    void await_resume() const;
+
+private:
+    void IoCallback();
+    void OnTimeout(CommunData* p_data);
+
+private:
+    ChannelReadWriteHelper& helper_;
+    std::shared_ptr<jaf::time::ITimer> timer_;
+
+    EpollData iocp_data_;
+    std::coroutine_handle<> handle_;
+
+    std::shared_ptr<CommunData> data_;
 };
 
 

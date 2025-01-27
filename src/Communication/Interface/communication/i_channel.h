@@ -25,6 +25,12 @@
 #include <stdint.h>
 #include <string>
 
+#ifdef _WIN32
+#elif defined(__linux__)
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#endif
+
 namespace jaf
 {
 namespace comm
@@ -45,7 +51,7 @@ struct SChannelResult
     };
 
     EState state = EState::CRS_UNKNOWN;
-    size_t len   = 0;  // 处理长度
+    ssize_t len   = 0;  // 处理长度
     int code_    = 0;  // 错误代码 state为CRS_FAIL时有效
     std::string error; // 当失败且未超时，失败原因
 };
@@ -55,12 +61,46 @@ class IChannel
 {
 public:
     IChannel() {}
-    virtual ~IChannel(){};
+    virtual ~IChannel() {};
 
 public:
     virtual void Stop()                                                                                    = 0;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout)        = 0;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) = 0;
+};
+
+// UDP通信通道
+class IUdpChannel : public IChannel
+{
+
+public:
+    struct Addr
+    {
+        Addr()
+        {
+        }
+
+
+#ifdef _WIN32
+#elif defined(__linux__)
+        Addr(std::string ip, uint16_t port)
+            : client_addr_{}
+        {
+            client_addr_.sin_family      = AF_INET;
+            client_addr_.sin_addr.s_addr = inet_addr(ip.c_str());
+            client_addr_.sin_port        = htons(port);
+        }
+#endif
+        sockaddr_in client_addr_;
+    };
+
+public:
+    IUdpChannel() {}
+    virtual ~IUdpChannel() {};
+
+public:
+    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)      = 0;
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout) = 0;
 };
 
 } // namespace comm

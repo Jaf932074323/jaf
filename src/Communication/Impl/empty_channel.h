@@ -53,5 +53,44 @@ public:
     }
 };
 
+// 空的通信通道
+// 在通讯接口获取通道时，若没有连接时返回，避免判空
+class EmptyUdpChannel: public IUdpChannel
+{
+public:
+    EmptyUdpChannel() {}
+    virtual ~EmptyUdpChannel(){};
+
+public:
+    virtual Coroutine<bool> Start() { co_return false; };
+    virtual void Stop() { return; };
+    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
+    {
+        SChannelResult result;
+        result.state = SChannelResult::EState::CRS_EMPTY;
+        co_return result;
+    }
+    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
+    {
+        SChannelResult result;
+        result.state = SChannelResult::EState::CRS_EMPTY;
+        co_return result;
+    }
+
+    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
+    {
+        SChannelResult result;
+        result.state = SChannelResult::EState::CRS_EMPTY;
+        co_return result;
+    }
+
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
+    {
+        SChannelResult result;
+        result.state = SChannelResult::EState::CRS_EMPTY;
+        co_return result;
+    }
+
+};
 } // namespace comm
 } // namespace jaf

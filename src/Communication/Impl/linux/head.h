@@ -47,7 +47,6 @@ struct WSABUF
     char* buf;    /* the pointer to the buffer */
 };
 
-template <typename AppendData>
 struct CommunData
 {
     std::function<void(void)> call_;
@@ -59,10 +58,13 @@ struct CommunData
     bool timeout_flag_ = false;
     bool finish_flag_  = false;
 
+    int need_len_ = 0;
+    unsigned char* operate_buf_ = nullptr;
     SChannelResult result;
-    AppendData append_data_;
-};
 
+    // 执行通讯功能
+    virtual void DoOperate(int file) = 0;
+};
 
 
 } // namespace comm

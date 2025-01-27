@@ -31,6 +31,7 @@
 
 void TestClient();
 void TestServer();
+void TestUdp();
 
 int main(int argc, char** argv)
 {
@@ -46,7 +47,7 @@ int main(int argc, char** argv)
 
     InitSocket init_socket;
 
-    TestServer();
+    TestUdp();
 
     return 0;
 }

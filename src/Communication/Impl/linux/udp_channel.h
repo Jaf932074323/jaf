@@ -41,17 +41,22 @@ namespace comm
 {
 
 // TCP通道
-class TcpChannel : public IChannel
+class UdpChannel : public IUdpChannel
 {
+    class ReadAwaitable;
+    class WriteAwaitable;
+
 public:
-    TcpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~TcpChannel();
+    UdpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
+    virtual ~UdpChannel();
 
 public:
     virtual Coroutine<void> Run();
     virtual void Stop() override;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout) override;
 
 private:
     void OnEpoll(EpollData* data);
@@ -68,6 +73,7 @@ private:
     uint16_t remote_port_ = 0;
     std::string local_ip_;
     uint16_t local_port_ = 0;
+    Addr remote_addr_;
 
     jaf::ControlStartStop control_start_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;
@@ -91,6 +97,7 @@ private:
 
     ChannelReadWriteHelper read_helper_;
     ChannelReadWriteHelper write_helper_;
+
 };
 
 
