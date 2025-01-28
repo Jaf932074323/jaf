@@ -74,7 +74,10 @@ jaf::Coroutine<void> SerialPort::Run()
     run_flag_ = true;
 
     epoll_fd_ = get_epoll_fd_->Get();
-    Init();
+    if(!OpenSerialPort())
+    {
+        co_return;
+    }
 
     std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(file_descriptor_, epoll_fd_, timer_);
 
@@ -118,34 +121,35 @@ Coroutine<SChannelResult> SerialPort::Write(const unsigned char* buff, size_t bu
     co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
-void SerialPort::Init(void)
-{
-    OpenSerialPort();
-}
-
 bool SerialPort::OpenSerialPort()
 {
     file_descriptor_ = ::open(comm_.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (file_descriptor_ < 0)
     {
         int error   = errno;
-        error_info_ = std::format("Failed to create a listen socket,code:{},:{}", error, strerror(error));
+        error_info_ = std::format("Failed to open serial port,code:{},:{}", error, strerror(error));
         return false;
     }
 
     struct termios tios;
 
-    tcgetattr(file_descriptor_, &tios);
+    if (tcgetattr(file_descriptor_, &tios) < 0)
+    {
+        int error   = errno;
+        error_info_ = std::format("Failed to tcgetattr,code:{},:{}", error, strerror(error));
+        return false;
+    }
 
     cfmakeraw(&tios);
     tios.c_cflag &= ~(CSIZE | CRTSCTS);
     tios.c_iflag &= ~(IXON | IXOFF | IXANY | IGNPAR);
-    tios.c_lflag &= ~(ECHOK | ECHOCTL | ECHOKE);
     tios.c_oflag &= ~(OPOST | ONLCR);
+    tios.c_lflag &= ~(ECHOK | ECHOCTL | ECHOKE);
 
     speed_t baud = TransitionBaudRate(baud_rate_);
     if (baud <= 0)
     {
+        error_info_ = std::format("The baud rate ({}) parameter is not optional", baud_rate_);
         return false;
     }
 #if defined(_BSD_SOURCE) || defined(_DEFAULT_SOURCE)
@@ -165,9 +169,11 @@ bool SerialPort::OpenSerialPort()
     case 6: tios.c_cflag |= CS6; break;
     case 7: tios.c_cflag |= CS7; break;
     case 8: tios.c_cflag |= CS8; break;
-    default: break;
+    default:
+        error_info_ = std::format("The data bite ({}) parameter is not optional", baud_rate_);
+        return false;
+     break;
     }
-
 
     // stop bits
     if (stop_bit_ == 1)

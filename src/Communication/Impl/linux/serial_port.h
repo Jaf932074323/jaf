@@ -59,7 +59,6 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-    void Init(void);
     bool OpenSerialPort();
     void CloseSerialPort();
 
