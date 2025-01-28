@@ -39,7 +39,7 @@ namespace comm
 {
 
 // TCP通道
-class UdpChannel : public IChannel
+class UdpChannel : public IUdpChannel
 {
     struct AwaitableResult;
     class ReadAwaitable;
@@ -54,7 +54,9 @@ public:
     virtual void Stop() override;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, std::string remote_ip, uint16_t remote_port, uint64_t timeout);
+    // TODO:目前没实现
+    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout) override;
 
 private:
     std::atomic<bool> stop_flag_ = false;

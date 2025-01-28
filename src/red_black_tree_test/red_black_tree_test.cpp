@@ -27,7 +27,7 @@
 #include <time.h>
 
 #ifdef _WIN32
-
+#include <winsock2.h>
 #include <Windows.h>
 
 namespace jaf

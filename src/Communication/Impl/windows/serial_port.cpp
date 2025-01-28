@@ -47,9 +47,10 @@ SerialPort::~SerialPort()
 {
 }
 
-void SerialPort::SetAddr(uint8_t comm, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity)
+void SerialPort::SetAddr(const std::string& comm_name, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity)
 {
-    comm_      = comm >= 10 ? std::format("\\\\.\\COM{}", comm) : std::format("COM{}", comm);
+    // comm_      = comm >= 10 ? std::format("\\\\.\\COM{}", comm) : std::format("COM{}", comm);
+    comm_ = comm_name;
     baud_rate_ = baud_rate;
     data_bit_  = data_bit;
     stop_bit_  = stop_bit;

@@ -23,8 +23,8 @@
 #ifdef _WIN32
 
 #include "udp_channel.h"
-#include "Log/log_head.h"
 #include "Impl/tool/run_with_timeout.h"
+#include "Log/log_head.h"
 #include "util/co_wait_util_controlled_stop.h"
 #include <WS2tcpip.h>
 #include <assert.h>
@@ -252,7 +252,7 @@ Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t bu
     co_return result;
 }
 
-Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, std::string remote_ip, uint16_t remote_port, uint64_t timeout)
+Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
@@ -264,12 +264,65 @@ Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t 
         co_return result;
     }
 
-    sockaddr_in send_addr     = {};
-    send_addr.sin_family      = AF_INET;
-    send_addr.sin_port        = htons(remote_port);
-    send_addr.sin_addr.s_addr = inet_addr(remote_ip.c_str());
+    ReadAwaitable read_awaitable(this, socket_, buff, buff_size);
+    RunWithTimeout run_with_timeout(control_start_stop_, read_awaitable, timeout, timer_);
+    co_await run_with_timeout.Run();
 
-    WriteAwaitable write_awaitable(this, socket_, buff, buff_size, send_addr);
+    const AwaitableResult& read_result = run_with_timeout.Result();
+    if (run_with_timeout.IsTimeout())
+    {
+        result.state = SChannelResult::EState::CRS_TIMEOUT;
+    }
+    result.len = read_result.len_;
+
+    if (result.len != 0)
+    {
+        result.state = SChannelResult::EState::CRS_SUCCESS;
+        co_return result;
+    }
+
+    if (stop_flag_)
+    {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
+        co_return result;
+    }
+
+    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
+    {
+        if (read_result.err_ == 0)
+        {
+            result.state = SChannelResult::EState::CRS_UNKNOWN;
+        }
+        else
+        {
+            result.state = SChannelResult::EState::CRS_FAIL;
+            result.code_ = read_result.err_;
+            Stop();
+            result.error = std::format("TcpChannel code error:{},error-msg:{}", read_result.err_, GetFormatMessage(read_result.err_));
+        }
+    }
+
+    co_return result;
+}
+
+Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
+{
+    wait_all_tasks_done_.CountUp();
+    FINALLY(wait_all_tasks_done_.CountDown(););
+
+    SChannelResult result;
+    if (stop_flag_)
+    {
+        result.state = SChannelResult::EState::CRS_CHANNEL_END;
+        co_return result;
+    }
+
+    //sockaddr_in send_addr     = {};
+    //send_addr.sin_family      = AF_INET;
+    //send_addr.sin_port        = htons(remote_port);
+    //send_addr.sin_addr.s_addr = inet_addr(remote_ip.c_str());
+
+    WriteAwaitable write_awaitable(this, socket_, buff, buff_size, addr->client_addr_);
     RunWithTimeout run_with_timeout(control_start_stop_, write_awaitable, timeout, timer_);
     co_await run_with_timeout.Run();
 
@@ -309,6 +362,7 @@ Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t 
 
     co_return result;
 }
+
 
 UdpChannel::ReadAwaitable::ReadAwaitable(UdpChannel* tcp_channel, SOCKET socket, unsigned char* buff, size_t size)
     : tcp_channel_(tcp_channel)

@@ -26,6 +26,7 @@
 #include <string>
 
 #ifdef _WIN32
+#include <winsock2.h>
 #elif defined(__linux__)
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -51,7 +52,7 @@ struct SChannelResult
     };
 
     EState state = EState::CRS_UNKNOWN;
-    ssize_t len  = 0;  // 处理长度
+    size_t len  = 0;  // 处理长度
     int code_    = 0;  // 错误代码 state为CRS_FAIL时有效
     std::string error; // 当失败且未超时，失败原因
 };
