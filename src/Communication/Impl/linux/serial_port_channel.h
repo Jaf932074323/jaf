@@ -24,17 +24,7 @@
 #ifdef _WIN32
 #elif defined(__linux__)
 
-#include "Interface/communication/comm_struct.h"
-#include "Interface/communication/i_channel.h"
-#include "channel_read_write_helper.h"
-#include "global_timer/co_await_time.h"
-#include "head.h"
-#include "time_head.h"
-#include "util/co_wait_all_tasks_done.h"
-#include "util/co_wait_util_stop.h"
-#include <functional>
-#include <memory>
-#include <string>
+#include "channel.h"
 
 namespace jaf
 {
@@ -42,37 +32,11 @@ namespace comm
 {
 
 // TCP通道
-class SerialPortChannel : public IChannel
+class SerialPortChannel : public Channel
 {
 public:
-    SerialPortChannel(int socket, int epoll_fd, std::shared_ptr<jaf::time::ITimer> timer);
+    SerialPortChannel(int file_descriptor_, int epoll_fd, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~SerialPortChannel();
-
-public:
-    virtual Coroutine<void> Run();
-    virtual void Stop() override;
-    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-
-private:
-    void OnEpoll(EpollData* data);
-
-private:
-    std::atomic<bool> stop_flag_ = true;
-    CoWaitUtilStop wait_stop_;
-    std::string finish_reason_;
-
-    std::shared_ptr<jaf::time::ITimer> timer_;
-
-    int socket_   = 0;  // 收发数据的套接字
-    int epoll_fd_ = -1; // epoll描述符
-
-    jaf::CoWaitAllTasksDone wait_all_tasks_done_;
-
-    EpollData epoll_data_; // 连接时用的通讯数据
-
-    ChannelReadWriteHelper read_helper_;
-    ChannelReadWriteHelper write_helper_;
 };
 
 

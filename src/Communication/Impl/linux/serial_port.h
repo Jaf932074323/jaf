@@ -70,7 +70,7 @@ private:
 
     int epoll_fd_ = -1;         // epoll描述符
     IGetEpollFd* get_epoll_fd_; // 获取epoll对象
-    int comm_fd_ = -1;
+    int file_descriptor_ = -1;
 
     std::string comm_;   //串口
     uint32_t baud_rate_; // 波特率

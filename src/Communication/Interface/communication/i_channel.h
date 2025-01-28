@@ -51,9 +51,29 @@ struct SChannelResult
     };
 
     EState state = EState::CRS_UNKNOWN;
-    ssize_t len   = 0;  // 处理长度
+    ssize_t len  = 0;  // 处理长度
     int code_    = 0;  // 错误代码 state为CRS_FAIL时有效
     std::string error; // 当失败且未超时，失败原因
+};
+
+struct Addr
+{
+    Addr()
+    {
+    }
+
+
+#ifdef _WIN32
+#elif defined(__linux__)
+    Addr(std::string ip, uint16_t port)
+        : client_addr_{}
+    {
+        client_addr_.sin_family      = AF_INET;
+        client_addr_.sin_addr.s_addr = inet_addr(ip.c_str());
+        client_addr_.sin_port        = htons(port);
+    }
+#endif
+    sockaddr_in client_addr_;
 };
 
 // 通信通道
@@ -72,27 +92,6 @@ public:
 // UDP通信通道
 class IUdpChannel : public IChannel
 {
-
-public:
-    struct Addr
-    {
-        Addr()
-        {
-        }
-
-
-#ifdef _WIN32
-#elif defined(__linux__)
-        Addr(std::string ip, uint16_t port)
-            : client_addr_{}
-        {
-            client_addr_.sin_family      = AF_INET;
-            client_addr_.sin_addr.s_addr = inet_addr(ip.c_str());
-            client_addr_.sin_port        = htons(port);
-        }
-#endif
-        sockaddr_in client_addr_;
-    };
 
 public:
     IUdpChannel() {}

@@ -76,7 +76,7 @@ jaf::Coroutine<void> SerialPort::Run()
     epoll_fd_ = get_epoll_fd_->Get();
     Init();
 
-    std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(comm_fd_, epoll_fd_, timer_);
+    std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(file_descriptor_, epoll_fd_, timer_);
 
     {
         std::unique_lock lock(channel_mutex_);
@@ -125,8 +125,8 @@ void SerialPort::Init(void)
 
 bool SerialPort::OpenSerialPort()
 {
-    comm_fd_ = ::open(comm_.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
-    if (comm_fd_ < 0)
+    file_descriptor_ = ::open(comm_.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
+    if (file_descriptor_ < 0)
     {
         int error   = errno;
         error_info_ = std::format("Failed to create a listen socket,code:{},:{}", error, strerror(error));
@@ -135,7 +135,7 @@ bool SerialPort::OpenSerialPort()
 
     struct termios tios;
 
-    tcgetattr(comm_fd_, &tios);
+    tcgetattr(file_descriptor_, &tios);
 
     cfmakeraw(&tios);
     tios.c_cflag &= ~(CSIZE | CRTSCTS);
@@ -219,15 +219,15 @@ bool SerialPort::OpenSerialPort()
     // tios.c_cc[VMIN] = options.vmin;
     // tios.c_cc[VTIME] = options.vtime;
 
-    tcsetattr(comm_fd_, TCSANOW, &tios);
-    tcflush(comm_fd_, TCIOFLUSH);
+    tcsetattr(file_descriptor_, TCSANOW, &tios);
+    tcflush(file_descriptor_, TCIOFLUSH);
 
     return true;
 }
 
 void SerialPort::CloseSerialPort()
 {
-    ::close(comm_fd_);
+    ::close(file_descriptor_);
 }
 
 speed_t SerialPort::TransitionBaudRate(uint32_t baud_rate)
