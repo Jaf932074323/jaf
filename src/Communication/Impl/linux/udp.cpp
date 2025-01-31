@@ -55,10 +55,12 @@ Udp::~Udp()
 
 void Udp::SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port)
 {
-    local_ip_    = local_ip;
-    local_port_  = local_port;
-    remote_ip_   = remote_ip;
-    remote_port_ = remote_port;
+    remote_endpoint_ = remote_endpoint;
+    local_endpoint_ = local_endpoint;
+    local_ip_    = local_endpoint_.Ip();
+    local_port_  = local_endpoint_.Port();
+    remote_ip_   = remote_endpoint_.Ip();
+    remote_port_ = remote_endpoint_.Port();
 }
 
 void Udp::SetHandleChannel(std::function<jaf::Coroutine<void>(std::shared_ptr<jaf::comm::IUdpChannel> channel)> handle_channel)

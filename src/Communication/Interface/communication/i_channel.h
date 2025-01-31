@@ -24,6 +24,7 @@
 #include "util/co_coroutine.h"
 #include <stdint.h>
 #include <string>
+#include "endpoint.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -57,26 +58,6 @@ struct SChannelResult
     std::string error; // 当失败且未超时，失败原因
 };
 
-struct Addr
-{
-    Addr()
-    {
-    }
-
-
-#ifdef _WIN32
-#elif defined(__linux__)
-    Addr(std::string ip, uint16_t port)
-        : client_addr_{}
-    {
-        client_addr_.sin_family      = AF_INET;
-        client_addr_.sin_addr.s_addr = inet_addr(ip.c_str());
-        client_addr_.sin_port        = htons(port);
-    }
-#endif
-    sockaddr_in client_addr_;
-};
-
 // 通信通道
 class IChannel
 {
@@ -99,8 +80,8 @@ public:
     virtual ~IUdpChannel() {};
 
 public:
-    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)      = 0;
-    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout) = 0;
+    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout)      = 0;
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout) = 0;
 };
 
 } // namespace comm

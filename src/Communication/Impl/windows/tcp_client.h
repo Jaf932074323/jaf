@@ -23,10 +23,10 @@
 // 2024-6-16 姜安富
 #ifdef _WIN32
 
-#include "Interface/communication/i_tcp_client.h"
 #include "Impl/empty_channel.h"
-#include "global_timer/co_await_time.h"
 #include "Interface/communication/i_channel.h"
+#include "Interface/communication/i_tcp_client.h"
+#include "global_timer/co_await_time.h"
 #include "i_get_completion_port.h"
 #include "time_head.h"
 #include "util/co_coroutine.h"
@@ -47,7 +47,7 @@ public:
     virtual ~TcpClient();
 
 public:
-    virtual void SetAddr(const std::string& remote_ip, uint16_t remote_port, const std::string& local_ip = "0.0.0.0", uint16_t local_port = 0) override;
+    virtual void SetAddr(const Endpoint& remote_endpoint, const Endpoint& local_endpoint = Endpoint("0.0.0.0", 0)) override;
     // 设置连接时间
     // connect_timeout 连接超时时间
     // reconnect_wait_time 重连等待时间
@@ -77,6 +77,8 @@ private:
     IGetCompletionPort* get_completion_port_ = nullptr;
     HANDLE completion_handle_                = nullptr;
 
+    Endpoint remote_endpoint_;
+    Endpoint local_endpoint_;
     std::string local_ip_ = "0.0.0.0";
     uint16_t local_port_  = 0;
     std::string remote_ip_;
@@ -90,7 +92,7 @@ private:
 
     std::mutex channel_mutex_;
     std::shared_ptr<IChannel> empty_channel_ = std::make_shared<EmptyChannel>();
-    std::shared_ptr<IChannel> channel_ = empty_channel_;
+    std::shared_ptr<IChannel> channel_       = empty_channel_;
 };
 
 } // namespace comm

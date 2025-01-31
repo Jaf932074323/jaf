@@ -22,6 +22,7 @@
 // SOFTWARE.
 // 2024-6-16 姜安富
 #include "Interface/communication/i_unpack.h"
+#include "endpoint.h"
 #include "util/co_coroutine.h"
 #include <functional>
 #include <memory>
@@ -36,10 +37,10 @@ namespace comm
 class ITcpClient
 {
 public:
-    virtual ~ITcpClient(){};
+    virtual ~ITcpClient() {};
 
 public:
-    virtual void SetAddr(const std::string& remote_ip, uint16_t remote_port, const std::string& local_ip = "0.0.0.0", uint16_t local_port = 0) = 0;
+    virtual void SetAddr(const Endpoint& remote_endpoint, const Endpoint& local_endpoint = Endpoint("0.0.0.0", 0)) = 0;
     // 设置连接时间
     // connect_timeout 连接超时时间
     // reconnect_wait_time 重连等待时间

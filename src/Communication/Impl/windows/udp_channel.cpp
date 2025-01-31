@@ -101,21 +101,13 @@ private:
     bool callback_flag_ = false; // 已经回调标记
 };
 
-UdpChannel::UdpChannel(HANDLE completion_handle, SOCKET socket,
-    std::string remote_ip, uint16_t remote_port,
-    std::string local_ip, uint16_t local_port,
-    std::shared_ptr<jaf::time::ITimer> timer)
+UdpChannel::UdpChannel(HANDLE completion_handle, SOCKET socket, const Endpoint& remote_endpoint, const Endpoint& local_endpoint, std::shared_ptr<jaf::time::ITimer> timer)
     : completion_handle_(completion_handle)
     , socket_(socket)
-    , remote_ip_(remote_ip)
-    , remote_port_(remote_port)
-    , local_ip_(local_ip)
-    , local_port_(local_port)
+    , remote_endpoint_(remote_endpoint)
+    , local_endpoint_(local_endpoint)
     , timer_(timer)
 {
-    send_addr_.sin_family      = AF_INET;
-    send_addr_.sin_port        = htons(remote_port_);
-    send_addr_.sin_addr.s_addr = inet_addr(remote_ip_.c_str());
 }
 
 UdpChannel::~UdpChannel()
@@ -211,7 +203,7 @@ Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t bu
         co_return result;
     }
 
-    WriteAwaitable write_awaitable(this, socket_, buff, buff_size, send_addr_);
+    WriteAwaitable write_awaitable(this, socket_, buff, buff_size, remote_endpoint_.GetSockAddr());
     RunWithTimeout run_with_timeout(control_start_stop_, write_awaitable, timeout, timer_);
     co_await run_with_timeout.Run();
 
@@ -252,7 +244,7 @@ Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t bu
     co_return result;
 }
 
-Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
+Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
@@ -305,7 +297,7 @@ Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_
     co_return result;
 }
 
-Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
+Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
@@ -322,7 +314,7 @@ Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t 
     //send_addr.sin_port        = htons(remote_port);
     //send_addr.sin_addr.s_addr = inet_addr(remote_ip.c_str());
 
-    WriteAwaitable write_awaitable(this, socket_, buff, buff_size, addr->client_addr_);
+    WriteAwaitable write_awaitable(this, socket_, buff, buff_size, endpoint->GetSockAddr());
     RunWithTimeout run_with_timeout(control_start_stop_, write_awaitable, timeout, timer_);
     co_await run_with_timeout.Run();
 

@@ -23,8 +23,8 @@
 #ifdef _WIN32
 
 #include "tcp_client.h"
-#include "Log/log_head.h"
 #include "Impl/tool/run_with_timeout.h"
+#include "Log/log_head.h"
 #include "tcp_channel.h"
 #include "util/finally.h"
 #include <WS2tcpip.h>
@@ -98,12 +98,14 @@ TcpClient::~TcpClient()
 {
 }
 
-void TcpClient::SetAddr(const std::string& remote_ip, uint16_t remote_port, const std::string& local_ip, uint16_t local_port)
+void TcpClient::SetAddr(const Endpoint& remote_endpoint, const Endpoint& local_endpoint)
 {
-    local_ip_    = local_ip;
-    local_port_  = local_port;
-    remote_ip_   = remote_ip;
-    remote_port_ = remote_port;
+    remote_endpoint_ = remote_endpoint;
+    local_endpoint_  = local_endpoint;
+    local_ip_        = local_endpoint.Ip();
+    local_port_      = local_endpoint.Port();
+    remote_ip_       = remote_endpoint.Ip();
+    remote_port_     = remote_endpoint.Port();
 }
 
 void TcpClient::SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time)
@@ -204,7 +206,7 @@ jaf::Coroutine<void> TcpClient::Execute()
         }
 
 
-        std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket, remote_ip_, remote_port_, local_ip_, local_port_, timer_);
+        std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket, remote_endpoint_, local_endpoint_, timer_);
 
         {
             std::unique_lock lock(channel_mutex_);

@@ -65,12 +65,12 @@ TEST(tcp, usual)
         uint16_t client_port = 0;
 
         std::shared_ptr<jaf::comm::ITcpServer> server = communication.CreateTcpServer();
-        server->SetAddr(str_ip, server_port);
+        server->SetAddr(jaf::comm::Endpoint(str_ip, server_port));
         server->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
         server->SetAcceptCount(1);
 
         std::shared_ptr<jaf::comm::ITcpClient> client = communication.CreateTcpClient();
-        client->SetAddr(str_ip, server_port, str_ip, client_port);
+        client->SetAddr(jaf::comm::Endpoint(str_ip, server_port), jaf::comm::Endpoint(str_ip, client_port));
         client->SetHandleChannel(fun_deal_client_channel);
 
         wait_recv.Start(10);

@@ -70,13 +70,11 @@ void Test()
             }
         };
 
-        std::string local_ip   = "192.168.204.130";
-        uint16_t local_port   = 8181;
-        std::string remote_ip = "192.168.204.1";
-        uint16_t remote_port   = 8181;
+        jaf::comm::Endpoint local_enpoint("192.168.204.130", 8181);
+        jaf::comm::Endpoint remote_enpoint("192.168.204.1", 8181);
 
         std::shared_ptr<jaf::comm::IUdp> udp = communication.CreateUdp();
-        udp->SetAddr(local_ip, local_port, remote_ip, remote_port);
+        udp->SetAddr(local_enpoint, remote_enpoint);
         udp->SetHandleChannel(fun_deal_client_channel);
 
         jaf::Coroutine<void> udp_run = udp->Run();

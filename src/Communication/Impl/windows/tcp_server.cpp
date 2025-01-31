@@ -111,10 +111,9 @@ TcpServer::~TcpServer()
 {
 }
 
-void TcpServer::SetAddr(const std::string& ip, uint16_t port)
+void TcpServer::SetAddr(const Endpoint& endpoint)
 {
-    ip_   = ip;
-    port_ = port;
+    endpoint_ = endpoint;
 }
 
 void TcpServer::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel)
@@ -217,12 +216,7 @@ void TcpServer::Init(void)
         return;
     }
 
-    SOCKADDR_IN server = {0};
-    inet_pton(AF_INET, ip_.c_str(), (void*) &server.sin_addr);
-    server.sin_family = AF_INET;
-    server.sin_port   = htons(port_);
-
-    if (SOCKET_ERROR == ::bind(listen_socket_, (LPSOCKADDR) &server, sizeof(server)))
+    if (SOCKET_ERROR == ::bind(listen_socket_, (LPSOCKADDR) &endpoint_.GetSockAddr(), sizeof(endpoint_.GetSockAddr())))
     {
         closesocket(listen_socket_);
         DWORD dw        = GetLastError();
@@ -291,8 +285,11 @@ jaf::Coroutine<void> TcpServer::RunSocket(SOCKET socket)
         socket = INVALID_SOCKET;
         co_return;
     }
-    sockaddr_in remote_addr;
-    sockaddr_in locade_addr;
+
+    Endpoint remote_enpoint;
+    Endpoint locade_enpoint;
+    sockaddr_in& remote_addr = remote_enpoint.GetSockAddr();
+    sockaddr_in& locade_addr = locade_enpoint.GetSockAddr();
     int remote_len = sizeof(sockaddr_in);
     int locade_len = sizeof(sockaddr_in);
     getsockname(listen_socket_, (struct sockaddr*) &remote_addr, &remote_len);
@@ -316,7 +313,7 @@ jaf::Coroutine<void> TcpServer::RunSocket(SOCKET socket)
         co_return;
     }
 
-    std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(socket, remote_ip, remote_port, local_ip, local_port, timer_);
+    std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(socket, remote_enpoint, locade_enpoint, timer_);
 
     bool run_flag;
     {

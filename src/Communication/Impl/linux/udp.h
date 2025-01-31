@@ -68,6 +68,8 @@ private:
     
     std::shared_ptr<jaf::time::ITimer> timer_;
 
+    Endpoint remote_endpoint_;
+    Endpoint local_endpoint_;
     std::string local_ip_  = "0.0.0.0";
     uint16_t local_port_   = 0;
     std::string remote_ip_ = "0.0.0.0";

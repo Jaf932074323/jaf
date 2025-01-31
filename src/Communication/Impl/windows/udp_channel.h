@@ -46,7 +46,7 @@ class UdpChannel : public IUdpChannel
     class WriteAwaitable;
 
 public:
-    UdpChannel(HANDLE completion_handle, SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
+    UdpChannel(HANDLE completion_handle, SOCKET socket, const Endpoint& remote_endpoint, const Endpoint& local_endpoint, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~UdpChannel();
 
 public:
@@ -55,8 +55,8 @@ public:
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     // TODO:目前没实现
-    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout) override;
 
 private:
     std::atomic<bool> stop_flag_ = false;
@@ -65,11 +65,9 @@ private:
 
     HANDLE completion_handle_ = nullptr;
     SOCKET socket_            = 0; // 收发数据的套接字
-    std::string remote_ip_;
-    uint16_t remote_port_ = 0;
-    std::string local_ip_;
-    uint16_t local_port_   = 0;
-    sockaddr_in send_addr_ = {};
+
+    Endpoint remote_endpoint_;
+    Endpoint local_endpoint_;
 
     jaf::ControlStartStop control_start_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;

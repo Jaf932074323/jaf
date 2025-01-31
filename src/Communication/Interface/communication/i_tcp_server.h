@@ -22,6 +22,7 @@
 // SOFTWARE.
 // 2024-6-16 姜安富
 #include "Interface/communication/i_unpack.h"
+#include "endpoint.h"
 #include "util/co_coroutine.h"
 #include <functional>
 #include <memory>
@@ -36,10 +37,10 @@ namespace comm
 class ITcpServer
 {
 public:
-    virtual ~ITcpServer(){};
+    virtual ~ITcpServer() {};
 
 public:
-    virtual void SetAddr(const std::string& ip, uint16_t port)                                                      = 0;
+    virtual void SetAddr(const Endpoint& endpoint)                                                                  = 0;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) = 0;
     virtual void SetAcceptCount(size_t accept_count)                                                                = 0;
     virtual void SetMaxClientCount(size_t max_client_count)                                                         = 0;

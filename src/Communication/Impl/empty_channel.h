@@ -77,14 +77,14 @@ public:
         co_return result;
     }
 
-    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
+    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout)
     {
         SChannelResult result;
         result.state = SChannelResult::EState::CRS_EMPTY;
         co_return result;
     }
 
-    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout)
     {
         SChannelResult result;
         result.state = SChannelResult::EState::CRS_EMPTY;

@@ -84,15 +84,15 @@ void Main::Init()
     std::shared_ptr<Unpack> unpack = std::make_shared<Unpack>(std::bind(&Main::Deal, this, std::placeholders::_1));
 
     server_ = communication_->CreateTcpServer();
-    server_->SetAddr(str_ip, 8181);
+    server_->SetAddr(jaf::comm::Endpoint(str_ip, 8181));
     server_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
     client_ = communication_->CreateTcpClient();
-    client_->SetAddr(str_ip, 8182, str_ip, 0);
+    client_->SetAddr(jaf::comm::Endpoint(str_ip, 8182), jaf::comm::Endpoint(str_ip, 0));
     client_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
     udp_ = communication_->CreateUdp();
-    udp_->SetAddr(str_ip, 8081, str_ip, 8082);
+    udp_->SetAddr(jaf::comm::Endpoint(str_ip, 8081), jaf::comm::Endpoint(str_ip, 8082));
     udp_->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
     serial_port_ = communication_->CreateSerialPort();

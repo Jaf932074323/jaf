@@ -96,12 +96,10 @@ private:
     bool callback_flag_ = false; // 已经回调标记
 };
 
-TcpChannel::TcpChannel(SOCKET socket, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
+TcpChannel::TcpChannel(SOCKET socket, const Endpoint& remote_endpoint, const Endpoint& local_endpoint, std::shared_ptr<jaf::time::ITimer> timer)
     : socket_(socket)
-    , remote_ip_(remote_ip)
-    , remote_port_(remote_port)
-    , local_ip_(local_ip)
-    , local_port_(local_port)
+    , remote_endpoint_(remote_endpoint)
+    , local_endpoint_(local_endpoint)
     , timer_(timer)
 {
 }

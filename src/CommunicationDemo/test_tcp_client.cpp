@@ -74,13 +74,11 @@ void Test()
             }
         };
 
-        std::string server_ip_ = "192.168.204.1";
-        std::string local_ip   = "0.0.0.0";
-        uint16_t server_port   = 8181;
-        uint16_t client_port   = 0;
+        jaf::comm::Endpoint server_endpoint("192.168.204.1", 8181);
+        jaf::comm::Endpoint client_endpoint("0.0.0.0", 0);
 
         std::shared_ptr<jaf::comm::ITcpClient> client = communication.CreateTcpClient();
-        client->SetAddr(server_ip_, server_port, local_ip, client_port);
+        client->SetAddr(server_endpoint, client_endpoint);
         client->SetHandleChannel(fun_deal_client_channel);
 
         jaf::Coroutine<void> client_run = client->Run();

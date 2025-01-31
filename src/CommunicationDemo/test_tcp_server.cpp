@@ -33,9 +33,9 @@
 #include "util/co_wait_notices.h"
 #include <format>
 #include <functional>
+#include <iostream>
 #include <list>
 #include <string>
-#include <iostream>
 
 namespace test_server
 {
@@ -73,11 +73,10 @@ jaf::Coroutine<void> Test()
         }
     };
 
-    std::string server_ip_ = "192.168.204.130";
-    uint16_t server_port   = 8181;
+    jaf::comm::Endpoint server_endpoint("192.168.204.130", 8181);
 
     std::shared_ptr<jaf::comm::ITcpServer> server = communication.CreateTcpServer();
-    server->SetAddr(server_ip_, server_port);
+    server->SetAddr(server_endpoint);
     server->SetHandleChannel(fun_deal_channel);
     server->SetAcceptCount(1);
 

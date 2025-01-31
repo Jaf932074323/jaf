@@ -55,11 +55,11 @@ TEST(udp, usual)
         std::shared_ptr<Unpack> unpack = std::make_shared<Unpack>(fun_deal);
 
         std::shared_ptr<jaf::comm::IUdp> udp_1 = communication.CreateUdp();
-        udp_1->SetAddr(str_ip, 8081, str_ip, 8082);
+        udp_1->SetAddr(jaf::comm::Endpoint(str_ip, 8081), jaf::comm::Endpoint(str_ip, 8082));
         udp_1->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
         std::shared_ptr<jaf::comm::IUdp> udp_2 = communication.CreateUdp();
-        udp_2->SetAddr(str_ip, 8082, str_ip, 8081);
+        udp_2->SetAddr(jaf::comm::Endpoint(str_ip, 8082), jaf::comm::Endpoint(str_ip, 8081));
         udp_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
         wait_recv.Start();
