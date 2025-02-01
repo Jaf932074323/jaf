@@ -297,7 +297,7 @@ Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_
     co_return result;
 }
 
-Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout)
+Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););

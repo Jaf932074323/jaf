@@ -42,14 +42,11 @@ namespace jaf
 namespace comm
 {
 
-UdpChannel::UdpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
+UdpChannel::UdpChannel(int socket, int epoll_fd, const Endpoint& remote_endpoint, const Endpoint& local_endpoint, std::shared_ptr<jaf::time::ITimer> timer)
     : socket_(socket)
     , epoll_fd_(epoll_fd)
-    , remote_ip_(remote_ip)
-    , remote_port_(remote_port)
-    , local_ip_(local_ip)
-    , local_port_(local_port)
-    , remote_addr_(remote_ip, remote_port)
+    , remote_endpoint_(remote_endpoint)
+    , local_endpoint_(local_endpoint)
     , timer_(timer)
 {
     close_flag_ = false;
@@ -141,20 +138,20 @@ Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t bu
 
     struct WriteCommunData : public CommunData
     {
-        WriteCommunData(Addr& remote_addr)
+        WriteCommunData(const sockaddr_in& remote_addr)
             : remote_addr_(remote_addr)
         {
         }
         // 执行通讯功能
         virtual void DoOperate(int file)
         {
-            result.len = ::sendto(file, operate_buf_, need_len_, 0, (sockaddr*) &remote_addr_.client_addr_, addr_len_);
+            result.len = ::sendto(file, operate_buf_, need_len_, 0, (const sockaddr*) &remote_addr_, addr_len_);
         }
 
-        Addr& remote_addr_;        
+        const sockaddr_in& remote_addr_;        
         socklen_t addr_len_ = sizeof(remote_addr_);
     };
-    std::shared_ptr<WriteCommunData> write_data = std::make_shared<WriteCommunData>(remote_addr_);
+    std::shared_ptr<WriteCommunData> write_data = std::make_shared<WriteCommunData>(remote_endpoint_.GetSockAddr());
     write_data->need_len_                       = buff_size;
     write_data->operate_buf_                    = (unsigned char*) buff;
 
@@ -174,7 +171,7 @@ Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t bu
     co_return write_data->result;
 }
 
-Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
+Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
@@ -201,7 +198,7 @@ Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_
     RWAwaitable read_awaitable(read_helper_, timer_, read_data, timeout);
     co_await read_awaitable;
 
-    addr->client_addr_ = read_data->client_addr_;
+    endpoint->Set(read_data->client_addr_);
 
     if (read_data->result.state == SChannelResult::EState::CRS_SUCCESS)
     {
@@ -216,7 +213,7 @@ Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_
     co_return read_data->result;
 }
 
-Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout)
+Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout)
 {
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
@@ -238,7 +235,7 @@ Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t 
         socklen_t addr_len_ = sizeof(client_addr_);
     };
     std::shared_ptr<WriteCommunData> write_data = std::make_shared<WriteCommunData>();
-    write_data->client_addr_                    = addr->client_addr_;
+    write_data->client_addr_                    = endpoint->GetSockAddr();
     write_data->need_len_                       = buff_size;
     write_data->operate_buf_                    = (unsigned char*) buff;
 

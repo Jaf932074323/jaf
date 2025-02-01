@@ -46,42 +46,52 @@ struct Endpoint
     }
 
     Endpoint(const std::string& ip, uint16_t port)
-        : client_addr_{}
+        : addr_{}
     {
-        client_addr_.sin_family = AF_INET;
-        client_addr_.sin_port   = ::htons(port);
-        ::inet_pton(AF_INET, ip.c_str(), (void*) &client_addr_.sin_addr);
+        addr_.sin_family = AF_INET;
+        addr_.sin_port   = ::htons(port);
+        ::inet_pton(AF_INET, ip.c_str(), (void*) &addr_.sin_addr);
+    }
+
+    Endpoint(const SockAddr& addr)
+        : addr_(addr)
+    {
     }
 
     void Set(const std::string& ip, uint16_t port)
     {
-        client_addr_.sin_family = AF_INET;
-        client_addr_.sin_port   = ::htons(port);
-        ::inet_pton(AF_INET, ip.c_str(), (void*) &client_addr_.sin_addr);
+        addr_.sin_family = AF_INET;
+        addr_.sin_port   = ::htons(port);
+        ::inet_pton(AF_INET, ip.c_str(), (void*) &addr_.sin_addr);
+    }
+
+    void Set(const SockAddr& addr)
+    {
+        addr_ = addr;
     }
 
     SockAddr& GetSockAddr()
     {
-        return client_addr_;
+        return addr_;
     }
     const SockAddr& GetSockAddr() const
     {
-        return client_addr_;
+        return addr_;
     }
 
     std::string Ip() const
     {
         char buff[20] = {0};
-        ::inet_ntop(AF_INET, &client_addr_.sin_addr, buff, sizeof(buff)); //其中recvAddr为SOCKADDR_IN类型
+        ::inet_ntop(AF_INET, &addr_.sin_addr, buff, sizeof(buff)); //其中recvAddr为SOCKADDR_IN类型
         return std::string(buff);
     }
     uint16_t Port() const
     {
-        return ::ntohs(client_addr_.sin_port);
+        return ::ntohs(addr_.sin_port);
     }
 
 private:
-    SockAddr client_addr_;
+    SockAddr addr_;
 };
 
 } // namespace comm

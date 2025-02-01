@@ -81,7 +81,7 @@ public:
 
 public:
     virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout)      = 0;
-    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout) = 0;
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout) = 0;
 };
 
 } // namespace comm

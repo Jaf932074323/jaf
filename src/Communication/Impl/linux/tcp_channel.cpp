@@ -40,12 +40,10 @@ namespace jaf
 namespace comm
 {
 
-TcpChannel::TcpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer)
+TcpChannel::TcpChannel(int socket, int epoll_fd, const Endpoint& remote_endpoint, const Endpoint& local_endpoint, std::shared_ptr<jaf::time::ITimer> timer)
     :Channel(socket, epoll_fd, timer)
-    , remote_ip_(remote_ip)
-    , remote_port_(remote_port)
-    , local_ip_(local_ip)
-    , local_port_(local_port)
+    , remote_endpoint_(remote_endpoint)
+    , local_endpoint_(local_endpoint)
 {
 }
 

@@ -49,7 +49,7 @@ public:
     virtual ~TcpClient();
 
 public:
-    virtual void SetAddr(const std::string& remote_ip, uint16_t remote_port, const std::string& local_ip = "0.0.0.0", uint16_t local_port = 0) override;
+    virtual void SetAddr(const Endpoint& remote_endpoint, const Endpoint& local_endpoint = Endpoint("0.0.0.0", 0)) override;
     // 设置连接时间
     // connect_timeout 连接超时时间
     // reconnect_wait_time 重连等待时间
@@ -77,6 +77,8 @@ private:
     IGetEpollFd* get_epoll_fd_; // 获取epoll对象
     int connect_socket_ = -1;
 
+    Endpoint remote_endpoint_;
+    Endpoint local_endpoint_;
     std::string local_ip_ = "0.0.0.0";
     uint16_t local_port_  = 0;
     std::string remote_ip_;

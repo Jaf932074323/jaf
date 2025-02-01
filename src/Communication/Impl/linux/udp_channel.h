@@ -27,6 +27,7 @@
 #include "Interface/communication/comm_struct.h"
 #include "Interface/communication/i_channel.h"
 #include "channel_read_write_helper.h"
+#include "endpoint.h"
 #include "global_timer/co_await_time.h"
 #include "head.h"
 #include "time_head.h"
@@ -47,7 +48,7 @@ class UdpChannel : public IUdpChannel
     class WriteAwaitable;
 
 public:
-    UdpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
+    UdpChannel(int socket, int epoll_fd, const Endpoint& remote_endpoint, const Endpoint& local_endpoint, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~UdpChannel();
 
 public:
@@ -55,8 +56,8 @@ public:
     virtual void Stop() override;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, Addr* addr, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout) override;
 
 private:
     void OnEpoll(EpollData* data);
@@ -69,11 +70,9 @@ private:
 
     int socket_   = 0;  // 收发数据的套接字
     int epoll_fd_ = -1; // epoll描述符
-    std::string remote_ip_;
-    uint16_t remote_port_ = 0;
-    std::string local_ip_;
-    uint16_t local_port_ = 0;
-    Addr remote_addr_;
+    
+    Endpoint remote_endpoint_;
+    Endpoint local_endpoint_; 
 
     jaf::ControlStartStop control_start_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;
@@ -83,21 +82,8 @@ private:
     std::atomic<bool> close_flag_   = true;  // 套接字是否已经关闭标志
     std::atomic<bool> write_status_ = false; // 是否可写
 
-    struct ReadAppendata
-    {
-        uint32_t need_len_         = 0;
-        unsigned char* result_buf_ = nullptr;
-    };
-
-    struct WriteAppendata
-    {
-        uint32_t need_len_               = 0;
-        const unsigned char* result_buf_ = nullptr;
-    };
-
     ChannelReadWriteHelper read_helper_;
     ChannelReadWriteHelper write_helper_;
-
 };
 
 

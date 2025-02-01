@@ -53,14 +53,14 @@ Udp::~Udp()
 {
 }
 
-void Udp::SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port)
+void Udp::SetAddr(const Endpoint& remote_endpoint, const Endpoint& local_endpoint)
 {
     remote_endpoint_ = remote_endpoint;
-    local_endpoint_ = local_endpoint;
-    local_ip_    = local_endpoint_.Ip();
-    local_port_  = local_endpoint_.Port();
-    remote_ip_   = remote_endpoint_.Ip();
-    remote_port_ = remote_endpoint_.Port();
+    local_endpoint_  = local_endpoint;
+    local_ip_        = local_endpoint_.Ip();
+    local_port_      = local_endpoint_.Port();
+    remote_ip_       = remote_endpoint_.Ip();
+    remote_port_     = remote_endpoint_.Port();
 }
 
 void Udp::SetHandleChannel(std::function<jaf::Coroutine<void>(std::shared_ptr<jaf::comm::IUdpChannel> channel)> handle_channel)
@@ -79,7 +79,7 @@ jaf::Coroutine<void> Udp::Run()
     epoll_fd_ = get_epoll_fd_->Get();
     Init();
 
-    std::shared_ptr<UdpChannel> channel = std::make_shared<UdpChannel>(socket_, epoll_fd_, remote_ip_, remote_port_, local_ip_, local_port_, timer_);
+    std::shared_ptr<UdpChannel> channel = std::make_shared<UdpChannel>(socket_, epoll_fd_, remote_endpoint_, local_endpoint_, timer_);
 
     {
         std::unique_lock lock(channel_mutex_);

@@ -51,7 +51,7 @@ public:
     virtual ~TcpServer();
 
 public:
-    virtual void SetAddr(const std::string& ip, uint16_t port) override;
+    virtual void SetAddr(const Endpoint& endpoint) override;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
     virtual void SetAcceptCount(size_t accept_count) override;
     virtual void SetMaxClientCount(size_t max_client_count) override;
@@ -81,6 +81,7 @@ private:
 
     std::string ip_ = "0.0.0.0";
     uint16_t port_  = 0;
+    Endpoint endpoint_;
     
     std::string error_info_;    
 

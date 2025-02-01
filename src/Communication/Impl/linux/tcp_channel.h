@@ -35,14 +35,12 @@ namespace comm
 class TcpChannel : public Channel
 {
 public:
-    TcpChannel(int socket, int epoll_fd, std::string remote_ip, uint16_t remote_port, std::string local_ip, uint16_t local_port, std::shared_ptr<jaf::time::ITimer> timer);
+    TcpChannel(int socket, int epoll_fd, const Endpoint& remote_endpoint, const Endpoint& local_endpoint, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~TcpChannel();
 
 private:
-    std::string remote_ip_;
-    uint16_t remote_port_ = 0;
-    std::string local_ip_;
-    uint16_t local_port_ = 0;
+    Endpoint remote_endpoint_;
+    Endpoint local_endpoint_;
 
 };
 

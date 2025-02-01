@@ -58,10 +58,11 @@ TcpServer::~TcpServer()
 {
 }
 
-void TcpServer::SetAddr(const std::string& ip, uint16_t port)
+void TcpServer::SetAddr(const Endpoint& endpoint)
 {
-    ip_   = ip;
-    port_ = port;
+    endpoint_ = endpoint;
+    ip_       = endpoint_.Ip();
+    port_     = endpoint_.Port();
 }
 
 void TcpServer::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel)
@@ -154,21 +155,16 @@ bool TcpServer::Init(void)
     int flags = fcntl(listen_socket_, F_GETFL);
     fcntl(listen_socket_, F_SETFL, flags | O_NONBLOCK);
 
-    sockaddr_in server{};
-    server.sin_port   = htons(port_);
-    server.sin_family = AF_INET;
-    inet_pton(AF_INET, ip_.c_str(), (void*) &server.sin_addr);
-
-	int flag = 1;
-	if (setsockopt(listen_socket_, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag)) < 0)
-	{
+    int flag = 1;
+    if (setsockopt(listen_socket_, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag)) < 0)
+    {
         int error   = errno;
         error_info_ = std::format("Failed to bind listen socket, addr {}:{},code:{},:{}", ip_, port_, error, strerror(error));
         close(listen_socket_);
         return false;
-	}
+    }
 
-    if (::bind(listen_socket_, (sockaddr*) &server, sizeof(server)) < 0)
+    if (::bind(listen_socket_, (const sockaddr*) &endpoint_.GetSockAddr(), sizeof(endpoint_.GetSockAddr())) < 0)
     {
         int error   = errno;
         error_info_ = std::format("Failed to bind listen socket, addr {}:{},code:{},:{}", ip_, port_, error, strerror(error));
@@ -230,12 +226,12 @@ jaf::Coroutine<void> TcpServer::RunSocket(int socket)
     socklen_t locade_len = sizeof(sockaddr_in);
     getsockname(listen_socket_, (struct sockaddr*) &remote_addr, &remote_len);
     getpeername(socket, (struct sockaddr*) &locade_addr, &locade_len);
-    std::string remote_ip = inet_ntoa(remote_addr.sin_addr);
-    uint16_t remote_port  = ntohs(remote_addr.sin_port);
+    // std::string remote_ip = inet_ntoa(remote_addr.sin_addr);
+    // uint16_t remote_port  = ntohs(remote_addr.sin_port);
     std::string local_ip  = inet_ntoa(locade_addr.sin_addr);
     uint16_t local_port   = ntohs(locade_addr.sin_port);
 
-    std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(socket, epoll_fd_, remote_ip, remote_port, local_ip, local_port, timer_);
+    std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(socket, epoll_fd_, remote_addr, locade_addr, timer_);
     const std::string channel_key       = std::format("{}:{}", local_ip, local_port);
 
     bool run_flag;

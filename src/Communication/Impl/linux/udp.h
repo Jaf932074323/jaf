@@ -51,7 +51,7 @@ public:
     virtual ~Udp();
 
 public:
-    virtual void SetAddr(const std::string& local_ip, uint16_t local_port, const std::string& remote_ip, uint16_t remote_port) override;
+    virtual void SetAddr(const Endpoint& remote_endpoint, const Endpoint& local_endpoint = Endpoint("0.0.0.0", 0)) override;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IUdpChannel> channel)> handle_channel) override;
     virtual Coroutine<void> Run() override;
     virtual void Stop() override;
