@@ -41,10 +41,6 @@ namespace comm
 // 串口通道
 class SerialPortChannel : public IChannel
 {
-    struct AwaitableResult;
-    class ReadAwaitable;
-    class WriteAwaitable;
-
 public:
     SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~SerialPortChannel();

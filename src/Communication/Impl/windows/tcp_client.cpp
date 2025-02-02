@@ -25,6 +25,7 @@
 #include "tcp_client.h"
 #include "Impl/tool/run_with_timeout.h"
 #include "Log/log_head.h"
+#include "channel_read_write_helper.h"
 #include "tcp_channel.h"
 #include "util/finally.h"
 #include <WS2tcpip.h>
@@ -54,39 +55,6 @@ static LPFN_CONNECTEX GetConnectEx(SOCKET a_socket)
 
     return func;
 }
-
-struct TcpClient::ConnectResult
-{
-    bool success = false;
-    std::string error_info_;
-};
-
-class TcpClient::ConnectAwaitable
-{
-public:
-    ConnectAwaitable(TcpClient* client, SOCKET connect_socket);
-    ~ConnectAwaitable();
-    bool await_ready();
-    bool await_suspend(std::coroutine_handle<> co_handle);
-    ConnectResult await_resume();
-    void IoCallback(IOCP_DATA* pData);
-    void Stop();
-
-private:
-    TcpClient* client_ = nullptr;
-    std::string error_info_;
-    IOCP_DATA iocp_data_;
-    std::coroutine_handle<> handle_;
-    SOCKET connect_socket_;
-
-    bool success_ = false;
-
-    char buf_[1]   = {0};
-    DWORD dwBytes_ = 0;
-
-    std::mutex mutex_;           // 超时使用的同步
-    bool callback_flag_ = false; // 已经回调标记
-};
 
 TcpClient::TcpClient(IGetCompletionPort* get_completion_port, std::shared_ptr<jaf::time::ITimer> timer)
     : get_completion_port_(get_completion_port)
@@ -127,10 +95,10 @@ jaf::Coroutine<void> TcpClient::Run()
     }
     run_flag_ = true;
 
+    control_start_stop_.Start();
+
     wait_stop_.Start();
     completion_handle_ = get_completion_port_->Get();
-
-    Init();
 
     jaf::Coroutine<void> execute = Execute();
 
@@ -166,12 +134,37 @@ Coroutine<SChannelResult> TcpClient::Write(const unsigned char* buff, size_t buf
     co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
-void TcpClient::Init(void)
-{
-}
-
 jaf::Coroutine<void> TcpClient::Execute()
 {
+    struct ConnectCommunData : public CommunData
+    {
+        SOCKET connect_socket_; // 收发数据的套接字
+        sockaddr_in connect_addr_;
+
+        // 执行通讯功能
+        bool DoOperate()
+        {
+            static LPFN_CONNECTEX func_connect = GetConnectEx(connect_socket_);
+
+            DWORD bytes;
+            bool connect_result = func_connect(connect_socket_, (const sockaddr*) &connect_addr_, sizeof(connect_addr_), nullptr, 0, &bytes, &iocp_data_.overlapped);
+
+            if (!connect_result && WSAGetLastError() != ERROR_IO_PENDING)
+            {
+                result.code_ = GetLastError();
+                result.error = std::format("code:{},:{}", result.code_, GetFormatMessage(result.code_));
+                return false;
+            }
+            return true;
+        }
+
+        // 停止通讯功能
+        void StopOperate()
+        {
+            CancelIoEx((HANDLE) connect_socket_, &iocp_data_.overlapped);
+        }
+    };
+
     SOCKET connect_socket = INVALID_SOCKET; // 连接套接字
 
     while (run_flag_)
@@ -184,27 +177,29 @@ jaf::Coroutine<void> TcpClient::Execute()
         }
         FINALLY(closesocket(connect_socket); connect_socket = INVALID_SOCKET;);
 
-        ConnectAwaitable connect_awaitable(this, connect_socket);
-        RunWithTimeout run_with_timeout(control_start_stop_, connect_awaitable, connect_timeout_, timer_);
-        co_await run_with_timeout.Run();
+        std::shared_ptr<ConnectCommunData> commun_data = std::make_shared<ConnectCommunData>();
+        commun_data->connect_addr_                     = remote_endpoint_.GetSockAddr();
+        commun_data->connect_socket_                   = connect_socket;
+        RWAwaitable connect_awaitable(timer_, commun_data, connect_timeout_);
+        co_await connect_awaitable;
 
-        const auto& result = run_with_timeout.Result();
+        ConnectCommunData* p_commun_data = commun_data.get();
+        const SChannelResult& result     = p_commun_data->result;
         if (!run_flag_)
         {
             co_return;
         }
-        if (!result.success)
+        if (result.state != SChannelResult::EState::CRS_SUCCESS)
         {
             LOG_WARNING() << std::format("TCP连接失败,本地{}:{},远程{}:{},{}",
                 local_ip_, local_port_,
                 remote_ip_, remote_port_,
-                result.error_info_);
+                result.error);
 
             jaf::time::CoAwaitTime await_time(reconnect_wait_time_, control_start_stop_, timer_);
             co_await await_time;
             continue;
         }
-
 
         std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket, remote_endpoint_, local_endpoint_, timer_);
 
@@ -272,82 +267,6 @@ SOCKET TcpClient::CreationSocket()
     }
 
     return connect_socket;
-}
-
-TcpClient::ConnectAwaitable::ConnectAwaitable(TcpClient* client, SOCKET connect_socket)
-    : client_(client)
-    , connect_socket_(connect_socket)
-{
-}
-
-TcpClient::ConnectAwaitable::~ConnectAwaitable()
-{
-}
-
-bool TcpClient::ConnectAwaitable::await_ready()
-{
-    return false;
-}
-
-bool TcpClient::ConnectAwaitable::await_suspend(std::coroutine_handle<> co_handle)
-{
-    static LPFN_CONNECTEX func_connect = GetConnectEx(connect_socket_);
-
-    handle_          = co_handle;
-    iocp_data_.call_ = std::bind(&ConnectAwaitable::IoCallback, this, std::placeholders::_1);
-
-    sockaddr_in connect_addr = {0};
-    inet_pton(AF_INET, client_->remote_ip_.c_str(), (void*) &connect_addr.sin_addr);
-    connect_addr.sin_family = AF_INET;
-    connect_addr.sin_port   = htons(client_->remote_port_);
-    DWORD bytes;
-    bool connect_result = func_connect(connect_socket_, (const sockaddr*) &connect_addr, sizeof(connect_addr), nullptr, 0, &bytes, &iocp_data_.overlapped);
-
-    if (!connect_result && WSAGetLastError() != ERROR_IO_PENDING)
-    {
-        DWORD dw    = GetLastError();
-        error_info_ = std::format("code:{},:{}", dw, GetFormatMessage(dw));
-        return false;
-    }
-
-    return true;
-}
-
-TcpClient::ConnectResult TcpClient::ConnectAwaitable::await_resume()
-{
-    return ConnectResult{.success = success_, .error_info_ = error_info_};
-}
-
-void TcpClient::ConnectAwaitable::IoCallback(IOCP_DATA* pData)
-{
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        callback_flag_ = true;
-    }
-
-    if (pData->success_ == 0)
-    {
-        DWORD dw    = GetLastError();
-        error_info_ = std::format("code:{},:{}", dw, GetFormatMessage(dw));
-        success_    = false;
-    }
-    else
-    {
-        success_ = true;
-    }
-
-    handle_.resume();
-}
-
-void TcpClient::ConnectAwaitable::Stop()
-{
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (callback_flag_)
-    {
-        return;
-    }
-    callback_flag_ = true;
-    CancelIoEx((HANDLE) connect_socket_, &iocp_data_.overlapped);
 }
 
 } // namespace comm

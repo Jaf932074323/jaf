@@ -50,14 +50,14 @@ SerialPort::~SerialPort()
 void SerialPort::SetAddr(const std::string& comm_name, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity)
 {
     // comm_      = comm >= 10 ? std::format("\\\\.\\COM{}", comm) : std::format("COM{}", comm);
-    comm_ = comm_name;
+    comm_      = comm_name;
     baud_rate_ = baud_rate;
     data_bit_  = data_bit;
     stop_bit_  = stop_bit;
     parity_    = parity;
 }
 
-void SerialPort::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel>channel)> handle_channel)
+void SerialPort::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel)
 {
     handle_channel_ = handle_channel;
 }
@@ -83,10 +83,10 @@ jaf::Coroutine<void> SerialPort::Run()
     jaf::Coroutine<void> channel_run = channel->Run();
     co_await handle_channel_(channel);
     channel->Stop();
+    CloseSerialPort();
     co_await channel_run;
 
     run_flag_ = false;
-    CloseSerialPort();
 
     co_return;
 }
@@ -94,12 +94,13 @@ jaf::Coroutine<void> SerialPort::Run()
 void SerialPort::Stop()
 {
     run_flag_ = false;
-    std::unique_lock lock(channel_mutex_);
-    if (channel_ != nullptr)
+    std::shared_ptr<IChannel> channel;
     {
-        channel_->Stop();
+        std::unique_lock lock(channel_mutex_);
+        channel  = channel_;
         channel_ = std::make_shared<EmptyChannel>();
     }
+    channel->Stop();
 }
 
 std::shared_ptr<IChannel> SerialPort::GetChannel()

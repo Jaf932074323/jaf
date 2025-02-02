@@ -145,12 +145,16 @@ void Communication::WorkThreadRun()
     while (run_flag_)
     {
         BOOL success = GetQueuedCompletionStatus(m_completionPort, &bytesTransferred, (PULONG_PTR) &completionKey, (LPOVERLAPPED*) &pPerIoData, INFINITE);
+        if (!success)
+        {
+            pPerIoData->err_ = GetLastError();
+        }
 
         if (pPerIoData == nullptr)
         {
             if (!success)
             {
-                DWORD dw = GetLastError();
+                DWORD dw = pPerIoData->err_;
                 if (WAIT_TIMEOUT == dw)
                 {
                     continue;

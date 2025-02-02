@@ -44,7 +44,7 @@ std::string GetFormatMessage(DWORD dw)
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_MAX_WIDTH_MASK,
         nullptr,
         dw,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US),
         (LPTSTR) &lpMsgBuf,
         0, NULL);
     std::string strText = lpMsgBuf;

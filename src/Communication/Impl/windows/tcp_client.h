@@ -58,14 +58,9 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-    void Init(void);
     jaf::Coroutine<void> Execute();
 
     SOCKET CreationSocket();
-
-private:
-    struct ConnectResult;
-    class ConnectAwaitable;
 
 private:
     bool run_flag_ = false;

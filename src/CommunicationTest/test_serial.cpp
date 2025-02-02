@@ -58,16 +58,16 @@ TEST(serial, usual)
 
         auto fun_deal_client_channel = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
             auto unpack_run = unpack->Run(channel);
-            auto result = co_await channel->Write((const unsigned char*) str.data(), str.length(), 1000);
+            auto result     = co_await channel->Write((const unsigned char*) str.data(), str.length(), 1000);
             co_await unpack_run;
         };
 
         std::shared_ptr<jaf::comm::ISerialPort> serial_port_1 = communication.CreateSerialPort();
-        // serial_port_1->SetAddr(11, 9600, 8, 0, 0);
+        serial_port_1->SetAddr("\\\\.\\COM11", 9600, 8, 0, 0);
         serial_port_1->SetHandleChannel(fun_deal_client_channel);
 
         std::shared_ptr<jaf::comm::ISerialPort> serial_port_2 = communication.CreateSerialPort();
-        // serial_port_2->SetAddr(21, 9600, 8, 0, 0);
+        serial_port_2->SetAddr("\\\\.\\COM21", 9600, 8, 0, 0);
         serial_port_2->SetHandleChannel(fun_deal_client_channel);
         //serial_port_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 

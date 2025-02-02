@@ -25,78 +25,17 @@
 #include "serial_port_channel.h"
 #include "Impl/tool/run_with_timeout.h"
 #include "Log/log_head.h"
+#include "channel_read_write_helper.h"
 #include "util/co_wait_util_controlled_stop.h"
 #include <assert.h>
 #include <format>
 #include <mutex>
 
-
 namespace jaf
 {
 namespace comm
 {
-
 std::string GetFormatMessage(DWORD dw);
-
-struct SerialPortChannel::AwaitableResult
-{
-    size_t len_ = 0; // 接收数据长度 为0时表示接收失败
-    int err_    = 0; // 错误代码
-};
-
-class SerialPortChannel::ReadAwaitable
-{
-public:
-    ReadAwaitable(SerialPortChannel* serial_port_channel, unsigned char* buff, size_t size);
-    ~ReadAwaitable();
-    bool await_ready();
-    bool await_suspend(std::coroutine_handle<> co_handle);
-    AwaitableResult await_resume() const;
-    void IoCallback(IOCP_DATA* pData);
-    void Stop();
-
-private:
-    SerialPortChannel* serial_port_channel_ = nullptr;
-    AwaitableResult reslult_;
-
-    IOCP_DATA iocp_data_;
-    std::coroutine_handle<> handle;
-
-    WSABUF wsbuffer_;
-
-    DWORD dwBytes = 0;
-
-    std::mutex mutex_;
-    bool callback_flag_ = false; // 已经回调标记
-};
-
-class SerialPortChannel::WriteAwaitable
-{
-public:
-    WriteAwaitable(SerialPortChannel* serial_port_channel, const unsigned char* buff, size_t size);
-    ~WriteAwaitable();
-    bool await_ready();
-    bool await_suspend(std::coroutine_handle<> co_handle);
-    AwaitableResult await_resume() const;
-    void IoCallback(IOCP_DATA* pData);
-    void Stop();
-
-private:
-    SerialPortChannel* serial_port_channel_ = nullptr;
-    AwaitableResult reslult_;
-
-    sockaddr_in send_addr_ = {};
-
-    IOCP_DATA iocp_data_;
-    std::coroutine_handle<> handle;
-
-    WSABUF wsbuffer_;
-
-    DWORD dwBytes = 0;
-
-    std::mutex mutex_;
-    bool callback_flag_ = false; // 已经回调标记
-};
 
 SerialPortChannel::SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle, std::shared_ptr<jaf::time::ITimer> timer)
     : timer_(timer)
@@ -121,7 +60,6 @@ Coroutine<void> SerialPortChannel::Run()
         co_return;
     }
 
-
     co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
     co_await wait_all_tasks_done_;
 
@@ -139,51 +77,64 @@ Coroutine<SChannelResult> SerialPortChannel::Read(unsigned char* buff, size_t bu
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
-    SChannelResult result;
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    ReadAwaitable read_awaitable(this, buff, buff_size);
-    RunWithTimeout run_with_timeout(control_start_stop_, read_awaitable, timeout, timer_);
-    co_await run_with_timeout.Run();
-
-    const AwaitableResult& read_result = run_with_timeout.Result();
-    if (run_with_timeout.IsTimeout())
+    struct ReadCommunData : public CommunData
     {
-        result.state = SChannelResult::EState::CRS_TIMEOUT;
-    }
-    result.len = read_result.len_;
+        HANDLE comm_handle_;
+        WSABUF wsbuffer_{};
+        // 执行通讯功能
+        bool DoOperate()
+        {
+            if (!ReadFile(comm_handle_, wsbuffer_.buf, wsbuffer_.len, nullptr, &iocp_data_.overlapped))
+            {
+                result.code_ = WSAGetLastError();
+                if (result.code_ != ERROR_IO_PENDING)
+                {
+                    result.error = GetFormatMessage(result.code_);
+                    return false;
+                }
+            }
 
-    if (result.len != 0)
+            return true;
+        }
+
+        // 停止通讯功能
+        void StopOperate()
+        {
+            CancelIoEx(comm_handle_, &iocp_data_.overlapped);
+        }
+    };
+
+    std::shared_ptr<ReadCommunData> commun_data = std::make_shared<ReadCommunData>();
+    commun_data->comm_handle_                   = comm_handle_;
+    commun_data->wsbuffer_.len                  = (ULONG) buff_size;
+    commun_data->wsbuffer_.buf                  = (char*) buff;
+    RWAwaitable read_awaitable(timer_, commun_data, timeout);
+    co_await read_awaitable;
+
+    SChannelResult& channel_result = commun_data->result;
+
+    if (channel_result.state == SChannelResult::EState::CRS_SUCCESS)
     {
-        result.state = SChannelResult::EState::CRS_SUCCESS;
-        co_return result;
+        co_return channel_result;
     }
 
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
+    if (channel_result.state == SChannelResult::EState::CRS_TIMEOUT)
     {
-        if (read_result.err_ == 0)
-        {
-            result.state = SChannelResult::EState::CRS_UNKNOWN;
-        }
-        else
-        {
-            result.state = SChannelResult::EState::CRS_FAIL;
-            result.code_ = read_result.err_;
-            result.error = std::format("SerialPortChannel code error:{},error-msg:{}", read_result.err_, GetFormatMessage(read_result.err_));
-        }
+        co_return channel_result;
     }
 
-    co_return result;
+    channel_result.error = std::format("SerialPortChannel code error:{},error-msg:{}", channel_result.code_, channel_result.error);
+    co_return channel_result;
 }
 
 Coroutine<SChannelResult> SerialPortChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
@@ -191,193 +142,63 @@ Coroutine<SChannelResult> SerialPortChannel::Write(const unsigned char* buff, si
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
-    SChannelResult result;
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    WriteAwaitable write_awaitable(this, buff, buff_size);
-    RunWithTimeout run_with_timeout(control_start_stop_, write_awaitable, timeout, timer_);
-    co_await run_with_timeout.Run();
-
-    const AwaitableResult& write_result = run_with_timeout.Result();
-    if (run_with_timeout.IsTimeout())
+    struct WriteCommunData : public CommunData
     {
-        result.state = SChannelResult::EState::CRS_TIMEOUT;
-    }
-    result.len = write_result.len_;
+        HANDLE comm_handle_;
+        WSABUF wsbuffer_{};
+        // 执行通讯功能
+        bool DoOperate()
+        {
+            if (!WriteFile(comm_handle_, wsbuffer_.buf, wsbuffer_.len, nullptr, &iocp_data_.overlapped))
+            {
+                result.code_ = WSAGetLastError();
+                if (result.code_ != ERROR_IO_PENDING)
+                {
+                    result.error = GetFormatMessage(result.code_);
+                    return false;
+                }
+            }
+            return true;
+        }
 
-    if (result.len != 0)
+        // 停止通讯功能
+        void StopOperate()
+        {
+            CancelIoEx(comm_handle_, &iocp_data_.overlapped);
+        }
+    };
+
+    std::shared_ptr<WriteCommunData> commun_data = std::make_shared<WriteCommunData>();
+    commun_data->comm_handle_                    = comm_handle_;
+    commun_data->wsbuffer_.len                   = (ULONG) buff_size;
+    commun_data->wsbuffer_.buf                   = (char*) buff;
+    RWAwaitable write_awaitable(timer_, commun_data, timeout);
+    co_await write_awaitable;
+
+    SChannelResult& channel_result = commun_data->result;
+
+    if (channel_result.state == SChannelResult::EState::CRS_SUCCESS)
     {
-        result.state = SChannelResult::EState::CRS_SUCCESS;
-        co_return result;
+        co_return channel_result;
     }
 
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
+    if (channel_result.state == SChannelResult::EState::CRS_TIMEOUT)
     {
-        if (write_result.err_ == 0)
-        {
-            result.state = SChannelResult::EState::CRS_UNKNOWN;
-        }
-        else
-        {
-            result.state = SChannelResult::EState::CRS_FAIL;
-            result.code_ = write_result.err_;
-            result.error = std::format("SerialPortChannel code error:{},error-msg:{}", write_result.err_, GetFormatMessage(write_result.err_));
-        }
+        co_return channel_result;
     }
 
-    co_return result;
-}
-
-SerialPortChannel::ReadAwaitable::ReadAwaitable(SerialPortChannel* serial_port_channel, unsigned char* buff, size_t size)
-    : serial_port_channel_(serial_port_channel)
-    , wsbuffer_{.len = (ULONG) size, .buf = (char*) buff}
-{
-}
-
-SerialPortChannel::ReadAwaitable::~ReadAwaitable()
-{
-}
-
-bool SerialPortChannel::ReadAwaitable::await_ready()
-{
-    return false;
-}
-
-bool SerialPortChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_handle)
-{
-    DWORD flags = 0;
-    handle      = co_handle;
-
-    iocp_data_.call_ = std::bind(&ReadAwaitable::IoCallback, this, std::placeholders::_1);
-
-    if (!ReadFile(serial_port_channel_->comm_handle_, wsbuffer_.buf, wsbuffer_.len, nullptr, &iocp_data_.overlapped))
-    {
-        int error = GetLastError();
-        if (error != ERROR_IO_PENDING)
-        {
-            reslult_.err_ = error;
-            return false;
-        }
-    }
-
-    return true;
-}
-
-SerialPortChannel::AwaitableResult SerialPortChannel::ReadAwaitable::await_resume() const
-{
-    return reslult_;
-}
-
-void SerialPortChannel::ReadAwaitable::IoCallback(IOCP_DATA* pData)
-{
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        callback_flag_ = true;
-    }
-
-    if (pData->success_ == 0)
-    {
-        reslult_.len_ = 0;
-        reslult_.err_ = GetLastError();
-    }
-    else
-    {
-        reslult_.len_ = (size_t) pData->bytesTransferred_;
-    }
-
-    handle.resume();
-}
-
-void SerialPortChannel::ReadAwaitable::Stop()
-{
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (callback_flag_)
-    {
-        return;
-    }
-    callback_flag_ = true;
-    CancelIoEx(serial_port_channel_->comm_handle_, &iocp_data_.overlapped);
-}
-
-SerialPortChannel::WriteAwaitable::WriteAwaitable(SerialPortChannel* serial_port_channel, const unsigned char* buff, size_t size)
-    : serial_port_channel_(serial_port_channel)
-    , wsbuffer_{.len = (ULONG) size, .buf = (char*) buff}
-{
-}
-
-SerialPortChannel::WriteAwaitable::~WriteAwaitable()
-{
-}
-
-bool SerialPortChannel::WriteAwaitable::await_ready()
-{
-    return false;
-}
-
-bool SerialPortChannel::WriteAwaitable::await_suspend(std::coroutine_handle<> co_handle)
-{
-    DWORD flags = 0;
-    handle      = co_handle;
-
-    iocp_data_.call_ = std::bind(&WriteAwaitable::IoCallback, this, std::placeholders::_1);
-
-    if (!WriteFile(serial_port_channel_->comm_handle_, wsbuffer_.buf, wsbuffer_.len, nullptr, &iocp_data_.overlapped))
-    {
-        int error = GetLastError();
-        if (error != ERROR_IO_PENDING)
-        {
-            reslult_.err_ = error;
-            return false;
-        }
-    }
-
-    return true;
-}
-
-SerialPortChannel::AwaitableResult SerialPortChannel::WriteAwaitable::await_resume() const
-{
-    return reslult_;
-}
-
-void SerialPortChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
-{
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        callback_flag_ = true;
-    }
-
-    if (pData->success_ == 0)
-    {
-        reslult_.len_ = 0;
-        reslult_.err_ = GetLastError();
-    }
-    else
-    {
-        reslult_.len_ = (size_t) pData->bytesTransferred_;
-    }
-
-    handle.resume();
-}
-
-void SerialPortChannel::WriteAwaitable::Stop()
-{
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (callback_flag_)
-    {
-        return;
-    }
-    callback_flag_ = true;
-    CancelIoEx(serial_port_channel_->comm_handle_, &iocp_data_.overlapped);
+    channel_result.error = std::format("SerialPortChannel code error:{},error-msg:{}", channel_result.code_, channel_result.error);
+    co_return channel_result;
 }
 
 } // namespace comm

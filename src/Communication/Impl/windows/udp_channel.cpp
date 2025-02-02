@@ -25,6 +25,7 @@
 #include "udp_channel.h"
 #include "Impl/tool/run_with_timeout.h"
 #include "Log/log_head.h"
+#include "channel_read_write_helper.h"
 #include "util/co_wait_util_controlled_stop.h"
 #include <WS2tcpip.h>
 #include <assert.h>
@@ -38,68 +39,6 @@ namespace comm
 {
 
 std::string GetFormatMessage(DWORD dw);
-
-struct UdpChannel::AwaitableResult
-{
-    size_t len_ = 0; // 接收数据长度 为0时表示接收失败
-    int err_    = 0; // 错误代码
-};
-
-class UdpChannel::ReadAwaitable
-{
-public:
-    ReadAwaitable(UdpChannel* tcp_channel, SOCKET socket, unsigned char* buff, size_t size);
-    ~ReadAwaitable();
-    bool await_ready();
-    bool await_suspend(std::coroutine_handle<> co_handle);
-    AwaitableResult await_resume() const;
-    void IoCallback(IOCP_DATA* pData);
-    void Stop();
-
-private:
-    UdpChannel* tcp_channel_ = nullptr;
-    SOCKET socket_           = 0; // 收发数据的套接字
-    AwaitableResult reslult_;
-
-    IOCP_DATA iocp_data_;
-    std::coroutine_handle<> handle;
-
-    WSABUF wsbuffer_;
-
-    DWORD dwBytes = 0;
-
-    std::mutex mutex_;
-    bool callback_flag_ = false; // 已经回调标记
-};
-
-class UdpChannel::WriteAwaitable
-{
-public:
-    WriteAwaitable(UdpChannel* tcp_channel, SOCKET socket, const unsigned char* buff, size_t size, sockaddr_in send_addr_);
-    ~WriteAwaitable();
-    bool await_ready();
-    bool await_suspend(std::coroutine_handle<> co_handle);
-    AwaitableResult await_resume() const;
-    void IoCallback(IOCP_DATA* pData);
-    void Stop();
-
-private:
-    UdpChannel* tcp_channel_ = nullptr;
-    SOCKET socket_           = 0; // 收发数据的套接字
-    AwaitableResult reslult_;
-
-    sockaddr_in send_addr_ = {};
-
-    IOCP_DATA iocp_data_;
-    std::coroutine_handle<> handle;
-
-    WSABUF wsbuffer_;
-
-    DWORD dwBytes = 0;
-
-    std::mutex mutex_;
-    bool callback_flag_ = false; // 已经回调标记
-};
 
 UdpChannel::UdpChannel(HANDLE completion_handle, SOCKET socket, const Endpoint& remote_endpoint, const Endpoint& local_endpoint, std::shared_ptr<jaf::time::ITimer> timer)
     : completion_handle_(completion_handle)
@@ -143,52 +82,69 @@ Coroutine<SChannelResult> UdpChannel::Read(unsigned char* buff, size_t buff_size
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
-    SChannelResult result;
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    ReadAwaitable read_awaitable(this, socket_, buff, buff_size);
-    RunWithTimeout run_with_timeout(control_start_stop_, read_awaitable, timeout, timer_);
-    co_await run_with_timeout.Run();
-
-    const AwaitableResult& read_result = run_with_timeout.Result();
-    if (run_with_timeout.IsTimeout())
+    struct ReadCommunData : public CommunData
     {
-        result.state = SChannelResult::EState::CRS_TIMEOUT;
-    }
-    result.len = read_result.len_;
+        SOCKET socket_ = 0; // 收发数据的套接字
+        WSABUF wsbuffer_{};
+        // 执行通讯功能
+        bool DoOperate()
+        {
+            DWORD flags = 0;
+            if (SOCKET_ERROR == WSARecv(socket_, &wsbuffer_, 1, nullptr, &flags, &iocp_data_.overlapped, NULL))
+            {
+                result.code_ = WSAGetLastError();
+                if (result.code_ != ERROR_IO_PENDING)
+                {
+                    result.error = GetFormatMessage(result.code_);
+                    return false;
+                }
+            }
+            return true;
+        }
 
-    if (result.len != 0)
+        // 停止通讯功能
+        void StopOperate()
+        {
+            CancelIoEx((HANDLE) socket_, &iocp_data_.overlapped);
+        }
+    };
+
+    std::shared_ptr<ReadCommunData> commun_data = std::make_shared<ReadCommunData>();
+    commun_data->socket_                        = socket_;
+    commun_data->wsbuffer_.len                  = (ULONG) buff_size;
+    commun_data->wsbuffer_.buf                  = (char*) buff;
+    RWAwaitable read_awaitable(timer_, commun_data, timeout);
+    co_await read_awaitable;
+
+    SChannelResult& channel_result = commun_data->result;
+
+    if (channel_result.state == SChannelResult::EState::CRS_SUCCESS)
     {
-        result.state = SChannelResult::EState::CRS_SUCCESS;
-        co_return result;
+        if (channel_result.len == 0)
+        {
+            channel_result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
+            channel_result.error = "The connection has been disconnected";
+        }
+        co_return channel_result;
     }
 
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
+    if (channel_result.state == SChannelResult::EState::CRS_TIMEOUT)
     {
-        if (read_result.err_ == 0)
-        {
-            result.state = SChannelResult::EState::CRS_UNKNOWN;
-        }
-        else
-        {
-            result.state = SChannelResult::EState::CRS_FAIL;
-            result.code_ = read_result.err_;
-            Stop();
-            result.error = std::format("TcpChannel code error:{},error-msg:{}", read_result.err_, GetFormatMessage(read_result.err_));
-        }
+        co_return channel_result;
     }
 
-    co_return result;
+    Stop();
+    co_return channel_result;
 }
 
 Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)
@@ -196,52 +152,72 @@ Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t bu
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
-    SChannelResult result;
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    WriteAwaitable write_awaitable(this, socket_, buff, buff_size, remote_endpoint_.GetSockAddr());
-    RunWithTimeout run_with_timeout(control_start_stop_, write_awaitable, timeout, timer_);
-    co_await run_with_timeout.Run();
-
-    const AwaitableResult& write_result = run_with_timeout.Result();
-    if (run_with_timeout.IsTimeout())
+    struct WriteCommunData : public CommunData
     {
-        result.state = SChannelResult::EState::CRS_TIMEOUT;
-    }
-    result.len = write_result.len_;
+        SOCKET socket_ = 0; // 收发数据的套接字
+        sockaddr_in send_addr_;
+        WSABUF wsbuffer_{};
+        // 执行通讯功能
+        bool DoOperate()
+        {
+            DWORD flags = 0;
 
-    if (result.len != 0)
+            if (SOCKET_ERROR == WSASendTo(socket_, &wsbuffer_, 1, nullptr, flags, (SOCKADDR*) &send_addr_, sizeof(send_addr_), &iocp_data_.overlapped, NULL))
+            {
+                int error = WSAGetLastError();
+                if (error != ERROR_IO_PENDING)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // 停止通讯功能
+        void StopOperate()
+        {
+            CancelIoEx((HANDLE) socket_, &iocp_data_.overlapped);
+        }
+    };
+
+    std::shared_ptr<WriteCommunData> commun_data = std::make_shared<WriteCommunData>();
+    commun_data->send_addr_                      = remote_endpoint_.GetSockAddr();
+    commun_data->socket_                         = socket_;
+    commun_data->wsbuffer_.len                   = (ULONG) buff_size;
+    commun_data->wsbuffer_.buf                   = (char*) buff;
+    RWAwaitable write_awaitable(timer_, commun_data, timeout);
+    co_await write_awaitable;
+
+    SChannelResult& channel_result = commun_data->result;
+
+    if (channel_result.state == SChannelResult::EState::CRS_SUCCESS)
     {
-        result.state = SChannelResult::EState::CRS_SUCCESS;
-        co_return result;
+        if (channel_result.len == 0)
+        {
+            channel_result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
+            channel_result.error = "The connection has been disconnected";
+        }
+        co_return channel_result;
     }
 
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
+    if (channel_result.state == SChannelResult::EState::CRS_TIMEOUT)
     {
-        if (write_result.err_ == 0)
-        {
-            result.state = SChannelResult::EState::CRS_UNKNOWN;
-        }
-        else
-        {
-            result.state = SChannelResult::EState::CRS_FAIL;
-            result.code_ = write_result.err_;
-            Stop();
-            result.error = std::format("TcpChannel code error:{},error-msg: {}", write_result.err_, GetFormatMessage(write_result.err_));
-        }
+        co_return channel_result;
     }
 
-    co_return result;
+    Stop();
+    co_return channel_result;
 }
 
 Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout)
@@ -249,52 +225,74 @@ Coroutine<SChannelResult> UdpChannel::ReadFrom(unsigned char* buff, size_t buff_
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
-    SChannelResult result;
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    ReadAwaitable read_awaitable(this, socket_, buff, buff_size);
-    RunWithTimeout run_with_timeout(control_start_stop_, read_awaitable, timeout, timer_);
-    co_await run_with_timeout.Run();
-
-    const AwaitableResult& read_result = run_with_timeout.Result();
-    if (run_with_timeout.IsTimeout())
+    struct ReadCommunData : public CommunData
     {
-        result.state = SChannelResult::EState::CRS_TIMEOUT;
-    }
-    result.len = read_result.len_;
+        SOCKET socket_ = 0; // 收发数据的套接字
+        sockaddr_in remote_addr_;
+        int remote_addr_size_ = sizeof(remote_addr_);
+        WSABUF wsbuffer_{};
+        // 执行通讯功能
+        bool DoOperate()
+        {
+            DWORD flags = 0;
+            if (SOCKET_ERROR == WSARecvFrom(socket_, &wsbuffer_, 1, nullptr, &flags, (SOCKADDR*) &remote_addr_, &remote_addr_size_, &iocp_data_.overlapped, NULL))
+            {
+                result.code_ = WSAGetLastError();
+                if (result.code_ != ERROR_IO_PENDING)
+                {
+                    result.error = GetFormatMessage(result.code_);
+                    return false;
+                }
+            }
+            return true;
+        }
 
-    if (result.len != 0)
+        // 停止通讯功能
+        void StopOperate()
+        {
+            CancelIoEx((HANDLE) socket_, &iocp_data_.overlapped);
+        }
+    };
+
+    std::shared_ptr<ReadCommunData> commun_data = std::make_shared<ReadCommunData>();
+    commun_data->socket_                        = socket_;
+    commun_data->wsbuffer_.len                  = (ULONG) buff_size;
+    commun_data->wsbuffer_.buf                  = (char*) buff;
+    RWAwaitable read_awaitable(timer_, commun_data, timeout);
+    co_await read_awaitable;
+
+    SChannelResult& channel_result = commun_data->result;
+
+    if (channel_result.state == SChannelResult::EState::CRS_SUCCESS)
     {
-        result.state = SChannelResult::EState::CRS_SUCCESS;
-        co_return result;
+        if (channel_result.len == 0)
+        {
+            channel_result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
+            channel_result.error = "The connection has been disconnected";
+        }
+
+        endpoint->Set(commun_data->remote_addr_);
+
+        co_return channel_result;
     }
 
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
+    if (channel_result.state == SChannelResult::EState::CRS_TIMEOUT)
     {
-        if (read_result.err_ == 0)
-        {
-            result.state = SChannelResult::EState::CRS_UNKNOWN;
-        }
-        else
-        {
-            result.state = SChannelResult::EState::CRS_FAIL;
-            result.code_ = read_result.err_;
-            Stop();
-            result.error = std::format("TcpChannel code error:{},error-msg:{}", read_result.err_, GetFormatMessage(read_result.err_));
-        }
+        co_return channel_result;
     }
 
-    co_return result;
+    Stop();
+    co_return channel_result;
 }
 
 Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout)
@@ -302,200 +300,75 @@ Coroutine<SChannelResult> UdpChannel::WriteTo(const unsigned char* buff, size_t 
     wait_all_tasks_done_.CountUp();
     FINALLY(wait_all_tasks_done_.CountDown(););
 
-    SChannelResult result;
-    if (stop_flag_)
-    {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
-    }
-
-    //sockaddr_in send_addr     = {};
-    //send_addr.sin_family      = AF_INET;
-    //send_addr.sin_port        = htons(remote_port);
-    //send_addr.sin_addr.s_addr = inet_addr(remote_ip.c_str());
-
-    WriteAwaitable write_awaitable(this, socket_, buff, buff_size, endpoint->GetSockAddr());
-    RunWithTimeout run_with_timeout(control_start_stop_, write_awaitable, timeout, timer_);
-    co_await run_with_timeout.Run();
-
-    const AwaitableResult& write_result = run_with_timeout.Result();
-    if (run_with_timeout.IsTimeout())
-    {
-        result.state = SChannelResult::EState::CRS_TIMEOUT;
-    }
-    result.len = write_result.len_;
-
-    if (result.len != 0)
-    {
-        result.state = SChannelResult::EState::CRS_SUCCESS;
-        co_return result;
-    }
+    wait_all_tasks_done_.CountUp();
+    FINALLY(wait_all_tasks_done_.CountDown(););
 
     if (stop_flag_)
     {
-        result.state = SChannelResult::EState::CRS_CHANNEL_END;
-        co_return result;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    if (result.state != SChannelResult::EState::CRS_TIMEOUT)
+    struct WriteCommunData : public CommunData
     {
-        if (write_result.err_ == 0)
+        SOCKET socket_ = 0; // 收发数据的套接字
+        sockaddr_in remote_addr_;
+        WSABUF wsbuffer_{};
+        // 执行通讯功能
+        bool DoOperate()
         {
-            result.state = SChannelResult::EState::CRS_UNKNOWN;
+            DWORD flags = 0;
+
+            if (SOCKET_ERROR == WSASendTo(socket_, &wsbuffer_, 1, nullptr, flags, (SOCKADDR*) &remote_addr_, sizeof(remote_addr_), &iocp_data_.overlapped, NULL))
+            {
+                int error = WSAGetLastError();
+                if (error != ERROR_IO_PENDING)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
-        else
+
+        // 停止通讯功能
+        void StopOperate()
         {
-            result.state = SChannelResult::EState::CRS_FAIL;
-            result.code_ = write_result.err_;
-            Stop();
-            result.error = std::format("TcpChannel code error:{},error-msg: {}", write_result.err_, GetFormatMessage(write_result.err_));
+            CancelIoEx((HANDLE) socket_, &iocp_data_.overlapped);
         }
-    }
+    };
 
-    co_return result;
-}
+    std::shared_ptr<WriteCommunData> commun_data = std::make_shared<WriteCommunData>();
+    commun_data->remote_addr_                    = endpoint->GetSockAddr();
+    commun_data->socket_                         = socket_;
+    commun_data->wsbuffer_.len                   = (ULONG) buff_size;
+    commun_data->wsbuffer_.buf                   = (char*) buff;
+    RWAwaitable write_awaitable(timer_, commun_data, timeout);
+    co_await write_awaitable;
 
+    SChannelResult& channel_result = commun_data->result;
 
-UdpChannel::ReadAwaitable::ReadAwaitable(UdpChannel* tcp_channel, SOCKET socket, unsigned char* buff, size_t size)
-    : tcp_channel_(tcp_channel)
-    , socket_(socket)
-    , wsbuffer_{.len = (ULONG) size, .buf = (char*) buff}
-{
-}
-
-UdpChannel::ReadAwaitable::~ReadAwaitable()
-{
-}
-
-bool UdpChannel::ReadAwaitable::await_ready()
-{
-    return false;
-}
-
-bool UdpChannel::ReadAwaitable::await_suspend(std::coroutine_handle<> co_handle)
-{
-    DWORD flags      = 0;
-    handle           = co_handle;
-    iocp_data_.call_ = std::bind(&ReadAwaitable::IoCallback, this, std::placeholders::_1);
-
-    if (SOCKET_ERROR == WSARecv(socket_, &wsbuffer_, 1, nullptr, &flags, &iocp_data_.overlapped, NULL))
+    if (channel_result.state == SChannelResult::EState::CRS_SUCCESS)
     {
-        int error = WSAGetLastError();
-        if (error != ERROR_IO_PENDING)
+        if (channel_result.len == 0)
         {
-            reslult_.err_ = error;
-            return false;
+            channel_result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
+            channel_result.error = "The connection has been disconnected";
         }
+        co_return channel_result;
     }
 
-    return true;
-}
-
-UdpChannel::AwaitableResult UdpChannel::ReadAwaitable::await_resume() const
-{
-    return reslult_;
-}
-
-void UdpChannel::ReadAwaitable::IoCallback(IOCP_DATA* pData)
-{
+    if (stop_flag_)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        callback_flag_ = true;
+        co_return SChannelResult{.state = SChannelResult::EState::CRS_CHANNEL_END};
     }
 
-    if (pData->success_ == 0)
+    if (channel_result.state == SChannelResult::EState::CRS_TIMEOUT)
     {
-        reslult_.len_ = 0;
-        reslult_.err_ = WSAGetLastError();
-    }
-    else
-    {
-        reslult_.len_ = (size_t) pData->bytesTransferred_;
+        co_return channel_result;
     }
 
-    handle.resume();
-}
-
-void UdpChannel::ReadAwaitable::Stop()
-{
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (callback_flag_)
-    {
-        return;
-    }
-    callback_flag_ = true;
-    CancelIoEx((HANDLE) socket_, &iocp_data_.overlapped);
-}
-
-UdpChannel::WriteAwaitable::WriteAwaitable(UdpChannel* tcp_channel, SOCKET socket, const unsigned char* buff, size_t size, sockaddr_in send_addr)
-    : send_addr_(send_addr)
-    , tcp_channel_(tcp_channel)
-    , socket_(socket)
-    , wsbuffer_{.len = (ULONG) size, .buf = (char*) buff}
-{
-}
-
-UdpChannel::WriteAwaitable::~WriteAwaitable()
-{
-}
-
-bool UdpChannel::WriteAwaitable::await_ready()
-{
-    return false;
-}
-
-bool UdpChannel::WriteAwaitable::await_suspend(std::coroutine_handle<> co_handle)
-{
-    DWORD flags      = 0;
-    handle           = co_handle;
-    iocp_data_.call_ = std::bind(&WriteAwaitable::IoCallback, this, std::placeholders::_1);
-
-    if (SOCKET_ERROR == WSASendTo(socket_, &wsbuffer_, 1, nullptr, flags, (SOCKADDR*) &send_addr_, sizeof(send_addr_), &iocp_data_.overlapped, NULL))
-    {
-        int error = WSAGetLastError();
-        if (error != ERROR_IO_PENDING)
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-UdpChannel::AwaitableResult UdpChannel::WriteAwaitable::await_resume() const
-{
-    return reslult_;
-}
-
-void UdpChannel::WriteAwaitable::IoCallback(IOCP_DATA* pData)
-{
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        callback_flag_ = true;
-    }
-
-    if (pData->success_ == 0)
-    {
-        reslult_.len_ = 0;
-        reslult_.err_ = WSAGetLastError();
-    }
-    else
-    {
-        reslult_.len_ = (size_t) pData->bytesTransferred_;
-    }
-
-    handle.resume();
-}
-
-void UdpChannel::WriteAwaitable::Stop()
-{
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (callback_flag_)
-    {
-        return;
-    }
-    callback_flag_ = true;
-    CancelIoEx((HANDLE) socket_, &iocp_data_.overlapped);
+    Stop();
+    co_return channel_result;
 }
 
 } // namespace comm

@@ -28,6 +28,10 @@
 #include "util/simple_thread_pool.h"
 #include <iostream>
 #include <memory>
+#ifdef _WIN32
+#include <ConsoleApi2.h>
+#elif defined(__linux__)
+#endif
 
 void TestClient();
 void TestServer();
@@ -36,6 +40,11 @@ void TestSerialPort();
 
 int main(int argc, char** argv)
 {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#elif defined(__linux__)
+#endif
+
     std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
     jaf::log::CommonLogger::SetDefaultLogger(std::make_shared<jaf::log::Logger>(appender));
     jaf::log::CommonLogger::SetLogger(jaf::comm::LOG_NAME, std::make_shared<jaf::log::Logger>(appender));
@@ -48,7 +57,7 @@ int main(int argc, char** argv)
 
     InitSocket init_socket;
 
-    TestSerialPort();
+    TestClient();
 
     return 0;
 }

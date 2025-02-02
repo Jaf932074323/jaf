@@ -33,73 +33,74 @@
 #include "util/co_wait_notices.h"
 #include <format>
 #include <functional>
+#include <iostream>
 #include <list>
 #include <string>
-#include <iostream>
 
 namespace test_client
 {
-    
-void Test()
+
+jaf::Coroutine<void> Test()
 {
-    auto co_fun = []() -> jaf::CoroutineWithWait<void> {
-        jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-        jaf::Coroutine<void> communication_run = communication.Run();
+    jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
+    jaf::Coroutine<void> communication_run = communication.Run();
 
-        std::string str = "hello world!";
+    std::string str = "hello world!";
 
-        auto fun_deal_client_channel = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
-            // auto result = co_await channel->Write((const unsigned char*) str.data(), str.length(), 1000);
-            // co_await unpack->Run(channel);
-            unsigned char buff[1024];
-            while (true)
+    auto fun_deal_client_channel = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
+        // auto result = co_await channel->Write((const unsigned char*) str.data(), str.length(), 1000);
+        // co_await unpack->Run(channel);
+        unsigned char buff[1024];
+        while (true)
+        {
+            auto read_result = co_await channel->Read(buff, 1024, 5000);
+            std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff, read_result.len), (int) read_result.state, read_result.error) << std::endl;
+            if (read_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
             {
-                auto read_result = co_await channel->Read(buff, 1024, 5000);
-                std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff), (int) read_result.state, read_result.error) << std::endl;
-                if (read_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
-                {
-                    break;
-                }
-                if (read_result.state != jaf::comm::SChannelResult::EState::CRS_SUCCESS)
-                {
-                    continue;
-                }
-
-                auto write_result = co_await channel->Write(buff, 1024, 5000);
-                std::cout << std::format("write {}, state {}, error {}", std::string((char*) buff), (int) write_result.state, write_result.error) << std::endl;
-                if (write_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
-                {
-                    break;
-                }
+                break;
             }
-        };
+            if (read_result.state != jaf::comm::SChannelResult::EState::CRS_SUCCESS)
+            {
+                continue;
+            }
 
-        jaf::comm::Endpoint server_endpoint("192.168.204.1", 8181);
-        jaf::comm::Endpoint client_endpoint("0.0.0.0", 0);
-
-        std::shared_ptr<jaf::comm::ITcpClient> client = communication.CreateTcpClient();
-        client->SetAddr(server_endpoint, client_endpoint);
-        client->SetHandleChannel(fun_deal_client_channel);
-
-        jaf::Coroutine<void> client_run = client->Run();
-
-        getchar();
-
-        client->Stop();
-
-        co_await client_run;
-
-        communication.Stop();
-        co_await communication_run;
+            auto write_result = co_await channel->Write(buff, read_result.len, 5000);
+            std::cout << std::format("write {}, state {}, error {}", std::string((char*) buff, read_result.len), (int) write_result.state, write_result.error) << std::endl;
+            if (write_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
+            {
+                break;
+            }
+        }
     };
 
-    auto co_test_co_await_time = co_fun();
-    co_test_co_await_time.Wait();
+    jaf::comm::Endpoint server_endpoint("192.168.204.1", 8181);
+    jaf::comm::Endpoint client_endpoint("0.0.0.0", 0);
+
+    std::shared_ptr<jaf::comm::ITcpClient> client = communication.CreateTcpClient();
+    client->SetAddr(server_endpoint, client_endpoint);
+    client->SetHandleChannel(fun_deal_client_channel);
+
+    jaf::Coroutine<void> client_run = client->Run();
+
+    getchar();
+
+    client->Stop();
+
+    co_await client_run;
+
+    communication.Stop();
+    co_await communication_run;
 }
 
-}
+} // namespace test_client
 
 void TestClient()
 {
     test_client::Test();
+    auto co_fun = []() -> jaf::CoroutineWithWait<void> {
+        co_await test_client::Test();
+    };
+
+    auto co_fun_run = co_fun();
+    co_fun_run.Wait();
 }

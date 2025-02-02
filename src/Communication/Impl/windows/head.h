@@ -22,9 +22,9 @@
 // SOFTWARE.
 // 2024-6-16 姜安富
 #ifdef _WIN32
-#include <functional>
 #include <WinSock2.h>
 #include <Windows.h>
+#include <functional>
 
 namespace jaf
 {
@@ -34,9 +34,28 @@ namespace comm
 struct IOCP_DATA
 {
     OVERLAPPED overlapped   = {0};
-    int success_            = 0;
+    BOOL success_            = 0;
+    DWORD err_                = 0; // 错误代码
     DWORD bytesTransferred_ = 0;
     std::function<void(IOCP_DATA*)> call_;
+};
+
+struct CommunData
+{
+    IOCP_DATA iocp_data_;
+
+    std::mutex mutex_;
+    bool timeout_flag_ = false;
+    bool finish_flag_  = false;
+
+    jaf::time::STimerTask timeout_task_;
+
+    SChannelResult result;
+
+    // 执行通讯功能
+    virtual bool DoOperate() = 0;
+    // 停止通讯功能
+    virtual void StopOperate() = 0;
 };
 
 } // namespace comm

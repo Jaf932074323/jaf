@@ -41,10 +41,6 @@ namespace comm
 // TCP通道
 class TcpChannel : public IChannel
 {
-    struct AwaitableResult;
-    class ReadAwaitable;
-    class WriteAwaitable;
-
 public:
     TcpChannel(SOCKET socket, const Endpoint& remote_endpoint, const Endpoint& local_endpoint, std::shared_ptr<jaf::time::ITimer> timer);
     virtual ~TcpChannel();

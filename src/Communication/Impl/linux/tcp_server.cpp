@@ -203,14 +203,17 @@ void TcpServer::OnListen(EpollData* data)
 
     sockaddr_in client_addr{};
     socklen_t client_addr_length = sizeof(client_addr);
-    int client_socket            = accept(listen_socket_, (sockaddr*) &client_addr, &client_addr_length);
-    //接受来自socket连接
-    if (client_socket < 0)
+    while (true)
     {
-        return;
-    }
+        int client_socket = accept(listen_socket_, (sockaddr*) &client_addr, &client_addr_length);
+        //接受来自socket连接
+        if (client_socket < 0)
+        {
+            return;
+        }
 
-    RunSocket(client_socket);
+        RunSocket(client_socket);
+    }
 }
 
 
@@ -228,8 +231,8 @@ jaf::Coroutine<void> TcpServer::RunSocket(int socket)
     getpeername(socket, (struct sockaddr*) &locade_addr, &locade_len);
     // std::string remote_ip = inet_ntoa(remote_addr.sin_addr);
     // uint16_t remote_port  = ntohs(remote_addr.sin_port);
-    std::string local_ip  = inet_ntoa(locade_addr.sin_addr);
-    uint16_t local_port   = ntohs(locade_addr.sin_port);
+    std::string local_ip = inet_ntoa(locade_addr.sin_addr);
+    uint16_t local_port  = ntohs(locade_addr.sin_port);
 
     std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(socket, epoll_fd_, remote_addr, locade_addr, timer_);
     const std::string channel_key       = std::format("{}:{}", local_ip, local_port);

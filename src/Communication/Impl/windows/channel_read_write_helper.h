@@ -20,7 +20,7 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 姜安富
+// 2024-12-28 姜安富
 #ifdef _WIN32
 
 #include "Interface/communication/comm_struct.h"
@@ -38,37 +38,27 @@ namespace jaf
 namespace comm
 {
 
-// TCP通道
-class UdpChannel : public IUdpChannel
+class RWAwaitable
 {
 public:
-    UdpChannel(HANDLE completion_handle, SOCKET socket, const Endpoint& remote_endpoint, const Endpoint& local_endpoint, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~UdpChannel();
+    RWAwaitable(std::shared_ptr<jaf::time::ITimer> timer, std::shared_ptr<CommunData> data, uint32_t timeout);
+    ~RWAwaitable();
 
-public:
-    virtual Coroutine<void> Run();
-    virtual void Stop() override;
-    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    // TODO:目前没实现
-    virtual Coroutine<SChannelResult> ReadFrom(unsigned char* buff, size_t buff_size, Endpoint* endpoint, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout) override;
+    bool await_ready();
+    bool await_suspend(std::coroutine_handle<> co_handle);
+    void await_resume() const;
+    void IoCallback(CommunData* p_data);
+    void OnTimeout(CommunData* p_data);
 
 private:
-    std::atomic<bool> stop_flag_ = false;
+    std::coroutine_handle<> handle_;
+
+    std::mutex mutex_;
+    bool callback_flag_ = false; // 已经回调标记
 
     std::shared_ptr<jaf::time::ITimer> timer_;
-
-    HANDLE completion_handle_ = nullptr;
-    SOCKET socket_            = 0; // 收发数据的套接字
-
-    Endpoint remote_endpoint_;
-    Endpoint local_endpoint_;
-
-    jaf::ControlStartStop control_start_stop_;
-    jaf::CoWaitAllTasksDone wait_all_tasks_done_;
+    std::shared_ptr<CommunData> data_;
 };
-
 
 } // namespace comm
 } // namespace jaf

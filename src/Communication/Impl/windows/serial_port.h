@@ -72,7 +72,7 @@ private:
     uint8_t stop_bit_;   // 停止位
     uint8_t parity_;     //校验位
 
-    HANDLE comm_handle_;
+    HANDLE comm_handle_ = INVALID_HANDLE_VALUE;
 
     std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
     std::mutex channel_mutex_;

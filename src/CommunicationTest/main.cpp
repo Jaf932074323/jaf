@@ -30,9 +30,18 @@
 #include "gtest/gtest.h"
 #include <iostream>
 #include <thread>
+#ifdef _WIN32
+#include <ConsoleApi2.h>
+#elif defined(__linux__)
+#endif
 
 int main(int argc, char** argv)
 {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#elif defined(__linux__)
+#endif
+
     std::shared_ptr<jaf::log::ConsoleAppender> appender = std::make_shared<jaf::log::ConsoleAppender>();
     jaf::log::CommonLogger::SetDefaultLogger(std::make_shared<jaf::log::Logger>(appender));
     jaf::log::CommonLogger::SetLogger(jaf::comm::LOG_NAME, std::make_shared<jaf::log::Logger>(appender));
@@ -55,7 +64,7 @@ int main(int argc, char** argv)
 
     //LOG_INFO() << "程序结束";
 
-    // ::testing::GTEST_FLAG(filter) = "tcp.tcp_client";
+    //::testing::GTEST_FLAG(filter) = "tcp.usual";
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 
