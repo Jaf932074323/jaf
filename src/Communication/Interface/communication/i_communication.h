@@ -25,6 +25,7 @@
 #include "Interface/communication/i_tcp_client.h"
 #include "Interface/communication/i_tcp_server.h"
 #include "Interface/communication/i_udp.h"
+#include "run_result.h"
 #include "util/co_coroutine.h"
 #include <memory>
 
@@ -37,13 +38,12 @@ namespace comm
 class ICommunication
 {
 public:
-    ICommunication(){};
-    virtual ~ICommunication(){};
+    ICommunication() {};
+    virtual ~ICommunication() {};
 
 public:
-    virtual jaf::Coroutine<void> Init() = 0;
-    virtual jaf::Coroutine<void> Run()  = 0;
-    virtual void Stop()                 = 0;
+    virtual jaf::Coroutine<RunResult> Run() = 0;
+    virtual void Stop()                     = 0;
 
 public:
     virtual std::shared_ptr<ITcpServer> CreateTcpServer()   = 0;

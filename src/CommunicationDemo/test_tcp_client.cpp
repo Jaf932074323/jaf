@@ -43,7 +43,7 @@ namespace test_client
 jaf::CoroutineWithWait<void> Test()
 {
     jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-    jaf::Coroutine<void> communication_run = communication.Run();
+    jaf::Coroutine<jaf::comm::RunResult> communication_run = communication.Run();
 
     std::string str = "hello world!";
 
@@ -80,7 +80,7 @@ jaf::CoroutineWithWait<void> Test()
     client->SetAddr(server_endpoint, client_endpoint);
     client->SetHandleChannel(fun_deal_client_channel);
 
-    jaf::Coroutine<void> client_run = client->Run();
+    jaf::Coroutine<jaf::comm::RunResult> client_run = client->Run();
 
     getchar();
 

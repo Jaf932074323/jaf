@@ -54,7 +54,7 @@ UdpChannel::UdpChannel(int socket, int epoll_fd, const Endpoint& remote_endpoint
 
 UdpChannel::~UdpChannel() {}
 
-Coroutine<void> UdpChannel::Run()
+Coroutine<RunResult> UdpChannel::Run()
 {
     stop_flag_ = false;
 
@@ -69,7 +69,7 @@ Coroutine<void> UdpChannel::Run()
         std::string str = std::format("epoll_ctl(): error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
         stop_flag_      = true;
         close(socket_);
-        co_return;
+        co_return str;
     }
 
     read_helper_.Start(socket_);
@@ -83,6 +83,8 @@ Coroutine<void> UdpChannel::Run()
     write_helper_.Stop();
 
     co_await wait_all_tasks_done_;
+
+    co_return true;
 }
 
 void UdpChannel::Stop()

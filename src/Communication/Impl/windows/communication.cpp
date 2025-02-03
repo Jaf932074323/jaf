@@ -58,16 +58,11 @@ Communication::~Communication()
 {
 }
 
-jaf::Coroutine<void> Communication::Init()
-{
-    co_return;
-}
-
-jaf::Coroutine<void> Communication::Run()
+jaf::Coroutine<RunResult> Communication::Run()
 {
     if (run_flag_)
     {
-        co_return;
+        co_return "Already in operation";
     }
     run_flag_ = true;
 
@@ -90,7 +85,7 @@ jaf::Coroutine<void> Communication::Run()
     CloseHandle(m_completionPort);
     m_completionPort = nullptr;
 
-    co_return;
+    co_return true;
 }
 
 void Communication::Stop()

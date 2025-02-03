@@ -82,17 +82,21 @@ void TcpServer::SetMaxClientCount(size_t max_client_count)
     max_client_count_ = max_client_count;
 }
 
-jaf::Coroutine<void> TcpServer::Run()
+jaf::Coroutine<RunResult> TcpServer::Run()
 {
     if (run_flag_)
     {
-        co_return;
+        co_return "Already in operation";
     }
     run_flag_ = true;
     wait_stop_.Start();
 
     epoll_fd_ = get_epoll_fd_->Get();
-    Init();
+    if (!Init())
+    {
+        run_flag_ = false;
+        co_return error_info_;
+    }
 
     co_await wait_stop_.Wait();
     run_flag_ = false;
@@ -113,7 +117,7 @@ jaf::Coroutine<void> TcpServer::Run()
     close(listen_socket_);
     listen_socket_ = -1;
 
-    co_return;
+    co_return true;
 }
 
 void TcpServer::Stop()
@@ -249,7 +253,7 @@ jaf::Coroutine<void> TcpServer::RunSocket(int socket)
 
     if (run_flag)
     {
-        jaf::Coroutine<void> channel_run = channel->Run();
+        jaf::Coroutine<RunResult> channel_run = channel->Run();
         co_await handle_channel_(channel);
         channel->Stop();
         co_await channel_run;

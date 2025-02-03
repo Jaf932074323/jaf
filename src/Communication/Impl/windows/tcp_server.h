@@ -55,7 +55,7 @@ public:
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
     virtual void SetAcceptCount(size_t accept_count) override;
     virtual void SetMaxClientCount(size_t max_client_count) override;
-    virtual Coroutine<void> Run() override;
+    virtual Coroutine<RunResult> Run() override;
     virtual void Stop() override;
     virtual Coroutine<void> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 

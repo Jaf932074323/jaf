@@ -40,7 +40,7 @@ namespace test_udp
 jaf::CoroutineWithWait<void> Test()
 {
     jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-    jaf::Coroutine<void> communication_run = communication.Run();
+    jaf::Coroutine<jaf::comm::RunResult> communication_run = communication.Run();
 
     std::string str = "hello world!";
 
@@ -76,7 +76,7 @@ jaf::CoroutineWithWait<void> Test()
     udp->SetAddr(local_enpoint, remote_enpoint);
     udp->SetHandleChannel(fun_deal_client_channel);
 
-    jaf::Coroutine<void> udp_run = udp->Run();
+    jaf::Coroutine<jaf::comm::RunResult> udp_run = udp->Run();
 
     getchar();
 

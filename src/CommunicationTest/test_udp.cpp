@@ -29,20 +29,23 @@
 #include "unpack.h"
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
+#include "util/simple_thread_pool.h"
 #include "gtest/gtest.h"
 #include <format>
 #include <list>
 
 TEST(udp, usual)
 {
-    jaf::comm::Communication communication;
-    jaf::Coroutine<void> communication_run = communication.Run();
+    std::shared_ptr<jaf::IThreadPool> thread_pool = std::make_shared<jaf::SimpleThreadPool>(); // TODO:这里需要调整
 
-    auto co_fun = [&communication]() -> jaf::CoroutineWithWait<void> {
+    auto co_fun = [thread_pool]() -> jaf::CoroutineWithWait<void> {
+        jaf::comm::Communication communication(thread_pool);
+        jaf::Coroutine<jaf::comm::RunResult> communication_run = communication.Run();
+
         std::string str = "hello world!";
         jaf::CoWaitUtilStop wait_recv; // 等待接收通知
 
-        auto fun_deal   = [&](std::shared_ptr<jaf::comm::IPack> pack) {
+        auto fun_deal = [&](std::shared_ptr<jaf::comm::IPack> pack) {
             auto [buff, len] = pack->GetData();
             std::string recv_str((const char*) buff, len);
             EXPECT_TRUE(recv_str == str);
@@ -63,8 +66,8 @@ TEST(udp, usual)
         udp_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
         wait_recv.Start();
-        jaf::Coroutine<void> udp_1_run = udp_1->Run();
-        jaf::Coroutine<void> udp_2_run = udp_2->Run();
+        jaf::Coroutine<jaf::comm::RunResult> udp_1_run = udp_1->Run();
+        jaf::Coroutine<jaf::comm::RunResult> udp_2_run = udp_2->Run();
 
         auto result = co_await udp_1->Write((const unsigned char*) str.data(), str.length(), 1000);
         co_await wait_recv.Wait();
@@ -72,12 +75,17 @@ TEST(udp, usual)
         udp_1->Stop();
         udp_2->Stop();
 
-        co_await udp_1_run;
-        co_await udp_2_run;
+        auto udp_1_run_result = co_await udp_1_run;
+        auto udp_2_run_result = co_await udp_2_run;
+
+        communication.Stop();
+        auto communication_run_result = co_await communication_run;
+
+        EXPECT_TRUE(udp_1_run_result);
+        EXPECT_TRUE(udp_2_run_result);
+        EXPECT_TRUE(communication_run_result);
     };
 
     auto co_test_co_await_time = co_fun();
     co_test_co_await_time.Wait();
-
-    communication.Stop();
 }

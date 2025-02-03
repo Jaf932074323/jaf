@@ -36,6 +36,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include "run_result.h"
 
 namespace jaf
 {
@@ -53,7 +54,7 @@ public:
     virtual ~UdpChannel();
 
 public:
-    virtual Coroutine<void> Run();
+    virtual Coroutine<RunResult> Run();
     virtual void Stop() override;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;

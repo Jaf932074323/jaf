@@ -51,7 +51,7 @@ Channel::Channel(int file_descriptor, int epoll_fd, std::shared_ptr<jaf::time::I
 
 Channel::~Channel() {}
 
-Coroutine<void> Channel::Run()
+Coroutine<RunResult> Channel::Run()
 {
     stop_flag_ = false;
 
@@ -66,7 +66,7 @@ Coroutine<void> Channel::Run()
         close(file_descriptor_);
         std::string str = std::format("epoll_ctl(): error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
         stop_flag_      = true;
-        co_return;
+        co_return str;
     }
 
     read_helper_.Start(file_descriptor_);
@@ -81,6 +81,8 @@ Coroutine<void> Channel::Run()
     read_helper_.Stop();
 
     co_await wait_all_tasks_done_;
+    
+    co_return true;
 }
 
 void Channel::Stop()

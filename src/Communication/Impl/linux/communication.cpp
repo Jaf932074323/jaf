@@ -27,10 +27,10 @@
 #include "Time/Impl/timer.h"
 #include "define_constant.h"
 #include "log_head.h"
+#include "serial_port.h"
 #include "tcp_client.h"
 #include "tcp_server.h"
 #include "udp.h"
-#include "serial_port.h"
 #include "util/finally.h"
 #include "util/simple_thread_pool.h"
 #include <assert.h>
@@ -60,16 +60,11 @@ Communication::~Communication()
 {
 }
 
-jaf::Coroutine<void> Communication::Init()
-{
-    co_return;
-}
-
-jaf::Coroutine<void> Communication::Run()
+jaf::Coroutine<RunResult> Communication::Run()
 {
     if (run_flag_)
     {
-        co_return;
+        co_return "Already in operation";
     }
     run_flag_ = true;
 
@@ -78,7 +73,8 @@ jaf::Coroutine<void> Communication::Run()
 
     if (!CreateEpoll())
     {
-        co_return;
+        run_flag_ = false;
+        co_return error_info_;
     }
 
     CreateWorkThread();
@@ -100,7 +96,7 @@ jaf::Coroutine<void> Communication::Run()
     close(epoll_fd_);
     epoll_fd_ = -1;
 
-    co_return;
+    co_return true;
 }
 
 void Communication::Stop()
@@ -136,7 +132,7 @@ bool Communication::CreateEpoll()
 {
     if ((epoll_fd_ = epoll_create(1)) < 0)
     {
-        std::string str = std::format("Communication CreateEpoll() create epoll error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+        error_info_ = std::format("Communication CreateEpoll() create epoll error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
         return false;
     }
 
@@ -144,7 +140,7 @@ bool Communication::CreateEpoll()
     stop_fd_ = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE);
     if (stop_fd_ < 0)
     {
-        std::string str = std::format("Communication CreateEpoll() create stop_fd_ error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+        error_info_ = std::format("Communication CreateEpoll() create stop_fd_ error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
         return false;
     }
 
@@ -153,7 +149,7 @@ bool Communication::CreateEpoll()
     stop_.data.ptr    = &stop_comm_data_;
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, stop_fd_, &stop_) < 0)
     {
-        std::string str = std::format("Communication CreateEpoll() epoll_ctl stop_fd_ error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+        error_info_ = std::format("Communication CreateEpoll() epoll_ctl stop_fd_ error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
         return false;
     }
 
@@ -161,7 +157,7 @@ bool Communication::CreateEpoll()
     funs_fd_ = ::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     if (funs_fd_ < 0)
     {
-        std::string str = std::format("Communication CreateEpoll() create funs_fd_ error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+        error_info_ = std::format("Communication CreateEpoll() create funs_fd_ error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
         return false;
     }
 
@@ -170,7 +166,7 @@ bool Communication::CreateEpoll()
     funs_event.data.ptr    = &funs_data_;
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, funs_fd_, &funs_event) < 0)
     {
-        std::string str = std::format("Communication CreateEpoll() epoll_ctl funs_event error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
+        error_info_ = std::format("Communication CreateEpoll() epoll_ctl funs_event error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
         return false;
     }
 
@@ -195,7 +191,7 @@ void Communication::WorkThreadRun()
         int events_wait_count = epoll_wait(epoll_fd_, events, events_size, -1);
         if (events_wait_count < 0)
         {
-            if(errno == EINTR )
+            if (errno == EINTR)
             {
                 continue;
             }

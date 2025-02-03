@@ -53,7 +53,7 @@ public:
 public:
     virtual void SetAddr(const Endpoint& remote_endpoint, const Endpoint& local_endpoint = Endpoint("0.0.0.0", 0)) override;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IUdpChannel> channel)> handle_channel) override;
-    virtual Coroutine<void> Run() override;
+    virtual Coroutine<RunResult> Run() override;
     virtual void Stop() override;
     virtual std::shared_ptr<IUdpChannel> GetChannel() override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;

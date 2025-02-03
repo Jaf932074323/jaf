@@ -62,11 +62,11 @@ void SerialPort::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<
     handle_channel_ = handle_channel;
 }
 
-jaf::Coroutine<void> SerialPort::Run()
+jaf::Coroutine<RunResult> SerialPort::Run()
 {
     if (run_flag_)
     {
-        co_return;
+        co_return "Already in operation";
     }
     run_flag_ = true;
 
@@ -75,7 +75,8 @@ jaf::Coroutine<void> SerialPort::Run()
     HANDLE comm_handle = OpenSerialPort();
     if (comm_handle == INVALID_HANDLE_VALUE)
     {
-        co_return;
+        run_flag_ = false;
+        co_return error_info_;
     }
 
     wait_stop_.Start();
@@ -90,6 +91,8 @@ jaf::Coroutine<void> SerialPort::Run()
     }
     CloseHandle(comm_handle);
     co_await run;
+
+    co_return true;
 }
 
 void SerialPort::Stop()
@@ -116,8 +119,7 @@ HANDLE SerialPort::OpenSerialPort()
     if (comm_handle == INVALID_HANDLE_VALUE)
     {
         DWORD dw        = GetLastError();
-        std::string str = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        LOG_ERROR(LOG_NAME) << str;
+        error_info_ = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
         return INVALID_HANDLE_VALUE;
     }
 
@@ -172,7 +174,7 @@ Coroutine<void> SerialPort::RunSerialPort(HANDLE comm_handle)
         channel_ = channel;        
     }
 
-    jaf::Coroutine<void> channel_run = channel->Run();
+    jaf::Coroutine<RunResult> channel_run = channel->Run();
     co_await handle_channel_(channel);
     channel->Stop();
     co_await channel_run;

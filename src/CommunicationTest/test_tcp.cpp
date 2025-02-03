@@ -40,7 +40,7 @@ TEST(tcp, usual)
 {
     auto co_fun = []() -> jaf::CoroutineWithWait<void> {
         jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-        jaf::Coroutine<void> communication_run = communication.Run();
+        jaf::Coroutine<jaf::comm::RunResult> communication_run = communication.Run();
 
         std::string str = "hello world!";
         jaf::CoWaitNotices wait_recv; // 等待接收通知
@@ -75,19 +75,23 @@ TEST(tcp, usual)
 
         wait_recv.Start(10);
 
-        jaf::Coroutine<void> server_run = server->Run();
-        jaf::Coroutine<void> client_run = client->Run();
+        jaf::Coroutine<jaf::comm::RunResult> server_run = server->Run();
+        jaf::Coroutine<jaf::comm::RunResult> client_run = client->Run();
 
         co_await wait_recv;
 
         client->Stop();
         server->Stop();
 
-        co_await server_run;
-        co_await client_run;
+        auto server_run_result = co_await server_run;
+        auto client_run_result = co_await client_run;
 
         communication.Stop();
-        co_await communication_run;
+        auto communication_run_result = co_await communication_run;
+
+        EXPECT_TRUE(server_run_result);
+        EXPECT_TRUE(client_run_result);
+        EXPECT_TRUE(communication_run_result);
     };
 
     auto co_test_co_await_time = co_fun();

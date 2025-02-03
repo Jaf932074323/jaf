@@ -27,6 +27,7 @@
 #include "Interface/communication/i_channel.h"
 #include "global_timer/co_await_time.h"
 #include "head.h"
+#include "run_result.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
 #include "util/co_wait_util_stop.h"
@@ -47,13 +48,12 @@ public:
     virtual ~TcpChannel();
 
 public:
-    virtual Coroutine<void> Run();
+    virtual Coroutine<RunResult> Run();
     virtual void Stop() override;
     virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-
 private:
     std::atomic<bool> stop_flag_ = false;
 
@@ -61,7 +61,7 @@ private:
 
     SOCKET socket_ = 0; // 收发数据的套接字
     Endpoint remote_endpoint_;
-    Endpoint local_endpoint_;    
+    Endpoint local_endpoint_;
 
     jaf::CoWaitUtilStop wait_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;

@@ -20,18 +20,15 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
-// 2024-6-16 姜安富
+// 2025-2-3 姜安富
 #ifdef _WIN32
-
-#include "Interface/communication/comm_struct.h"
-#include "Interface/communication/i_channel.h"
-#include "global_timer/co_await_time.h"
-#include "head.h"
-#include "run_result.h"
-#include "util/co_wait_all_tasks_done.h"
-#include "util/co_wait_util_stop.h"
-#include <functional>
-#include <memory>
+#include <WS2tcpip.h>
+#include <winsock2.h>
+#include <ws2def.h>
+#elif defined(__linux__)
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#endif
 #include <string>
 
 namespace jaf
@@ -39,34 +36,46 @@ namespace jaf
 namespace comm
 {
 
-// 串口通道
-class SerialPortChannel : public IChannel
+class RunResult
 {
 public:
-    SerialPortChannel(HANDLE completion_handle, HANDLE comm_handle, std::shared_ptr<jaf::time::ITimer> timer);
-    virtual ~SerialPortChannel();
+    RunResult()
+        : succcess_(false)
+        , error_info_("empty")
+    {
+    }
 
-public:
-    virtual Coroutine<RunResult> Run();
-    virtual void Stop() override;
-    virtual Coroutine<SChannelResult> Read(unsigned char* buff, size_t buff_size, uint64_t timeout) override;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
+    RunResult(bool succcess)
+        : succcess_(succcess)
+    {
+    }
+
+    RunResult(const std::string& error_info)
+        : succcess_(false)
+        , error_info_(error_info)
+    {
+    }
+
+    RunResult(bool succcess, const std::string& error_info)
+        : succcess_(succcess)
+        , error_info_(error_info)
+    {
+    }
+
+    inline operator bool() const
+    {
+        return succcess_;
+    }
+
+    inline const std::string& ErrorInfo() const
+    {
+        return error_info_;
+    }
 
 private:
-    bool stop_flag_ = false;
-
-    std::shared_ptr<jaf::time::ITimer> timer_;
-
-    HANDLE completion_handle_ = nullptr;
-    HANDLE comm_handle_;
-
-    jaf::CoWaitUtilStop wait_stop_;
-    jaf::CoWaitAllTasksDone wait_all_tasks_done_;
+    bool succcess_;
+    std::string error_info_;
 };
-
 
 } // namespace comm
 } // namespace jaf
-
-#elif defined(__linux__)
-#endif

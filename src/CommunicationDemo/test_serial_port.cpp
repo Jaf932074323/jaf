@@ -41,7 +41,7 @@ namespace test_serial_port
 jaf::CoroutineWithWait<void> Test()
 {
     jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-    jaf::Coroutine<void> communication_run = communication.Run();
+    jaf::Coroutine<jaf::comm::RunResult> communication_run = communication.Run();
 
     std::string str = "hello world!";
 
@@ -79,7 +79,7 @@ jaf::CoroutineWithWait<void> Test()
 
     serial_port->SetHandleChannel(fun_deal_client_channel);
 
-    jaf::Coroutine<void> serial_port_run = serial_port->Run();
+    jaf::Coroutine<jaf::comm::RunResult> serial_port_run = serial_port->Run();
 
     getchar();
 

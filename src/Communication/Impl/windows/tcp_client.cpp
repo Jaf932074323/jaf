@@ -87,11 +87,11 @@ void TcpClient::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<I
     handle_channel_ = handle_channel;
 }
 
-jaf::Coroutine<void> TcpClient::Run()
+jaf::Coroutine<RunResult> TcpClient::Run()
 {
     if (run_flag_)
     {
-        co_return;
+        co_return "Already in operation";
     }
     run_flag_ = true;
 
@@ -100,8 +100,8 @@ jaf::Coroutine<void> TcpClient::Run()
     SOCKET connect_socket = CreationSocket();
     if (connect_socket == INVALID_SOCKET)
     {
-        LOG_ERROR() << error_info_;
-        co_return;
+        run_flag_ = false;
+        co_return error_info_;
     }
 
     wait_stop_.Start();
@@ -113,6 +113,8 @@ jaf::Coroutine<void> TcpClient::Run()
     GetChannel()->Stop();
     closesocket(connect_socket);
     co_await execute;
+
+    co_return true;
 }
 
 void TcpClient::Stop()
@@ -201,7 +203,7 @@ jaf::Coroutine<void> TcpClient::Execute(SOCKET connect_socket)
         channel_ = channel;
     }
 
-    jaf::Coroutine<void> channel_run = channel->Run();
+    jaf::Coroutine<RunResult> channel_run = channel->Run();
     co_await handle_channel_(channel);
     channel->Stop();
     co_await channel_run;

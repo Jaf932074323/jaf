@@ -23,6 +23,7 @@
 // 2024-6-16 姜安富
 #include "Interface/communication/i_unpack.h"
 #include "endpoint.h"
+#include "run_result.h"
 #include "util/co_coroutine.h"
 #include <functional>
 #include <memory>
@@ -44,7 +45,7 @@ public:
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) = 0;
     virtual void SetAcceptCount(size_t accept_count)                                                                = 0;
     virtual void SetMaxClientCount(size_t max_client_count)                                                         = 0;
-    virtual Coroutine<void> Run()                                                                                   = 0;
+    virtual Coroutine<RunResult> Run()                                                                              = 0;
     virtual void Stop()                                                                                             = 0;
     virtual Coroutine<void> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)                    = 0;
 };

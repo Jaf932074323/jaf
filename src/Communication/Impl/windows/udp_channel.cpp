@@ -53,7 +53,7 @@ UdpChannel::~UdpChannel()
 {
 }
 
-Coroutine<void> UdpChannel::Run()
+Coroutine<RunResult> UdpChannel::Run()
 {
     wait_stop_.Start();
     stop_flag_ = false;
@@ -61,8 +61,7 @@ Coroutine<void> UdpChannel::Run()
     {
         DWORD dw        = GetLastError();
         std::string str = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        LOG_ERROR() << str;
-        co_return;
+        co_return str;
     }
 
     co_await wait_stop_.Wait();
@@ -70,7 +69,7 @@ Coroutine<void> UdpChannel::Run()
     closesocket(socket_);
     co_await wait_all_tasks_done_;
 
-    co_return;
+    co_return true;
 }
 
 void UdpChannel::Stop()

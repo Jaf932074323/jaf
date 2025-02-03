@@ -55,7 +55,7 @@ public:
     // reconnect_wait_time 重连等待时间
     virtual void SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time) override;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
-    virtual jaf::Coroutine<void> Run() override;
+    virtual jaf::Coroutine<RunResult> Run() override;
     virtual void Stop() override;
     virtual std::shared_ptr<IChannel> GetChannel() override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;

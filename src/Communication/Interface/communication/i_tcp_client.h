@@ -23,6 +23,7 @@
 // 2024-6-16 姜安富
 #include "Interface/communication/i_unpack.h"
 #include "endpoint.h"
+#include "run_result.h"
 #include "util/co_coroutine.h"
 #include <functional>
 #include <memory>
@@ -46,10 +47,10 @@ public:
     // reconnect_wait_time 重连等待时间
     virtual void SetConnectTime(uint64_t connect_timeout, uint64_t reconnect_wait_time)                             = 0;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) = 0;
-    virtual jaf::Coroutine<void> Run()                                                                              = 0;
+    virtual jaf::Coroutine<RunResult> Run()                                                                         = 0;
     virtual void Stop()                                                                                             = 0;
     virtual std::shared_ptr<IChannel> GetChannel()                                                                  = 0;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) = 0;
+    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)          = 0;
 };
 
 } // namespace comm

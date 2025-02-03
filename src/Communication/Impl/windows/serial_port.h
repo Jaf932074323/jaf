@@ -51,7 +51,7 @@ public:
 public:
     virtual void SetAddr(const std::string& comm_name, uint32_t baud_rate, uint8_t data_bit, uint8_t stop_bit, uint8_t parity) override;
     virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel) override;
-    virtual jaf::Coroutine<void> Run() override;
+    virtual jaf::Coroutine<RunResult> Run() override;
     virtual void Stop() override;
     virtual std::shared_ptr<IChannel> GetChannel() override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
@@ -71,6 +71,8 @@ private:
     uint8_t data_bit_;   // 数据位
     uint8_t stop_bit_;   // 停止位
     uint8_t parity_;     //校验位
+
+    std::string error_info_;
 
     std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
     std::mutex channel_mutex_;

@@ -48,15 +48,15 @@ SerialPortChannel::~SerialPortChannel()
 {
 }
 
-Coroutine<void> SerialPortChannel::Run()
+Coroutine<RunResult> SerialPortChannel::Run()
 {
     stop_flag_ = false;
     if (CreateIoCompletionPort(comm_handle_, completion_handle_, (ULONG_PTR) comm_handle_, 0) == 0)
     {
         DWORD dw        = GetLastError();
         std::string str = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        LOG_ERROR() << str;
-        co_return;
+        stop_flag_ = true;
+        co_return str;
     }
 
     wait_stop_.Start();
@@ -64,7 +64,7 @@ Coroutine<void> SerialPortChannel::Run()
     stop_flag_ = true;
     co_await wait_all_tasks_done_;
 
-    co_return;
+    co_return true;
 }
 
 void SerialPortChannel::Stop()

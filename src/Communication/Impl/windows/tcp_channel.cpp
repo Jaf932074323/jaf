@@ -51,7 +51,7 @@ TcpChannel::TcpChannel(SOCKET socket, const Endpoint& remote_endpoint, const End
 
 TcpChannel::~TcpChannel() {}
 
-Coroutine<void> TcpChannel::Run()
+Coroutine<RunResult> TcpChannel::Run()
 {
     stop_flag_ = false;
     wait_stop_.Start();
@@ -59,6 +59,8 @@ Coroutine<void> TcpChannel::Run()
     stop_flag_ = true;
     closesocket(socket_);
     co_await wait_all_tasks_done_;
+
+    co_return true;
 }
 
 void TcpChannel::Stop()

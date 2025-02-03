@@ -60,11 +60,11 @@ void Udp::SetHandleChannel(std::function<jaf::Coroutine<void>(std::shared_ptr<ja
     handle_channel_ = handle_channel;
 }
 
-jaf::Coroutine<void> Udp::Run()
+jaf::Coroutine<RunResult> Udp::Run()
 {
     if (run_flag_)
     {
-        co_return;
+        co_return "Already in operation";
     }
     run_flag_ = true;
 
@@ -74,7 +74,7 @@ jaf::Coroutine<void> Udp::Run()
     if (the_socket == INVALID_SOCKET)
     {
         run_flag_ = false;
-        co_return;
+        co_return error_info_;
     }
 
     wait_stop_.Start();
@@ -86,6 +86,8 @@ jaf::Coroutine<void> Udp::Run()
     GetChannel()->Stop();
     closesocket(the_socket);
     co_await run;
+
+    co_return true;
 }
 
 void Udp::Stop()
@@ -151,7 +153,7 @@ Coroutine<void> Udp::RunSocket(SOCKET the_socket)
         channel_ = channel;
     }
 
-    jaf::Coroutine<void> channel_run = channel->Run();
+    jaf::Coroutine<RunResult> channel_run = channel->Run();
     co_await handle_channel_(channel);
     channel->Stop();
     co_await channel_run;

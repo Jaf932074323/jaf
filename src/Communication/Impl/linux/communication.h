@@ -47,8 +47,7 @@ public:
     virtual ~Communication();
 
 public:
-    virtual jaf::Coroutine<void> Init() override;
-    virtual jaf::Coroutine<void> Run() override;
+    virtual jaf::Coroutine<RunResult> Run() override;
     virtual void Stop() override;
 
 public:
@@ -126,6 +125,8 @@ private:
     EpollFd get_epoll_fd_; // 获取完成端口对象
 
     bool run_flag_ = false; // 运行标志
+
+    std::string error_info_;
     
     int stop_fd_              = -1;                          // 停止事件描述符，用于通知停止epoll
     EpollData stop_comm_data_ = {[](EpollData*) -> void {}}; // 停止时用的通讯数据

@@ -45,8 +45,7 @@ public:
     virtual ~Communication();
 
 public:
-    virtual jaf::Coroutine<void> Init() override;
-    virtual jaf::Coroutine<void> Run() override;
+    virtual jaf::Coroutine<RunResult> Run() override;
     virtual void Stop() override;
 
 public:
