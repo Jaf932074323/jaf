@@ -24,7 +24,6 @@
 #include "global_thread_pool/global_thread_pool.h"
 #include "init_socket.h"
 #include "log_head.h"
-#include "main_class.h"
 #include "time_head.h"
 #include "util/simple_thread_pool.h"
 #include "gtest/gtest.h"
@@ -53,16 +52,6 @@ int main(int argc, char** argv)
     jaf::GlobalThreadPool::SetThreadPool(std::make_shared<jaf::SimpleThreadPool>(1));
 
     InitSocket init_socket;
-
-    //Main main;
-    //main.Run();
-
-    //getchar();
-
-    //main.Stop();
-    //main.WaitFinish();
-
-    //LOG_INFO() << "程序结束";
 
     //::testing::GTEST_FLAG(filter) = "tcp.usual";
     testing::InitGoogleTest(&argc, argv);

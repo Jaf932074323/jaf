@@ -59,12 +59,12 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-    bool Init(void);
+    int CreateSocket(void);
+    Coroutine<void> RunSocket(int the_socket);
 
 private:
     int epoll_fd_ = -1;         // epoll描述符
     IGetEpollFd* get_epoll_fd_; // 获取epoll对象
-    int socket_ = -1;
     
     std::shared_ptr<jaf::time::ITimer> timer_;
 
@@ -79,8 +79,10 @@ private:
 
     std::function<Coroutine<void>(std::shared_ptr<IUdpChannel> channel)> handle_channel_; // 操作通道
     std::mutex channel_mutex_;
-    std::atomic<bool> run_flag_        = false;
     std::shared_ptr<IUdpChannel> channel_ = std::make_shared<EmptyUdpChannel>();
+
+    std::atomic<bool> run_flag_        = false;
+    CoWaitUtilStop wait_stop_;
 };
 
 } // namespace comm

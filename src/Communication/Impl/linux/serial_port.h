@@ -30,6 +30,7 @@
 #include "Interface/i_timer.h"
 #include "head.h"
 #include "i_get_epoll_fd.h"
+#include "util/co_wait_util_stop.h"
 #include <atomic>
 #include <functional>
 #include <map>
@@ -59,8 +60,8 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-    bool OpenSerialPort();
-    void CloseSerialPort();
+    int OpenSerialPort();
+    Coroutine<void> RunSerialPort(int file_descriptor);
 
     speed_t TransitionBaudRate(uint32_t baud_rate);
 
@@ -69,7 +70,6 @@ private:
 
     int epoll_fd_ = -1;         // epoll描述符
     IGetEpollFd* get_epoll_fd_; // 获取epoll对象
-    int file_descriptor_ = -1;
 
     std::string comm_;   //串口
     uint32_t baud_rate_; // 波特率
@@ -81,8 +81,10 @@ private:
 
     std::function<Coroutine<void>(std::shared_ptr<IChannel> channel)> handle_channel_; // 操作通道
     std::mutex channel_mutex_;
-    std::atomic<bool> run_flag_        = false;
     std::shared_ptr<IChannel> channel_ = std::make_shared<EmptyChannel>();
+
+    std::atomic<bool> run_flag_ = false;
+    CoWaitUtilStop wait_stop_;
 };
 
 } // namespace comm

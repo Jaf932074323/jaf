@@ -291,13 +291,7 @@ jaf::Coroutine<void> TcpClient::Run()
 
     run_flag_ = false;
 
-
-    std::shared_ptr<IChannel> channel;
-    {
-        std::unique_lock<std::mutex> lock(channel_mutex_);
-        channel = channel_;
-    }
-    channel->Stop();
+    std::shared_ptr<IChannel> channel = GetChannel();
     control_start_stop_.Stop();
 
     co_await execute;
@@ -307,6 +301,13 @@ jaf::Coroutine<void> TcpClient::Run()
 void TcpClient::Stop()
 {
     wait_stop_.Stop();
+}
+
+std::shared_ptr<IChannel> TcpClient::GetChannel()
+{
+    std::unique_lock lock(channel_mutex_);
+    assert(channel_ != nullptr);
+    return channel_;
 }
 
 Coroutine<SChannelResult> TcpClient::Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)

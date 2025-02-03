@@ -73,39 +73,28 @@ jaf::Coroutine<void> SerialPort::Run()
     }
     run_flag_ = true;
 
-    epoll_fd_ = get_epoll_fd_->Get();
-    if(!OpenSerialPort())
+    epoll_fd_           = get_epoll_fd_->Get();
+    int file_descriptor = OpenSerialPort();
+    if (file_descriptor < 0)
     {
         co_return;
     }
 
-    std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(file_descriptor_, epoll_fd_, timer_);
+    wait_stop_.Start();
+    auto run = RunSerialPort(file_descriptor);
+    
+    co_await wait_stop_.Wait();
 
-    {
-        std::unique_lock lock(channel_mutex_);
-        channel_ = channel;
-    }
-
-    jaf::Coroutine<void> channel_run = channel->Run();
-    co_await handle_channel_(channel);
+    std::shared_ptr<IChannel> channel = GetChannel();
     channel->Stop();
-    co_await channel_run;
-
-    run_flag_ = false;
-    CloseSerialPort();
-
-    co_return;
+    ::close(file_descriptor);
+    co_await run;
 }
 
 void SerialPort::Stop()
 {
     run_flag_ = false;
-    std::unique_lock lock(channel_mutex_);
-    if (channel_ != nullptr)
-    {
-        channel_->Stop();
-        channel_ = std::make_shared<EmptyChannel>();
-    }
+    wait_stop_.Stop();
 }
 
 std::shared_ptr<IChannel> SerialPort::GetChannel()
@@ -121,23 +110,23 @@ Coroutine<SChannelResult> SerialPort::Write(const unsigned char* buff, size_t bu
     co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
-bool SerialPort::OpenSerialPort()
+int SerialPort::OpenSerialPort()
 {
-    file_descriptor_ = ::open(comm_.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
-    if (file_descriptor_ < 0)
+    int file_descriptor = ::open(comm_.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
+    if (file_descriptor < 0)
     {
         int error   = errno;
         error_info_ = std::format("Failed to open serial port,code:{},:{}", error, strerror(error));
-        return false;
+        return -1;
     }
 
     struct termios tios;
 
-    if (tcgetattr(file_descriptor_, &tios) < 0)
+    if (tcgetattr(file_descriptor, &tios) < 0)
     {
         int error   = errno;
         error_info_ = std::format("Failed to tcgetattr,code:{},:{}", error, strerror(error));
-        return false;
+        return -1;
     }
 
     cfmakeraw(&tios);
@@ -150,7 +139,7 @@ bool SerialPort::OpenSerialPort()
     if (baud <= 0)
     {
         error_info_ = std::format("The baud rate ({}) parameter is not optional", baud_rate_);
-        return false;
+        return -1;
     }
 #if defined(_BSD_SOURCE) || defined(_DEFAULT_SOURCE)
     ::cfsetspeed(&tios, baud);
@@ -171,8 +160,8 @@ bool SerialPort::OpenSerialPort()
     case 8: tios.c_cflag |= CS8; break;
     default:
         error_info_ = std::format("The data bite ({}) parameter is not optional", baud_rate_);
-        return false;
-     break;
+        return -1;
+        break;
     }
 
     // stop bits
@@ -225,15 +214,36 @@ bool SerialPort::OpenSerialPort()
     // tios.c_cc[VMIN] = options.vmin;
     // tios.c_cc[VTIME] = options.vtime;
 
-    tcsetattr(file_descriptor_, TCSANOW, &tios);
-    tcflush(file_descriptor_, TCIOFLUSH);
+    tcsetattr(file_descriptor, TCSANOW, &tios);
+    tcflush(file_descriptor, TCIOFLUSH);
 
-    return true;
+    return file_descriptor;
 }
 
-void SerialPort::CloseSerialPort()
+Coroutine<void> SerialPort::RunSerialPort(int file_descriptor)
 {
-    ::close(file_descriptor_);
+    std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(file_descriptor, epoll_fd_, timer_);
+
+    {
+        std::unique_lock lock(channel_mutex_);
+        if (!run_flag_)
+        {
+            co_return;
+        }
+        channel_ = channel;        
+    }
+
+    jaf::Coroutine<void> channel_run = channel->Run();
+    co_await handle_channel_(channel);
+    channel->Stop();
+    co_await channel_run;
+
+    {
+        std::unique_lock lock(channel_mutex_);
+        channel_ = std::make_shared<EmptyChannel>();
+    }
+
+    Stop();
 }
 
 speed_t SerialPort::TransitionBaudRate(uint32_t baud_rate)

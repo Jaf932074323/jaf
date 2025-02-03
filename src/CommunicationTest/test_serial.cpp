@@ -63,13 +63,19 @@ TEST(serial, usual)
         };
 
         std::shared_ptr<jaf::comm::ISerialPort> serial_port_1 = communication.CreateSerialPort();
-        serial_port_1->SetAddr("\\\\.\\COM11", 9600, 8, 0, 0);
         serial_port_1->SetHandleChannel(fun_deal_client_channel);
 
         std::shared_ptr<jaf::comm::ISerialPort> serial_port_2 = communication.CreateSerialPort();
-        serial_port_2->SetAddr("\\\\.\\COM21", 9600, 8, 0, 0);
         serial_port_2->SetHandleChannel(fun_deal_client_channel);
-        //serial_port_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
+
+#ifdef _WIN32
+        serial_port_1->SetAddr("\\\\.\\COM13", 9600, 8, 0, 0);
+        serial_port_2->SetAddr("\\\\.\\COM23", 9600, 8, 0, 0);
+#elif defined(__linux__)
+        serial_port_1->SetAddr("/dev/ttyS1", 9600, 8, 0, 0);
+        serial_port_2->SetAddr("/dev/ttyS2", 9600, 8, 0, 0);
+#endif
+
 
         wait_recv.Start(10);
 

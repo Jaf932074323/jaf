@@ -77,37 +77,27 @@ jaf::Coroutine<void> Udp::Run()
     run_flag_ = true;
 
     epoll_fd_ = get_epoll_fd_->Get();
-    Init();
-
-    std::shared_ptr<UdpChannel> channel = std::make_shared<UdpChannel>(socket_, epoll_fd_, remote_endpoint_, local_endpoint_, timer_);
-
+    int the_socket = CreateSocket();
+    if(the_socket < -1)
     {
-        std::unique_lock lock(channel_mutex_);
-        channel_ = channel;
+        run_flag_ = false;
+        co_return;
     }
 
-    jaf::Coroutine<void> channel_run = channel->Run();
-    co_await handle_channel_(channel);
+    wait_stop_.Start();
+    auto run = RunSocket(the_socket);
+    co_await wait_stop_.Wait();    
+
+    std::shared_ptr<IChannel> channel = GetChannel();
     channel->Stop();
-    co_await channel_run;
-
-    run_flag_ = false;
-
-    close(socket_);
-    socket_ = -1;
-
-    co_return;
+    close(the_socket);
+    co_await run;
 }
 
 void Udp::Stop()
 {
     run_flag_ = false;
-    std::unique_lock lock(channel_mutex_);
-    if (channel_ != nullptr)
-    {
-        channel_->Stop();
-        channel_ = std::make_shared<EmptyUdpChannel>();
-    }
+    wait_stop_.Stop();
 }
 
 std::shared_ptr<IUdpChannel> Udp::GetChannel()
@@ -123,14 +113,14 @@ Coroutine<SChannelResult> Udp::Write(const unsigned char* buff, size_t buff_size
     co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
-bool Udp::Init(void)
+int Udp::CreateSocket(void)
 {
-    socket_ = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (socket_ < 0)
+    int the_socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (the_socket < 0)
     {
         int error   = errno;
         error_info_ = std::format("Failed to create a listen socket,code:{},:{}", error, strerror(error));
-        return false;
+        return -1;
     }
 
     sockaddr_in bind_addr     = {};
@@ -139,17 +129,43 @@ bool Udp::Init(void)
     bind_addr.sin_port        = htons(local_port_);
 
     //绑定套接字, 绑定到端口
-    if (::bind(socket_, (sockaddr*) &bind_addr, sizeof(bind_addr)) < 0)
+    if (::bind(the_socket, (sockaddr*) &bind_addr, sizeof(bind_addr)) < 0)
     {
         int error   = errno;
         error_info_ = std::format("Failed to bind to the local,local {}:{},code:{},:{}",
             local_ip_, local_port_,
             error, strerror(error));
-        close(socket_);
-        return false;
+        close(the_socket);
+        return -1;
     }
 
-    return true;
+    return the_socket;
+}
+
+Coroutine<void> Udp::RunSocket(int the_socket)
+{
+    std::shared_ptr<UdpChannel> channel = std::make_shared<UdpChannel>(the_socket, epoll_fd_, remote_endpoint_, local_endpoint_, timer_);
+
+    {
+        std::unique_lock lock(channel_mutex_);
+        if (!run_flag_)
+        {
+            co_return;
+        }
+        channel_ = channel;
+    }
+
+    jaf::Coroutine<void> channel_run = channel->Run();
+    co_await handle_channel_(channel);
+    channel->Stop();
+    co_await channel_run;
+
+    {
+        std::unique_lock lock(channel_mutex_);
+        channel_ = std::make_shared<EmptyUdpChannel>();
+    }
+
+    Stop();
 }
 
 } // namespace comm
