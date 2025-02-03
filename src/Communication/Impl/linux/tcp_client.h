@@ -73,7 +73,6 @@ private:
     CoWaitUtilStop wait_stop_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
-    jaf::ControlStartStop control_start_stop_;
 
     int epoll_fd_ = -1;         // epoll描述符
     IGetEpollFd* get_epoll_fd_; // 获取epoll对象

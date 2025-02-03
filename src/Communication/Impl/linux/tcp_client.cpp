@@ -228,7 +228,6 @@ jaf::Coroutine<void> TcpClient::Run()
         co_return;
     }
     run_flag_ = true;
-    control_start_stop_.Start();
     wait_stop_.Start();
 
     epoll_fd_ = get_epoll_fd_->Get();
