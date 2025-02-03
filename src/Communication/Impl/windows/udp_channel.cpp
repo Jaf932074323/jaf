@@ -66,6 +66,7 @@ Coroutine<void> UdpChannel::Run()
     }
 
     co_await wait_stop_.Wait();
+    stop_flag_ = true;
     closesocket(socket_);
     co_await wait_all_tasks_done_;
 
@@ -74,7 +75,6 @@ Coroutine<void> UdpChannel::Run()
 
 void UdpChannel::Stop()
 {
-    stop_flag_ = true;
     wait_stop_.Stop();
 }
 

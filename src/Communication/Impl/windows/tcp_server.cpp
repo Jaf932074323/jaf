@@ -146,6 +146,7 @@ jaf::Coroutine<void> TcpServer::Run()
     }
 
     co_await wait_stop_.Wait();
+    run_flag_ = false;
     closesocket(listen_socket_);
 
     {
@@ -166,7 +167,6 @@ jaf::Coroutine<void> TcpServer::Run()
 
 void TcpServer::Stop()
 {
-    run_flag_ = false;
     wait_stop_.Stop();
 }
 

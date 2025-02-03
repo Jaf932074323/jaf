@@ -81,6 +81,7 @@ jaf::Coroutine<void> Udp::Run()
     auto run = RunSocket(the_socket);
 
     co_await wait_stop_.Wait();
+    run_flag_ = false;
 
     GetChannel()->Stop();
     closesocket(the_socket);
@@ -89,7 +90,6 @@ jaf::Coroutine<void> Udp::Run()
 
 void Udp::Stop()
 {
-    run_flag_ = false;
     wait_stop_.Stop();
 }
 

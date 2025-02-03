@@ -84,6 +84,7 @@ jaf::Coroutine<void> SerialPort::Run()
     auto run = RunSerialPort(file_descriptor);
     
     co_await wait_stop_.Wait();
+    run_flag_ = false;
 
     std::shared_ptr<IChannel> channel = GetChannel();
     channel->Stop();
@@ -93,7 +94,6 @@ jaf::Coroutine<void> SerialPort::Run()
 
 void SerialPort::Stop()
 {
-    run_flag_ = false;
     wait_stop_.Stop();
 }
 

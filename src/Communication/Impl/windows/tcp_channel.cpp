@@ -56,13 +56,13 @@ Coroutine<void> TcpChannel::Run()
     stop_flag_ = false;
     wait_stop_.Start();
     co_await wait_stop_.Wait();
+    stop_flag_ = true;
     closesocket(socket_);
     co_await wait_all_tasks_done_;
 }
 
 void TcpChannel::Stop()
 {
-    stop_flag_ = true;
     wait_stop_.Stop();
 }
 

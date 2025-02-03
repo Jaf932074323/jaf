@@ -82,6 +82,7 @@ jaf::Coroutine<void> SerialPort::Run()
     auto run = RunSerialPort(comm_handle);
 
     co_await wait_stop_.Wait();
+    run_flag_ = false;
 
     {
         std::unique_lock lock(channel_mutex_);
@@ -93,7 +94,6 @@ jaf::Coroutine<void> SerialPort::Run()
 
 void SerialPort::Stop()
 {
-    run_flag_ = false;
     wait_stop_.Stop();
 }
 

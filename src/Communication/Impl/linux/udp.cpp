@@ -86,7 +86,8 @@ jaf::Coroutine<void> Udp::Run()
 
     wait_stop_.Start();
     auto run = RunSocket(the_socket);
-    co_await wait_stop_.Wait();    
+    co_await wait_stop_.Wait(); 
+    run_flag_ = false;   
 
     std::shared_ptr<IChannel> channel = GetChannel();
     channel->Stop();
@@ -96,7 +97,6 @@ jaf::Coroutine<void> Udp::Run()
 
 void Udp::Stop()
 {
-    run_flag_ = false;
     wait_stop_.Stop();
 }
 

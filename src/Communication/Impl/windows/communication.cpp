@@ -79,7 +79,6 @@ jaf::Coroutine<void> Communication::Run()
     CreateWorkThread();
 
     co_await wait_stop_.Wait();
-
     run_flag_ = false;
 
     for (size_t i = 0; i < work_thread_count_; ++i)

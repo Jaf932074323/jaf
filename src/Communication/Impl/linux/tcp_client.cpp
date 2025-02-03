@@ -243,6 +243,7 @@ jaf::Coroutine<void> TcpClient::Run()
     jaf::Coroutine<void> execute = Execute(connect_socket);
 
     co_await wait_stop_.Wait();
+    run_flag_ = false;
 
     GetChannel()->Stop();
     close(connect_socket);
@@ -251,7 +252,6 @@ jaf::Coroutine<void> TcpClient::Run()
 
 void TcpClient::Stop()
 {
-    run_flag_ = false;
     wait_stop_.Stop();
 }
 

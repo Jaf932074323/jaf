@@ -61,6 +61,7 @@ Coroutine<void> SerialPortChannel::Run()
 
     wait_stop_.Start();
     co_await wait_stop_.Wait();
+    stop_flag_ = true;
     co_await wait_all_tasks_done_;
 
     co_return;
@@ -68,7 +69,6 @@ Coroutine<void> SerialPortChannel::Run()
 
 void SerialPortChannel::Stop()
 {
-    stop_flag_ = true;
     wait_stop_.Stop();
 }
 
