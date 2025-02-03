@@ -57,6 +57,7 @@ public:
     virtual void Stop() override;
     virtual std::shared_ptr<IUdpChannel> GetChannel() override;
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout) override;
 
 private:
     int CreateSocket(void);

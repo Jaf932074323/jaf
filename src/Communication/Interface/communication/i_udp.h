@@ -39,12 +39,13 @@ public:
     virtual ~IUdp() {};
 
 public:
-    virtual void SetAddr(const Endpoint& remote_endpoint, const Endpoint& local_endpoint = Endpoint("0.0.0.0", 0))     = 0;
-    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IUdpChannel> channel)> handle_channel) = 0;
-    virtual Coroutine<void> Run()                                                                                      = 0;
-    virtual void Stop()                                                                                                = 0;
-    virtual std::shared_ptr<IUdpChannel> GetChannel()                                                                  = 0;
-    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)             = 0;
+    virtual void SetAddr(const Endpoint& remote_endpoint, const Endpoint& local_endpoint = Endpoint("0.0.0.0", 0))                     = 0;
+    virtual void SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<IUdpChannel> channel)> handle_channel)                 = 0;
+    virtual Coroutine<void> Run()                                                                                                      = 0;
+    virtual void Stop()                                                                                                                = 0;
+    virtual std::shared_ptr<IUdpChannel> GetChannel()                                                                                  = 0;
+    virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout)                             = 0;
+    virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout) = 0;
 };
 
 } // namespace comm

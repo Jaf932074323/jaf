@@ -71,7 +71,7 @@ jaf::Coroutine<void> Udp::Run()
     completion_handle_ = get_completion_port_->Get();
 
     SOCKET the_socket = CreateSocket();
-    if(the_socket == INVALID_SOCKET)
+    if (the_socket == INVALID_SOCKET)
     {
         run_flag_ = false;
         co_return;
@@ -106,6 +106,12 @@ Coroutine<SChannelResult> Udp::Write(const unsigned char* buff, size_t buff_size
 {
     std::shared_ptr<IChannel> channel = GetChannel();
     co_return co_await channel->Write(buff, buff_size, timeout);
+}
+
+Coroutine<SChannelResult> Udp::WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout)
+{
+    std::shared_ptr<IUdpChannel> channel = GetChannel();
+    co_return co_await channel->WriteTo(buff, buff_size, endpoint, timeout);
 }
 
 SOCKET Udp::CreateSocket(void)

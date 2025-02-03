@@ -113,6 +113,12 @@ Coroutine<SChannelResult> Udp::Write(const unsigned char* buff, size_t buff_size
     co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
+Coroutine<SChannelResult> Udp::WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout)
+{
+    std::shared_ptr<IUdpChannel> channel = GetChannel();
+    co_return co_await channel->WriteTo(buff, buff_size, endpoint, timeout);
+}
+
 int Udp::CreateSocket(void)
 {
     int the_socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
