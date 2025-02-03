@@ -28,7 +28,7 @@
 #include "global_timer/co_await_time.h"
 #include "head.h"
 #include "util/co_wait_all_tasks_done.h"
-#include "util/control_start_stop.h"
+#include "util/co_wait_util_stop.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -59,7 +59,7 @@ private:
     HANDLE completion_handle_ = nullptr;
     HANDLE comm_handle_;
 
-    jaf::ControlStartStop control_start_stop_;
+    jaf::CoWaitUtilStop wait_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;
 };
 

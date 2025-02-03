@@ -55,7 +55,7 @@ UdpChannel::~UdpChannel()
 
 Coroutine<void> UdpChannel::Run()
 {
-    control_start_stop_.Start();
+    wait_stop_.Start();
     stop_flag_ = false;
     if (CreateIoCompletionPort((HANDLE) socket_, completion_handle_, 0, 0) == 0)
     {
@@ -65,7 +65,8 @@ Coroutine<void> UdpChannel::Run()
         co_return;
     }
 
-    co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
+    co_await wait_stop_.Wait();
+    closesocket(socket_);
     co_await wait_all_tasks_done_;
 
     co_return;
@@ -74,7 +75,7 @@ Coroutine<void> UdpChannel::Run()
 void UdpChannel::Stop()
 {
     stop_flag_ = true;
-    control_start_stop_.Stop();
+    wait_stop_.Stop();
 }
 
 Coroutine<SChannelResult> UdpChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)

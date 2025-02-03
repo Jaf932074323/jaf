@@ -48,11 +48,11 @@ Udp::~Udp()
 void Udp::SetAddr(const Endpoint& remote_endpoint, const Endpoint& local_endpoint)
 {
     remote_endpoint_ = remote_endpoint;
-    local_endpoint_ = local_endpoint;
-    local_ip_    = local_endpoint_.Ip();
-    local_port_  = local_endpoint_.Port();
-    remote_ip_   = remote_endpoint_.Ip();
-    remote_port_ = remote_endpoint_.Port();
+    local_endpoint_  = local_endpoint;
+    local_ip_        = local_endpoint_.Ip();
+    local_port_      = local_endpoint_.Port();
+    remote_ip_       = remote_endpoint_.Ip();
+    remote_port_     = remote_endpoint_.Port();
 }
 
 void Udp::SetHandleChannel(std::function<jaf::Coroutine<void>(std::shared_ptr<jaf::comm::IUdpChannel> channel)> handle_channel)
@@ -69,37 +69,30 @@ jaf::Coroutine<void> Udp::Run()
     run_flag_ = true;
 
     completion_handle_ = get_completion_port_->Get();
-    Init();
 
-    std::shared_ptr<UdpChannel> channel = std::make_shared<UdpChannel>(completion_handle_, socket_, remote_endpoint_, local_endpoint_, timer_);
+    SOCKET the_socket = CreateSocket();
+    if(the_socket == INVALID_SOCKET)
+    {
+        run_flag_ = false;
+        co_return;
+    }
+
+    wait_stop_.Start();
+    auto run = RunSocket(the_socket);
+    co_await wait_stop_.Wait();
 
     {
         std::unique_lock lock(channel_mutex_);
-        channel_ = channel;
+        channel_->Stop();
     }
-
-    jaf::Coroutine<void> channel_run = channel->Run();
-    co_await handle_channel_(channel);
-    channel->Stop();
-    co_await channel_run;
-
-    run_flag_ = false;
-
-    closesocket(socket_);
-    socket_ = INVALID_SOCKET;
-
-    co_return;
+    closesocket(the_socket);
+    co_await run;
 }
 
 void Udp::Stop()
 {
     run_flag_ = false;
-    std::unique_lock lock(channel_mutex_);
-    if (channel_ != nullptr)
-    {
-        channel_->Stop();
-        channel_ = std::make_shared<EmptyUdpChannel>();
-    }
+    wait_stop_.Stop();
 }
 
 std::shared_ptr<IUdpChannel> Udp::GetChannel()
@@ -115,24 +108,56 @@ Coroutine<SChannelResult> Udp::Write(const unsigned char* buff, size_t buff_size
     co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
-void Udp::Init(void)
+SOCKET Udp::CreateSocket(void)
 {
-    socket_ = socket(AF_INET, SOCK_DGRAM, 0);
-    if (INVALID_SOCKET == socket_)
+    SOCKET the_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (INVALID_SOCKET == the_socket)
     {
-        DWORD dw        = GetLastError();
-        std::string str = std::format("Udp code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
-        OutputDebugString(str.c_str());
-        return;
+        DWORD dw    = GetLastError();
+        error_info_ = std::format("Udp code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
+        return INVALID_SOCKET;
     }
 
-    sockaddr_in addrSrv = {}; //定义sockSrv发送和接收数据包的地址
-    inet_pton(AF_INET, local_ip_.c_str(), (void*) &addrSrv.sin_addr);
-    addrSrv.sin_family = AF_INET;
-    addrSrv.sin_port   = htons(local_port_);
+    sockaddr_in& addrSrv = local_endpoint_.GetSockAddr(); //定义sockSrv发送和接收数据包的地址
 
     //绑定套接字, 绑定到端口
-    ::bind(socket_, (SOCKADDR*) &addrSrv, sizeof(addrSrv)); //会返回一个SOCKET_ERROR
+    if (SOCKET_ERROR == ::bind(the_socket, (SOCKADDR*) &addrSrv, sizeof(addrSrv)))
+    {
+        DWORD dw    = GetLastError();
+        error_info_ = std::format("绑定UDP套接字失败,本地{}:{},code:{}",
+            local_ip_, local_port_,
+            dw, GetFormatMessage(dw));
+        closesocket(the_socket);
+        return INVALID_SOCKET;
+    }
+
+    return the_socket;
+}
+
+Coroutine<void> Udp::RunSocket(SOCKET the_socket)
+{
+    std::shared_ptr<UdpChannel> channel = std::make_shared<UdpChannel>(completion_handle_, the_socket, remote_endpoint_, local_endpoint_, timer_);
+
+    {
+        std::unique_lock lock(channel_mutex_);
+        if (!run_flag_)
+        {
+            co_return;
+        }
+        channel_ = channel;
+    }
+
+    jaf::Coroutine<void> channel_run = channel->Run();
+    co_await handle_channel_(channel);
+    channel->Stop();
+    co_await channel_run;
+
+    {
+        std::unique_lock lock(channel_mutex_);
+        channel_ = std::make_shared<EmptyUdpChannel>();
+    }
+
+    Stop();
 }
 
 } // namespace comm

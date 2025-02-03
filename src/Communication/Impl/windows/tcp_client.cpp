@@ -94,10 +94,10 @@ jaf::Coroutine<void> TcpClient::Run()
         co_return;
     }
     run_flag_ = true;
+    wait_stop_.Start();
 
     control_start_stop_.Start();
 
-    wait_stop_.Start();
     completion_handle_ = get_completion_port_->Get();
 
     jaf::Coroutine<void> execute = Execute();

@@ -40,7 +40,7 @@
 namespace test_client
 {
 
-jaf::Coroutine<void> Test()
+jaf::CoroutineWithWait<void> Test()
 {
     jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
     jaf::Coroutine<void> communication_run = communication.Run();
@@ -96,11 +96,6 @@ jaf::Coroutine<void> Test()
 
 void TestClient()
 {
-    test_client::Test();
-    auto co_fun = []() -> jaf::CoroutineWithWait<void> {
-        co_await test_client::Test();
-    };
-
-    auto co_fun_run = co_fun();
-    co_fun_run.Wait();
+    auto run = test_client::Test();
+    run.Wait();
 }

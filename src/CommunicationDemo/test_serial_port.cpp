@@ -25,74 +25,75 @@
 #include "global_thread_pool/global_thread_pool.h"
 #include "global_timer/co_sleep.h"
 #include "global_timer/global_timer.h"
+#include "log_head.h"
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
 #include "util/co_wait_notices.h"
 #include <format>
 #include <functional>
+#include <iostream>
 #include <list>
 #include <string>
-#include <iostream>
 
 namespace test_serial_port
 {
-    
-void Test()
+
+jaf::CoroutineWithWait<void> Test()
 {
-    auto co_fun = []() -> jaf::CoroutineWithWait<void> {
-        jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-        jaf::Coroutine<void> communication_run = communication.Run();
+    jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
+    jaf::Coroutine<void> communication_run = communication.Run();
 
-        std::string str = "hello world!";
+    std::string str = "hello world!";
 
-        auto fun_deal_client_channel = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
-            unsigned char buff[1024] = "";
-            while (true)
+    auto fun_deal_client_channel = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
+        unsigned char buff[1024] = "";
+        while (true)
+        {
+            auto read_result = co_await channel->Read(buff, 1024, 5000);
+            std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff, read_result.len), (int) read_result.state, read_result.error) << std::endl;
+            if (read_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
             {
-                auto read_result = co_await channel->Read(buff, 1024, 5000);
-                std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff), (int) read_result.state, read_result.error) << std::endl;
-                if (read_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
-                {
-                    break;
-                }
-                if (read_result.state != jaf::comm::SChannelResult::EState::CRS_SUCCESS)
-                {
-                    continue;
-                }
-
-                auto write_result = co_await channel->Write(buff, 1024, 5000);
-                std::cout << std::format("write {}, state {}, error {}", std::string((char*) buff), (int) write_result.state, write_result.error) << std::endl;
-                if (write_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
-                {
-                    break;
-                }
-                buff[0] = '\0';
+                break;
             }
-        };
+            if (read_result.state != jaf::comm::SChannelResult::EState::CRS_SUCCESS)
+            {
+                continue;
+            }
 
-        std::shared_ptr<jaf::comm::ISerialPort> serial_port = communication.CreateSerialPort();
-        serial_port->SetAddr("/dev/ttyS0", 9600, 8, 0, 0);
-        serial_port->SetHandleChannel(fun_deal_client_channel);
-
-        jaf::Coroutine<void> serial_port_run = serial_port->Run();
-
-        getchar();
-
-        serial_port->Stop();
-
-        co_await serial_port_run;
-
-        communication.Stop();
-        co_await communication_run;
+            auto write_result = co_await channel->Write(buff, read_result.len, 5000);
+            std::cout << std::format("write {}, state {}, error {}", std::string((char*) buff, read_result.len), (int) write_result.state, write_result.error) << std::endl;
+            if (write_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
+            {
+                break;
+            }
+            buff[0] = '\0';
+        }
     };
 
-    auto co_test_co_await_time = co_fun();
-    co_test_co_await_time.Wait();
+    std::shared_ptr<jaf::comm::ISerialPort> serial_port = communication.CreateSerialPort();
+#ifdef _WIN32
+    serial_port->SetAddr("\\\\.\\COM21", 9600, 8, 0, 0);
+#elif defined(__linux__)
+    serial_port->SetAddr("/dev/ttyS0", 9600, 8, 0, 0);
+#endif
+
+    serial_port->SetHandleChannel(fun_deal_client_channel);
+
+    jaf::Coroutine<void> serial_port_run = serial_port->Run();
+
+    getchar();
+
+    serial_port->Stop();
+    co_await serial_port_run;
+
+    communication.Stop();
+    co_await communication_run;
 }
 
-}
+} // namespace test_serial_port
 
 void TestSerialPort()
 {
-    test_serial_port::Test();
+    auto run = test_serial_port::Test();
+    run.Wait();
 }

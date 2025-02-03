@@ -56,12 +56,12 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-    void Init(void);
+    SOCKET CreateSocket(void);
+    Coroutine<void> RunSocket(SOCKET the_socket);
 
 private:
     IGetCompletionPort* get_completion_port_ = nullptr;
     HANDLE completion_handle_                = nullptr;
-    SOCKET socket_                           = 0; // 侦听套接字
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
@@ -72,10 +72,14 @@ private:
     std::string remote_ip_ = "0.0.0.0";
     uint16_t remote_port_  = 0;
 
+    std::string error_info_;
+
     std::function<Coroutine<void>(std::shared_ptr<IUdpChannel> channel)> handle_channel_; // 操作通道
     std::mutex channel_mutex_;
-    std::atomic<bool> run_flag_           = false;
     std::shared_ptr<IUdpChannel> channel_ = std::make_shared<EmptyUdpChannel>();
+
+    std::atomic<bool> run_flag_           = false;
+    CoWaitUtilStop wait_stop_;
 };
 
 } // namespace comm

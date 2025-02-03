@@ -71,36 +71,30 @@ jaf::Coroutine<void> SerialPort::Run()
     run_flag_ = true;
 
     completion_handle_ = get_completion_port_->Get();
-    Init();
 
-    std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(completion_handle_, comm_handle_, timer_);
+    HANDLE comm_handle = OpenSerialPort();
+    if (comm_handle == INVALID_HANDLE_VALUE)
+    {
+        co_return;
+    }
+
+    wait_stop_.Start();
+    auto run = RunSerialPort(comm_handle);
+
+    co_await wait_stop_.Wait();
 
     {
         std::unique_lock lock(channel_mutex_);
-        channel_ = channel;
+        channel_->Stop();
     }
-
-    jaf::Coroutine<void> channel_run = channel->Run();
-    co_await handle_channel_(channel);
-    channel->Stop();
-    CloseSerialPort();
-    co_await channel_run;
-
-    run_flag_ = false;
-
-    co_return;
+    CloseHandle(comm_handle);
+    co_await run;
 }
 
 void SerialPort::Stop()
 {
     run_flag_ = false;
-    std::shared_ptr<IChannel> channel;
-    {
-        std::unique_lock lock(channel_mutex_);
-        channel  = channel_;
-        channel_ = std::make_shared<EmptyChannel>();
-    }
-    channel->Stop();
+    wait_stop_.Stop();
 }
 
 std::shared_ptr<IChannel> SerialPort::GetChannel()
@@ -116,12 +110,7 @@ Coroutine<SChannelResult> SerialPort::Write(const unsigned char* buff, size_t bu
     co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
-void SerialPort::Init(void)
-{
-    OpenSerialPort();
-}
-
-bool SerialPort::OpenSerialPort()
+HANDLE SerialPort::OpenSerialPort()
 {
     HANDLE comm_handle = CreateFile(comm_.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, nullptr);
     if (comm_handle == INVALID_HANDLE_VALUE)
@@ -129,7 +118,7 @@ bool SerialPort::OpenSerialPort()
         DWORD dw        = GetLastError();
         std::string str = std::format("Communication code error: {} \t  error-msg: {}\r\n", dw, GetFormatMessage(dw));
         LOG_ERROR(LOG_NAME) << str;
-        return false;
+        return INVALID_HANDLE_VALUE;
     }
 
     // TODO:这些参数的设置会影响读写效果，后续需要提供接口让用户配置
@@ -167,18 +156,33 @@ bool SerialPort::OpenSerialPort()
 
     PurgeComm(comm_handle, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
 
-    comm_handle_ = comm_handle;
-
-    return true;
+    return comm_handle;
 }
 
-void SerialPort::CloseSerialPort()
+Coroutine<void> SerialPort::RunSerialPort(HANDLE comm_handle)
 {
-    if (comm_handle_ != INVALID_HANDLE_VALUE)
+    std::shared_ptr<SerialPortChannel> channel = std::make_shared<SerialPortChannel>(completion_handle_, comm_handle, timer_);
+
     {
-        CloseHandle(comm_handle_);
-        comm_handle_ = INVALID_HANDLE_VALUE;
+        std::unique_lock lock(channel_mutex_);
+        if (!run_flag_)
+        {
+            co_return;
+        }
+        channel_ = channel;        
     }
+
+    jaf::Coroutine<void> channel_run = channel->Run();
+    co_await handle_channel_(channel);
+    channel->Stop();
+    co_await channel_run;
+
+    {
+        std::unique_lock lock(channel_mutex_);
+        channel_ = std::make_shared<EmptyChannel>();
+    }
+
+    Stop();
 }
 
 } // namespace comm

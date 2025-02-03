@@ -83,13 +83,15 @@ std::shared_ptr<IPack> RecvBuffer::GetPack(size_t start_index, size_t len)
         SConstData{recv_data_ + start_index, len});
 }
 
-std::shared_ptr<IChannel> RecvBuffer::GetChannel() { return channel_; }
+std::shared_ptr<IChannel> RecvBuffer::GetChannel()
+{
+    return channel_;
+}
 
 void RecvBuffer::SwitchNewRecvBuff()
 {
     // TODO: 当剩余数据太多时，应当如何处理？
-    std::shared_ptr<unsigned char[]> new_recv_buff =
-        std::make_shared<unsigned char[]>(total_buff_len_);
+    std::shared_ptr<unsigned char[]> new_recv_buff = std::make_shared<unsigned char[]>(total_buff_len_);
 
     assert(total_buff_len_ >= recv_len_);
     if (recv_data_ != nullptr)

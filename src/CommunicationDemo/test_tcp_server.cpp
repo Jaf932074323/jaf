@@ -40,7 +40,7 @@
 namespace test_server
 {
 
-jaf::Coroutine<void> Test()
+jaf::CoroutineWithWait<void> Test()
 {
     jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
     jaf::Coroutine<void> communication_run = communication.Run();
@@ -54,7 +54,7 @@ jaf::Coroutine<void> Test()
         while (true)
         {
             auto read_result = co_await channel->Read(buff, 1024, 5000);
-            std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff), (int) read_result.state, read_result.error) << std::endl;
+            std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff, read_result.len), (int)read_result.state, read_result.error) << std::endl;
             if (read_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
             {
                 break;
@@ -64,8 +64,8 @@ jaf::Coroutine<void> Test()
                 continue;
             }
 
-            auto write_result = co_await channel->Write(buff, 1024, 5000);
-            std::cout << std::format("write {}, state {}, error {}", std::string((char*) buff), (int) write_result.state, write_result.error) << std::endl;
+            auto write_result = co_await channel->Write(buff, read_result.len, 5000);
+            std::cout << std::format("write {}, state {}, error {}", std::string((char*) buff, read_result.len), (int)write_result.state, write_result.error) << std::endl;
             if (write_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
             {
                 break;
@@ -73,7 +73,7 @@ jaf::Coroutine<void> Test()
         }
     };
 
-    jaf::comm::Endpoint server_endpoint("192.168.204.130", 8181);
+    jaf::comm::Endpoint server_endpoint("127.0.0.1", 8181);
 
     std::shared_ptr<jaf::comm::ITcpServer> server = communication.CreateTcpServer();
     server->SetAddr(server_endpoint);
@@ -96,10 +96,6 @@ jaf::Coroutine<void> Test()
 
 void TestServer()
 {
-    auto co_fun = []() -> jaf::CoroutineWithWait<void> {
-        co_await test_server::Test();
-    };
-
-    auto co_fun_run = co_fun();
-    co_fun_run.Wait();
+    auto run = test_server::Test();
+    run.Wait();
 }

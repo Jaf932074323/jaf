@@ -24,17 +24,17 @@
 #ifdef _WIN32
 
 #include "Interface/communication/i_tcp_server.h"
-#include "Interface/i_timer.h"
 #include "Interface/communication/i_unpack.h"
+#include "Interface/i_timer.h"
 #include "i_get_completion_port.h"
 #include "util/co_coroutine.h"
 #include "util/co_wait_all_tasks_done.h"
-#include "util/control_start_stop.h"
+#include "util/co_wait_util_stop.h"
+#include <atomic>
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <atomic>
 #include <string>
 #include <winsock2.h>
 
@@ -71,7 +71,7 @@ private:
 private:
     std::atomic<bool> run_flag_ = false;
 
-    jaf::ControlStartStop control_start_stop_;
+    CoWaitUtilStop wait_stop_;
     CoWaitAllTasksDone wait_all_tasks_done_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;

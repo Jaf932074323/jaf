@@ -29,6 +29,7 @@
 #include "head.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
+#include "util/co_wait_util_stop.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -65,7 +66,7 @@ private:
     Endpoint remote_endpoint_;
     Endpoint local_endpoint_;
 
-    jaf::ControlStartStop control_start_stop_;
+    CoWaitUtilStop wait_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;
 };
 

@@ -54,16 +54,16 @@ TcpChannel::~TcpChannel() {}
 Coroutine<void> TcpChannel::Run()
 {
     stop_flag_ = false;
-    control_start_stop_.Start();
-
-    co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
+    wait_stop_.Start();
+    co_await wait_stop_.Wait();
+    closesocket(socket_);
     co_await wait_all_tasks_done_;
 }
 
 void TcpChannel::Stop()
 {
     stop_flag_ = true;
-    control_start_stop_.Stop();
+    wait_stop_.Stop();
 }
 
 Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
@@ -116,10 +116,7 @@ Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size
     {
         if (channel_result.len == 0)
         {
-            CancelIo((HANDLE) socket_);
-            closesocket(socket_);
             Stop();
-            socket_              = INVALID_SOCKET;
             channel_result.state = SChannelResult::EState::CRS_CHANNEL_DISCONNECTED;
             channel_result.error = "The connection has been disconnected";
         }
@@ -136,10 +133,7 @@ Coroutine<SChannelResult> TcpChannel::Read(unsigned char* buff, size_t buff_size
         co_return channel_result;
     }
 
-    CancelIo((HANDLE) socket_);
-    closesocket(socket_);
     Stop();
-    socket_              = INVALID_SOCKET;
     channel_result.error = std::format("TcpChannel code error:{},error-msg:{}", channel_result.code_, channel_result.error);
     co_return channel_result;
 }
@@ -205,9 +199,7 @@ Coroutine<SChannelResult> TcpChannel::Write(const unsigned char* buff, size_t bu
         co_return channel_result;
     }
 
-    CancelIo((HANDLE) socket_);
-    closesocket(socket_);
-    socket_              = INVALID_SOCKET;
+    Stop();
     channel_result.error = std::format("TcpChannel code error:{},error-msg:{}", channel_result.code_, channel_result.error);
     co_return channel_result;
 }

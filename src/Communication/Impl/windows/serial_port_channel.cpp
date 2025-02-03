@@ -51,7 +51,6 @@ SerialPortChannel::~SerialPortChannel()
 Coroutine<void> SerialPortChannel::Run()
 {
     stop_flag_ = false;
-    control_start_stop_.Start();
     if (CreateIoCompletionPort(comm_handle_, completion_handle_, (ULONG_PTR) comm_handle_, 0) == 0)
     {
         DWORD dw        = GetLastError();
@@ -60,7 +59,8 @@ Coroutine<void> SerialPortChannel::Run()
         co_return;
     }
 
-    co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
+    wait_stop_.Start();
+    co_await wait_stop_.Wait();
     co_await wait_all_tasks_done_;
 
     co_return;
@@ -69,7 +69,7 @@ Coroutine<void> SerialPortChannel::Run()
 void SerialPortChannel::Stop()
 {
     stop_flag_ = true;
-    control_start_stop_.Stop();
+    wait_stop_.Stop();
 }
 
 Coroutine<SChannelResult> SerialPortChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)

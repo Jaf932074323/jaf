@@ -29,6 +29,7 @@
 #include "head.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
+#include "util/co_wait_util_stop.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -52,15 +53,17 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
+
+private:
     std::atomic<bool> stop_flag_ = false;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 
     SOCKET socket_ = 0; // 收发数据的套接字
     Endpoint remote_endpoint_;
-    Endpoint local_endpoint_;
+    Endpoint local_endpoint_;    
 
-    jaf::ControlStartStop control_start_stop_;
+    jaf::CoWaitUtilStop wait_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;
 };
 

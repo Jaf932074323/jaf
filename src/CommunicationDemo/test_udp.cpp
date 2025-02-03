@@ -30,72 +30,68 @@
 #include "util/co_wait_notices.h"
 #include <format>
 #include <functional>
+#include <iostream>
 #include <list>
 #include <string>
-#include <iostream>
 
 namespace test_udp
 {
-    
-void Test()
+
+jaf::CoroutineWithWait<void> Test()
 {
-    auto co_fun = []() -> jaf::CoroutineWithWait<void> {
-        jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-        jaf::Coroutine<void> communication_run = communication.Run();
+    jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
+    jaf::Coroutine<void> communication_run = communication.Run();
 
-        std::string str = "hello world!";
+    std::string str = "hello world!";
 
-        auto fun_deal_client_channel = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
-            unsigned char buff[1024] = "";
-            while (true)
+    auto fun_deal_client_channel = [&](std::shared_ptr<jaf::comm::IChannel> channel) -> jaf::Coroutine<void> {
+        unsigned char buff[1024] = "";
+        while (true)
+        {
+            auto read_result = co_await channel->Read(buff, 1024, 5000);
+            std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff), (int) read_result.state, read_result.error) << std::endl;
+            if (read_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
             {
-                auto read_result = co_await channel->Read(buff, 1024, 5000);
-                std::cout << std::format("read {}, state {}, error {}", std::string((char*) buff), (int) read_result.state, read_result.error) << std::endl;
-                if (read_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
-                {
-                    break;
-                }
-                if (read_result.state != jaf::comm::SChannelResult::EState::CRS_SUCCESS)
-                {
-                    continue;
-                }
-
-                auto write_result = co_await channel->Write(buff, 1024, 5000);
-                std::cout << std::format("write {}, state {}, error {}", std::string((char*) buff), (int) write_result.state, write_result.error) << std::endl;
-                if (write_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
-                {
-                    break;
-                }
-                buff[0] = '\0';
+                break;
             }
-        };
+            if (read_result.state != jaf::comm::SChannelResult::EState::CRS_SUCCESS)
+            {
+                continue;
+            }
 
-        jaf::comm::Endpoint local_enpoint("192.168.204.130", 8181);
-        jaf::comm::Endpoint remote_enpoint("192.168.204.1", 8181);
-
-        std::shared_ptr<jaf::comm::IUdp> udp = communication.CreateUdp();
-        udp->SetAddr(local_enpoint, remote_enpoint);
-        udp->SetHandleChannel(fun_deal_client_channel);
-
-        jaf::Coroutine<void> udp_run = udp->Run();
-
-        getchar();
-
-        udp->Stop();
-
-        co_await udp_run;
-
-        communication.Stop();
-        co_await communication_run;
+            auto write_result = co_await channel->Write(buff, 1024, 5000);
+            std::cout << std::format("write {}, state {}, error {}", std::string((char*) buff), (int) write_result.state, write_result.error) << std::endl;
+            if (write_result.state == jaf::comm::SChannelResult::EState::CRS_CHANNEL_END)
+            {
+                break;
+            }
+            buff[0] = '\0';
+        }
     };
 
-    auto co_test_co_await_time = co_fun();
-    co_test_co_await_time.Wait();
+    jaf::comm::Endpoint local_enpoint("127.0.0.1", 8182);
+    jaf::comm::Endpoint remote_enpoint("127.0.0.1", 8181);
+
+    std::shared_ptr<jaf::comm::IUdp> udp = communication.CreateUdp();
+    udp->SetAddr(local_enpoint, remote_enpoint);
+    udp->SetHandleChannel(fun_deal_client_channel);
+
+    jaf::Coroutine<void> udp_run = udp->Run();
+
+    getchar();
+
+    udp->Stop();
+
+    co_await udp_run;
+
+    communication.Stop();
+    co_await communication_run;
 }
 
-}
+} // namespace test_udp
 
 void TestUdp()
 {
-    test_udp::Test();
+    auto run = test_udp::Test();
+    run.Wait();
 }

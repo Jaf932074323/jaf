@@ -51,11 +51,13 @@ struct Endpoint
         addr_.sin_family = AF_INET;
         addr_.sin_port   = ::htons(port);
         ::inet_pton(AF_INET, ip.c_str(), (void*) &addr_.sin_addr);
+        Update();
     }
 
     Endpoint(const SockAddr& addr)
         : addr_(addr)
     {
+        Update();
     }
 
     void Set(const std::string& ip, uint16_t port)
@@ -63,11 +65,13 @@ struct Endpoint
         addr_.sin_family = AF_INET;
         addr_.sin_port   = ::htons(port);
         ::inet_pton(AF_INET, ip.c_str(), (void*) &addr_.sin_addr);
+        Update();
     }
 
     void Set(const SockAddr& addr)
     {
         addr_ = addr;
+        Update();
     }
 
     SockAddr& GetSockAddr()
@@ -91,7 +95,21 @@ struct Endpoint
     }
 
 private:
+    void Update()
+    {
+#ifdef _DEBUG 
+        ip_ = Ip();
+        port_ = Port();
+#endif
+    }
+
+private:
     SockAddr addr_;
+#ifdef _DEBUG 
+    std::string ip_;
+    uint16_t port_         = 0;
+#endif
+
 };
 
 } // namespace comm
