@@ -32,6 +32,7 @@
 #include "head.h"
 #include "time_head.h"
 #include "util/co_wait_all_tasks_done.h"
+#include "util/co_wait_util_stop.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -70,11 +71,11 @@ private:
 
     int socket_   = 0;  // 收发数据的套接字
     int epoll_fd_ = -1; // epoll描述符
-    
-    Endpoint remote_endpoint_;
-    Endpoint local_endpoint_; 
 
-    jaf::ControlStartStop control_start_stop_;
+    Endpoint remote_endpoint_;
+    Endpoint local_endpoint_;
+
+    CoWaitUtilStop wait_stop_;
     jaf::CoWaitAllTasksDone wait_all_tasks_done_;
 
     EpollData epoll_data_; // 连接时用的通讯数据

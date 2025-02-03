@@ -75,18 +75,19 @@ Coroutine<void> UdpChannel::Run()
     read_helper_.Start(socket_);
     write_helper_.Start(socket_);
 
-    control_start_stop_.Start();
-    co_await jaf::CoWaitUtilControlledStop(control_start_stop_);
+    wait_stop_.Start();
+    co_await wait_stop_.Wait();
+    stop_flag_ = true;
+    close(socket_);
+    read_helper_.Stop();
+    write_helper_.Stop();
+
     co_await wait_all_tasks_done_;
 }
 
 void UdpChannel::Stop()
 {
-    stop_flag_ = true;
-    close(socket_);
-    read_helper_.Stop();
-    write_helper_.Stop();
-    control_start_stop_.Stop();
+    wait_stop_.Stop();
 }
 
 Coroutine<SChannelResult> UdpChannel::Read(unsigned char* buff, size_t buff_size, uint64_t timeout)
@@ -148,7 +149,7 @@ Coroutine<SChannelResult> UdpChannel::Write(const unsigned char* buff, size_t bu
             result.len = ::sendto(file, operate_buf_, need_len_, 0, (const sockaddr*) &remote_addr_, addr_len_);
         }
 
-        const sockaddr_in& remote_addr_;        
+        const sockaddr_in& remote_addr_;
         socklen_t addr_len_ = sizeof(remote_addr_);
     };
     std::shared_ptr<WriteCommunData> write_data = std::make_shared<WriteCommunData>(remote_endpoint_.GetSockAddr());
