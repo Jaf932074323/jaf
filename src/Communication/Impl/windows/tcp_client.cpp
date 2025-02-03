@@ -94,29 +94,29 @@ jaf::Coroutine<void> TcpClient::Run()
         co_return;
     }
     run_flag_ = true;
-    wait_stop_.Start();
-
-    control_start_stop_.Start();
 
     completion_handle_ = get_completion_port_->Get();
 
-    jaf::Coroutine<void> execute = Execute();
+    SOCKET connect_socket = CreationSocket();
+    if (connect_socket == INVALID_SOCKET)
+    {
+        LOG_ERROR() << error_info_;
+        co_return;
+    }
+
+    wait_stop_.Start();
+    jaf::Coroutine<void> execute = Execute(connect_socket);
 
     co_await wait_stop_.Wait();
 
-    run_flag_ = false;
-
-    std::shared_ptr<IChannel> channel = GetChannel();
-    channel->Stop();
-    control_start_stop_.Stop();
-
+    GetChannel()->Stop();
+    closesocket(connect_socket);
     co_await execute;
-
-    co_return;
 }
 
 void TcpClient::Stop()
 {
+    run_flag_ = false;
     wait_stop_.Stop();
 }
 
@@ -138,7 +138,7 @@ Coroutine<SChannelResult> TcpClient::Write(const unsigned char* buff, size_t buf
     co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
-jaf::Coroutine<void> TcpClient::Execute()
+jaf::Coroutine<void> TcpClient::Execute(SOCKET connect_socket)
 {
     struct ConnectCommunData : public CommunData
     {
@@ -169,60 +169,49 @@ jaf::Coroutine<void> TcpClient::Execute()
         }
     };
 
-    SOCKET connect_socket = INVALID_SOCKET; // 连接套接字
+    std::shared_ptr<ConnectCommunData> commun_data = std::make_shared<ConnectCommunData>();
+    commun_data->connect_addr_                     = remote_endpoint_.GetSockAddr();
+    commun_data->connect_socket_                   = connect_socket;
+    RWAwaitable connect_awaitable(timer_, commun_data, connect_timeout_);
+    co_await connect_awaitable;
 
-    while (run_flag_)
+    if (!run_flag_)
     {
-        connect_socket = CreationSocket();
-        if (connect_socket == INVALID_SOCKET)
-        {
-            LOG_ERROR() << error_info_;
-            co_return;
-        }
-        FINALLY(closesocket(connect_socket); connect_socket = INVALID_SOCKET;);
+        co_return;
+    }
 
-        std::shared_ptr<ConnectCommunData> commun_data = std::make_shared<ConnectCommunData>();
-        commun_data->connect_addr_                     = remote_endpoint_.GetSockAddr();
-        commun_data->connect_socket_                   = connect_socket;
-        RWAwaitable connect_awaitable(timer_, commun_data, connect_timeout_);
-        co_await connect_awaitable;
+    const SChannelResult& result     = commun_data->result;
+    if (result.state != SChannelResult::EState::CRS_SUCCESS)
+    {
+        LOG_WARNING() << std::format("TCP连接失败,本地{}:{},远程{}:{},{}",
+            local_ip_, local_port_,
+            remote_ip_, remote_port_,
+            result.error);
+        co_return;
+    }
 
-        ConnectCommunData* p_commun_data = commun_data.get();
-        const SChannelResult& result     = p_commun_data->result;
+    std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket, remote_endpoint_, local_endpoint_, timer_);
+
+    {
+        std::unique_lock lock(channel_mutex_);
         if (!run_flag_)
         {
             co_return;
         }
-        if (result.state != SChannelResult::EState::CRS_SUCCESS)
-        {
-            LOG_WARNING() << std::format("TCP连接失败,本地{}:{},远程{}:{},{}",
-                local_ip_, local_port_,
-                remote_ip_, remote_port_,
-                result.error);
-
-            jaf::time::CoAwaitTime await_time(reconnect_wait_time_, control_start_stop_, timer_);
-            co_await await_time;
-            continue;
-        }
-
-        std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket, remote_endpoint_, local_endpoint_, timer_);
-
-        {
-            std::unique_lock lock(channel_mutex_);
-            channel_ = channel;
-        }
-
-        jaf::Coroutine<void> channel_run = channel->Run();
-        co_await handle_channel_(channel);
-        channel->Stop();
-        co_await channel_run;
-
-        {
-            std::unique_lock lock(channel_mutex_);
-            channel_ = empty_channel_;
-        }
+        channel_ = channel;
     }
 
+    jaf::Coroutine<void> channel_run = channel->Run();
+    co_await handle_channel_(channel);
+    channel->Stop();
+    co_await channel_run;
+
+    {
+        std::unique_lock lock(channel_mutex_);
+        channel_ = empty_channel_;
+    }
+
+    Stop();
     co_return;
 }
 

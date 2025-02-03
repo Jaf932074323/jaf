@@ -61,8 +61,9 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-    jaf::Coroutine<void> Execute();
+    jaf::Coroutine<void> Execute(int connect_socket);
 
+    int CreationSocket();
 private:
     struct ConnectResult;
     class ConnectAwaitable;
@@ -76,7 +77,6 @@ private:
 
     int epoll_fd_ = -1;         // epoll描述符
     IGetEpollFd* get_epoll_fd_; // 获取epoll对象
-    int connect_socket_ = -1;
 
     Endpoint remote_endpoint_;
     Endpoint local_endpoint_;

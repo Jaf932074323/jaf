@@ -59,7 +59,7 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-    jaf::Coroutine<void> Execute();
+    jaf::Coroutine<void> Execute(SOCKET connect_socket);
 
     SOCKET CreationSocket();
 
@@ -68,7 +68,6 @@ private:
     CoWaitUtilStop wait_stop_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
-    jaf::ControlStartStop control_start_stop_;
 
     IGetCompletionPort* get_completion_port_ = nullptr;
     HANDLE completion_handle_                = nullptr;

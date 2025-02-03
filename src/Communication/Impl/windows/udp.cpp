@@ -79,12 +79,10 @@ jaf::Coroutine<void> Udp::Run()
 
     wait_stop_.Start();
     auto run = RunSocket(the_socket);
+
     co_await wait_stop_.Wait();
 
-    {
-        std::unique_lock lock(channel_mutex_);
-        channel_->Stop();
-    }
+    GetChannel()->Stop();
     closesocket(the_socket);
     co_await run;
 }

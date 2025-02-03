@@ -60,8 +60,9 @@ class TcpClient::ConnectAwaitable
     };
 
 public:
-    ConnectAwaitable(TcpClient* tcp_client)
+    ConnectAwaitable(TcpClient* tcp_client, int connect_socket)
         : tcp_client_(tcp_client)
+        , connect_socket_(connect_socket)
     {
         connect_epoll_data_.call_ = [this](EpollData* data) { OnConnect(data); };
     }
@@ -75,13 +76,7 @@ public:
         handle_ = co_handle;
 
         epoll_fd_ = tcp_client_->get_epoll_fd_->Get();
-        Connect();
-        if (connect_socket_ < 0)
-        {
-            return false;
-        }
-
-        return true;
+        return Connect();
     }
     void await_resume()
     {
@@ -89,16 +84,9 @@ public:
     }
 
 private:
-    void Connect()
+    bool Connect()
     {
-        connect_socket_ = CreationSocket();
-        if (connect_socket_ < 0)
-        {
-            LOG_ERROR() << error_info_;
-            return;
-        }
-
-        sockaddr_in& connect_addr     = tcp_client_->remote_endpoint_.GetSockAddr();
+        sockaddr_in& connect_addr = tcp_client_->remote_endpoint_.GetSockAddr();
         if (::connect(connect_socket_, (const sockaddr*) &connect_addr, sizeof(connect_addr)) < 0)
         {
             if (errno != EINPROGRESS)
@@ -107,8 +95,7 @@ private:
                     tcp_client_->local_ip_, tcp_client_->local_port_,
                     tcp_client_->remote_ip_, tcp_client_->remote_port_,
                     errno, strerror(errno));
-                close(connect_socket_);
-                return;
+                return false;
             }
         }
 
@@ -128,49 +115,12 @@ private:
         int ret                = epoll_ctl(tcp_client_->epoll_fd_, EPOLL_CTL_ADD, connect_socket_, &connect_event);
         if (ret == -1)
         {
-            close(connect_socket_);
             std::string str = std::format("epoll_ctl(): error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
-            return;
+            return false;
         }
 
         tcp_client_->timer_->StartTask(&p_connect_data->timeout_task_);
-    }
-
-    int CreationSocket()
-    {
-        int connect_socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-        if (connect_socket < 0)
-        {
-            int error   = errno;
-            error_info_ = std::format("Failed to create a connection socket,local {}:{},remote {}:{},code:{},:{}",
-                tcp_client_->local_ip_, tcp_client_->local_port_,
-                tcp_client_->remote_ip_, tcp_client_->remote_port_,
-                error, strerror(error));
-            return -1;
-        }
-
-        sockaddr_in bind_addr     = {};
-        bind_addr.sin_family      = AF_INET;
-        bind_addr.sin_addr.s_addr = inet_addr(tcp_client_->local_ip_.c_str());
-        bind_addr.sin_port        = htons(tcp_client_->local_port_);
-
-        //绑定套接字, 绑定到端口
-        if (::bind(connect_socket, (sockaddr*) &bind_addr, sizeof(bind_addr)) < 0)
-        {
-            int error   = errno;
-            error_info_ = std::format("Failed to bind to the local,local {}:{},remote {}:{},code:{},:{}",
-                tcp_client_->local_ip_, tcp_client_->local_port_,
-                tcp_client_->remote_ip_, tcp_client_->remote_port_,
-                error, strerror(error));
-            close(connect_socket);
-            return -1;
-        }
-
-        //设置 connect 的 socket 为非阻塞
-        int flags = fcntl(connect_socket, F_GETFL);
-        fcntl(connect_socket, F_SETFL, flags | O_NONBLOCK);
-
-        return connect_socket;
+        return true;
     }
 
     void OnConnect(EpollData* data)
@@ -182,7 +132,6 @@ private:
             std::unique_lock<std::mutex> lock(connect_data_->mutex_);
             if (connect_data_->timeout_flag_)
             {
-                close(connect_socket_);
                 return;
             }
             connect_data_->callback_flag_ = true;
@@ -197,8 +146,6 @@ private:
         {
             connect_result_.success     = false;
             connect_result_.error_info_ = std::format("OnConnect(): connect error: {} \t  error-msg: {}\r\n", errno, strerror(errno));
-            close(connect_socket_);
-            connect_socket_ = -1;
 
             handle_.resume();
             return;
@@ -284,22 +231,27 @@ jaf::Coroutine<void> TcpClient::Run()
     control_start_stop_.Start();
     wait_stop_.Start();
 
-    epoll_fd_                    = get_epoll_fd_->Get();
-    jaf::Coroutine<void> execute = Execute();
+    epoll_fd_ = get_epoll_fd_->Get();
+
+    int connect_socket = CreationSocket();
+    if (connect_socket < 0)
+    {
+        LOG_ERROR() << error_info_;
+        co_return;
+    }
+
+    jaf::Coroutine<void> execute = Execute(connect_socket);
 
     co_await wait_stop_.Wait();
 
-    run_flag_ = false;
-
-    std::shared_ptr<IChannel> channel = GetChannel();
-    control_start_stop_.Stop();
-
+    GetChannel()->Stop();
+    close(connect_socket);
     co_await execute;
-    co_return;
 }
 
 void TcpClient::Stop()
 {
+    run_flag_ = false;
     wait_stop_.Stop();
 }
 
@@ -321,52 +273,86 @@ Coroutine<SChannelResult> TcpClient::Write(const unsigned char* buff, size_t buf
     co_return co_await channel->Write(buff, buff_size, timeout);
 }
 
-jaf::Coroutine<void> TcpClient::Execute()
+jaf::Coroutine<void> TcpClient::Execute(int connect_socket)
 {
-    ConnectAwaitable connect_awaitable(this);
+    ConnectAwaitable connect_awaitable(this, connect_socket);
+    co_await connect_awaitable;
 
-    while (run_flag_)
+    if (!run_flag_)
     {
-        co_await connect_awaitable;
+        co_return;
+    }
 
+    const ConnectResult& connect_result = connect_awaitable.connect_result_;
+    if (!connect_result.success)
+    {
+        LOG_WARNING() << std::format("TCP连接失败,本地{}:{},远程{}:{},{}",
+            local_ip_, local_port_,
+            remote_ip_, remote_port_,
+            connect_result.error_info_);
+        co_return;
+    }
+
+    std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket, epoll_fd_, remote_endpoint_, local_endpoint_, timer_);
+
+    {
+        std::unique_lock lock(channel_mutex_);
         if (!run_flag_)
         {
             co_return;
         }
-
-        const ConnectResult& connect_result = connect_awaitable.connect_result_;
-        if (!connect_result.success)
-        {
-            LOG_WARNING() << std::format("TCP连接失败,本地{}:{},远程{}:{},{}",
-                local_ip_, local_port_,
-                remote_ip_, remote_port_,
-                connect_result.error_info_);
-
-            jaf::time::CoAwaitTime await_time(reconnect_wait_time_, control_start_stop_, timer_);
-            co_await await_time;
-            continue;
-        }
-
-        connect_socket_                     = connect_awaitable.connect_socket_;
-        std::shared_ptr<TcpChannel> channel = std::make_shared<TcpChannel>(connect_socket_, epoll_fd_, remote_endpoint_, local_endpoint_, timer_);
-
-        {
-            std::unique_lock lock(channel_mutex_);
-            channel_ = channel;
-        }
-
-        jaf::Coroutine<void> channel_run = channel->Run();
-        co_await handle_channel_(channel);
-        channel->Stop();
-        co_await channel_run;
-
-        {
-            std::unique_lock lock(channel_mutex_);
-            channel_ = empty_channel_;
-        }
+        channel_ = channel;
     }
 
+    jaf::Coroutine<void> channel_run = channel->Run();
+    co_await handle_channel_(channel);
+    channel->Stop();
+    co_await channel_run;
+
+    {
+        std::unique_lock lock(channel_mutex_);
+        channel_ = empty_channel_;
+    }
+
+    Stop();
     co_return;
+}
+
+int TcpClient::CreationSocket()
+{
+    int connect_socket = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (connect_socket < 0)
+    {
+        int error   = errno;
+        error_info_ = std::format("Failed to create a connection socket,local {}:{},remote {}:{},code:{},:{}",
+            local_ip_, local_port_,
+            remote_ip_, remote_port_,
+            error, strerror(error));
+        return -1;
+    }
+
+    sockaddr_in bind_addr     = {};
+    bind_addr.sin_family      = AF_INET;
+    bind_addr.sin_addr.s_addr = inet_addr(local_ip_.c_str());
+    bind_addr.sin_port        = htons(local_port_);
+
+    //绑定套接字, 绑定到端口
+    if (::bind(connect_socket, (sockaddr*) &bind_addr, sizeof(bind_addr)) < 0)
+    {
+        int error   = errno;
+        error_info_ = std::format("Failed to bind to the local,local {}:{},remote {}:{},code:{},:{}",
+            local_ip_, local_port_,
+            remote_ip_, remote_port_,
+            error, strerror(error));
+        close(connect_socket);
+        return -1;
+    }
+
+    //设置 connect 的 socket 为非阻塞
+    int flags = fcntl(connect_socket, F_GETFL);
+    fcntl(connect_socket, F_SETFL, flags | O_NONBLOCK);
+
+    return connect_socket;
 }
 
 } // namespace comm
