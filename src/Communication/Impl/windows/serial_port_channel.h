@@ -53,7 +53,7 @@ public:
     virtual Coroutine<SChannelResult> Write(const unsigned char* buff, size_t buff_size, uint64_t timeout) override;
 
 private:
-    bool stop_flag_ = false;
+    bool stop_flag_ = true;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 

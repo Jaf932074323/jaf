@@ -55,7 +55,7 @@ public:
 
 private:
 private:
-    std::atomic<bool> stop_flag_ = false;
+    std::atomic<bool> stop_flag_ = true;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 

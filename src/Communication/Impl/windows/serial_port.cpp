@@ -64,10 +64,7 @@ void SerialPort::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<
 
 jaf::Coroutine<RunResult> SerialPort::Run()
 {
-    if (run_flag_)
-    {
-        co_return "Already in operation";
-    }
+    assert(!run_flag_);
     run_flag_ = true;
 
     completion_handle_ = get_completion_port_->Get();

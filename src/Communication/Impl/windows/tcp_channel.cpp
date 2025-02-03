@@ -53,6 +53,7 @@ TcpChannel::~TcpChannel() {}
 
 Coroutine<RunResult> TcpChannel::Run()
 {
+    assert(stop_flag_);
     stop_flag_ = false;
     wait_stop_.Start();
     co_await wait_stop_.Wait();

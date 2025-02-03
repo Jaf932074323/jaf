@@ -62,10 +62,7 @@ void Udp::SetHandleChannel(std::function<jaf::Coroutine<void>(std::shared_ptr<ja
 
 jaf::Coroutine<RunResult> Udp::Run()
 {
-    if (run_flag_)
-    {
-        co_return "Already in operation";
-    }
+    assert(!run_flag_);
     run_flag_ = true;
 
     completion_handle_ = get_completion_port_->Get();

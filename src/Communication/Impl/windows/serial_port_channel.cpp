@@ -50,6 +50,7 @@ SerialPortChannel::~SerialPortChannel()
 
 Coroutine<RunResult> SerialPortChannel::Run()
 {
+    assert(stop_flag_);
     stop_flag_ = false;
     if (CreateIoCompletionPort(comm_handle_, completion_handle_, (ULONG_PTR) comm_handle_, 0) == 0)
     {

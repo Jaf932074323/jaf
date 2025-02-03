@@ -56,7 +56,7 @@ public:
     virtual Coroutine<SChannelResult> WriteTo(const unsigned char* buff, size_t buff_size, const Endpoint* endpoint, uint64_t timeout) override;
 
 private:
-    std::atomic<bool> stop_flag_ = false;
+    std::atomic<bool> stop_flag_ = true;
 
     std::shared_ptr<jaf::time::ITimer> timer_;
 

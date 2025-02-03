@@ -65,7 +65,7 @@ private:
     void OnEpoll(EpollData* data);
 
 private:
-    std::atomic<bool> stop_flag_ = false;
+    std::atomic<bool> stop_flag_ = true;
     std::string finish_reason_;
 
     std::shared_ptr<jaf::time::ITimer> timer_;

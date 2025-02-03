@@ -55,6 +55,7 @@ UdpChannel::~UdpChannel()
 
 Coroutine<RunResult> UdpChannel::Run()
 {
+    assert(stop_flag_);
     wait_stop_.Start();
     stop_flag_ = false;
     if (CreateIoCompletionPort((HANDLE) socket_, completion_handle_, 0, 0) == 0)

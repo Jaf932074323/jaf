@@ -56,6 +56,7 @@ UdpChannel::~UdpChannel() {}
 
 Coroutine<RunResult> UdpChannel::Run()
 {
+    assert(stop_flag_);
     stop_flag_ = false;
 
     epoll_data_.call_ = [this](EpollData* pData) { OnEpoll(pData); };

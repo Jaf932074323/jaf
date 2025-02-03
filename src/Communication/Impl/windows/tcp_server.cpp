@@ -130,10 +130,7 @@ void TcpServer::SetMaxClientCount(size_t max_client_count)
 
 jaf::Coroutine<RunResult> TcpServer::Run()
 {
-    if (run_flag_)
-    {
-        co_return "Already in operation";
-    }
+    assert(!run_flag_);
     run_flag_ = true;
     wait_stop_.Start();
 

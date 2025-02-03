@@ -223,10 +223,7 @@ void TcpClient::SetHandleChannel(std::function<Coroutine<void>(std::shared_ptr<I
 
 jaf::Coroutine<RunResult> TcpClient::Run()
 {
-    if (run_flag_)
-    {
-        co_return "Already in operation";
-    }
+    assert(!run_flag_);
     run_flag_ = true;
     wait_stop_.Start();
 

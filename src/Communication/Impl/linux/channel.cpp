@@ -53,6 +53,7 @@ Channel::~Channel() {}
 
 Coroutine<RunResult> Channel::Run()
 {
+    assert(stop_flag_);
     stop_flag_ = false;
 
     epoll_data_.call_ = [this](EpollData* pData) { OnEpoll(pData); };
@@ -81,7 +82,7 @@ Coroutine<RunResult> Channel::Run()
     read_helper_.Stop();
 
     co_await wait_all_tasks_done_;
-    
+
     co_return true;
 }
 
