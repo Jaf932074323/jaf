@@ -29,6 +29,8 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <Windows.h>
+#elif defined(__linux__)
+#endif
 
 namespace jaf
 {
@@ -44,13 +46,22 @@ public:
         {
             return;
         }
+
+#ifdef _WIN32
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
         CONSOLE_SCREEN_BUFFER_INFO csbi;
         GetConsoleScreenBufferInfo(hConsole, &csbi);
         SetConsoleTextAttribute(hConsole, csbi.wAttributes);
         SetConsoleTextAttribute(hConsole, Tree::IsRed(node) ? BACKGROUND_RED : csbi.wAttributes);
+#elif defined(__linux__)
+#endif
+
         std::cout << node->key_ << "----\t";
+
+#ifdef _WIN32
         SetConsoleTextAttribute(hConsole, csbi.wAttributes);
+#elif defined(__linux__)
+#endif
 
         ShowNode(node->left_child_, depth + 1);
         std::cout << "\n";
@@ -329,5 +340,3 @@ TEST(red_black_tree, LowerBound_UpperBound)
     EXPECT_TRUE(it.GetNode() == nullptr);
 }
 
-#elif defined(__linux__)
-#endif
