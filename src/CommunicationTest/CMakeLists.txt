@@ -20,13 +20,13 @@ target_link_libraries(${PROJECT_NAME}
     Time
     global_thread_pool
     gtest
+    global_timer
 )
 
-INCLUDE_DIRECTORIES("./")
-INCLUDE_DIRECTORIES("../")
-INCLUDE_DIRECTORIES("../../include")
-INCLUDE_DIRECTORIES("../../3rdparty")
-INCLUDE_DIRECTORIES("../../3rdparty")
-INCLUDE_DIRECTORIES("../Communication")
-INCLUDE_DIRECTORIES("../Log")
-INCLUDE_DIRECTORIES("../Time")
+INCLUDE_DIRECTORIES("${PROJECT_SOURCE_DIR}")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/util/include")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/Communication/include")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/Log/include")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/Time/include")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/global_thread_pool/include")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/global_timer/include")

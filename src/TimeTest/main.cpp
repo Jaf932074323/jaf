@@ -22,8 +22,8 @@
 // 2024-6-16 姜安富
 #include "global_timer/co_await_time.h"
 #include "global_timer/global_timer.h"
-#include "log_head.h"
-#include "time_head.h"
+#include "log/log_head.h"
+#include "time/time_head.h"
 #include "util/finally.h"
 #include "gtest/gtest.h"
 #include <chrono>

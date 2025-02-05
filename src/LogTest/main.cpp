@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "log_head.h"
+#include "log/log_head.h"
 #include <chrono>
 #include <iostream>
 #include <string>

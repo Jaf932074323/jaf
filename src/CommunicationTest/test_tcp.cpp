@@ -20,11 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-20 姜安富
-#include "Communication/Impl/communication_include.h"
-#include "Interface/communication/i_serial_port.h"
-#include "Interface/communication/i_tcp_client.h"
-#include "Interface/communication/i_tcp_server.h"
-#include "Interface/communication/i_udp.h"
+#include "Communication/communication.h"
 #include "global_thread_pool/global_thread_pool.h"
 #include "global_timer/co_sleep.h"
 #include "global_timer/global_timer.h"
@@ -32,15 +28,17 @@
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
 #include "util/co_wait_notices.h"
+#include "util/simple_thread_pool.h"
 #include "gtest/gtest.h"
 #include <format>
 #include <list>
 
 TEST(tcp, usual)
 {
-    auto co_fun = []() -> jaf::CoroutineWithWait<void> {
-        jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-        jaf::Coroutine<jaf::comm::RunResult> communication_run = communication.Run();
+    std::shared_ptr<jaf::IThreadPool> thread_pool = std::make_shared<jaf::SimpleThreadPool>(); // TODO:这里需要调整
+    auto co_fun                                   = [thread_pool]() -> jaf::CoroutineWithWait<void> {
+        std::shared_ptr<jaf::comm::ICommunication> communication = jaf::comm::CreateCommunication(thread_pool);
+        jaf::Coroutine<jaf::comm::RunResult> communication_run   = communication->Run();
 
         std::string str = "hello world!";
         jaf::CoWaitNotices wait_recv; // 等待接收通知
@@ -64,12 +62,12 @@ TEST(tcp, usual)
         uint16_t server_port = 8181;
         uint16_t client_port = 0;
 
-        std::shared_ptr<jaf::comm::ITcpServer> server = communication.CreateTcpServer();
+        std::shared_ptr<jaf::comm::ITcpServer> server = communication->CreateTcpServer();
         server->SetAddr(jaf::comm::Endpoint(str_ip, server_port));
         server->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
         server->SetAcceptCount(1);
 
-        std::shared_ptr<jaf::comm::ITcpClient> client = communication.CreateTcpClient();
+        std::shared_ptr<jaf::comm::ITcpClient> client = communication->CreateTcpClient();
         client->SetAddr(jaf::comm::Endpoint(str_ip, server_port), jaf::comm::Endpoint(str_ip, client_port));
         client->SetHandleChannel(fun_deal_client_channel);
 
@@ -86,7 +84,7 @@ TEST(tcp, usual)
         auto server_run_result = co_await server_run;
         auto client_run_result = co_await client_run;
 
-        communication.Stop();
+        communication->Stop();
         auto communication_run_result = co_await communication_run;
 
         EXPECT_TRUE(server_run_result);

@@ -20,11 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-20 姜安富
-#include "Communication/Impl/communication_include.h"
-#include "Interface/communication/i_serial_port.h"
-#include "Interface/communication/i_tcp_client.h"
-#include "Interface/communication/i_tcp_server.h"
-#include "Interface/communication/i_udp.h"
+#include "Communication/communication.h"
 #include "global_thread_pool/global_thread_pool.h"
 #include "global_timer/co_sleep.h"
 #include "global_timer/global_timer.h"
@@ -42,8 +38,8 @@ namespace test_client
 
 jaf::CoroutineWithWait<void> Test()
 {
-    jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-    jaf::Coroutine<jaf::comm::RunResult> communication_run = communication.Run();
+    std::shared_ptr<jaf::comm::ICommunication> communication = jaf::comm::CreateCommunication();
+    jaf::Coroutine<jaf::comm::RunResult> communication_run = communication->Run();
 
     std::string str = "hello world!";
 
@@ -76,7 +72,7 @@ jaf::CoroutineWithWait<void> Test()
     jaf::comm::Endpoint server_endpoint("192.168.204.1", 8181);
     jaf::comm::Endpoint client_endpoint("0.0.0.0", 0);
 
-    std::shared_ptr<jaf::comm::ITcpClient> client = communication.CreateTcpClient();
+    std::shared_ptr<jaf::comm::ITcpClient> client = communication->CreateTcpClient();
     client->SetAddr(server_endpoint, client_endpoint);
     client->SetHandleChannel(fun_deal_client_channel);
 
@@ -88,7 +84,7 @@ jaf::CoroutineWithWait<void> Test()
 
     co_await client_run;
 
-    communication.Stop();
+    communication->Stop();
     co_await communication_run;
 }
 

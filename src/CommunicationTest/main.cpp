@@ -20,17 +20,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "define_constant.h"
+#include "Communication/communication.h"
 #include "global_thread_pool/global_thread_pool.h"
-#include "init_socket.h"
-#include "log_head.h"
-#include "time_head.h"
+#include "global_timer/global_timer.h"
+#include "log/log_head.h"
+#include "time/time_head.h"
 #include "util/simple_thread_pool.h"
 #include "gtest/gtest.h"
 #include <iostream>
 #include <thread>
 #ifdef _WIN32
-#include <ConsoleApi2.h>
+#include <Windows.h>
 #elif defined(__linux__)
 #endif
 
@@ -51,9 +51,8 @@ int main(int argc, char** argv)
 
     jaf::GlobalThreadPool::SetThreadPool(std::make_shared<jaf::SimpleThreadPool>(1));
 
-    InitSocket init_socket;
-
     //::testing::GTEST_FLAG(filter) = "tcp.usual";
+    testing::GTEST_FLAG(break_on_failure) = true;
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 

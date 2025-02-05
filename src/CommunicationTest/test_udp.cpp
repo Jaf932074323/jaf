@@ -20,15 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-20 姜安富
-#include "Communication/Impl/communication_include.h"
-#include "Interface/communication/i_serial_port.h"
-#include "Interface/communication/i_tcp_client.h"
-#include "Interface/communication/i_tcp_server.h"
-#include "Interface/communication/i_udp.h"
+#include "Communication/communication.h"
 #include "global_timer/co_sleep.h"
 #include "unpack.h"
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
+#include "util/co_wait_util_stop.h"
 #include "util/simple_thread_pool.h"
 #include "gtest/gtest.h"
 #include <format>
@@ -39,8 +36,8 @@ TEST(udp, usual)
     std::shared_ptr<jaf::IThreadPool> thread_pool = std::make_shared<jaf::SimpleThreadPool>(); // TODO:这里需要调整
 
     auto co_fun = [thread_pool]() -> jaf::CoroutineWithWait<void> {
-        jaf::comm::Communication communication(thread_pool);
-        jaf::Coroutine<jaf::comm::RunResult> communication_run = communication.Run();
+        std::shared_ptr<jaf::comm::ICommunication> communication = jaf::comm::CreateCommunication(thread_pool);
+        jaf::Coroutine<jaf::comm::RunResult> communication_run   = communication->Run();
 
         std::string str = "hello world!";
         jaf::CoWaitUtilStop wait_recv; // 等待接收通知
@@ -57,11 +54,11 @@ TEST(udp, usual)
 
         std::shared_ptr<Unpack> unpack = std::make_shared<Unpack>(fun_deal);
 
-        std::shared_ptr<jaf::comm::IUdp> udp_1 = communication.CreateUdp();
+        std::shared_ptr<jaf::comm::IUdp> udp_1 = communication->CreateUdp();
         udp_1->SetAddr(jaf::comm::Endpoint(str_ip, 8081), jaf::comm::Endpoint(str_ip, 8082));
         udp_1->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
-        std::shared_ptr<jaf::comm::IUdp> udp_2 = communication.CreateUdp();
+        std::shared_ptr<jaf::comm::IUdp> udp_2 = communication->CreateUdp();
         udp_2->SetAddr(jaf::comm::Endpoint(str_ip, 8082), jaf::comm::Endpoint(str_ip, 8081));
         udp_2->SetHandleChannel(std::bind(&Unpack::Run, unpack, std::placeholders::_1));
 
@@ -78,7 +75,7 @@ TEST(udp, usual)
         auto udp_1_run_result = co_await udp_1_run;
         auto udp_2_run_result = co_await udp_2_run;
 
-        communication.Stop();
+        communication->Stop();
         auto communication_run_result = co_await communication_run;
 
         EXPECT_TRUE(udp_1_run_result);

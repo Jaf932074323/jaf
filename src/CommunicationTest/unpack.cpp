@@ -21,7 +21,7 @@
 // SOFTWARE.
 // 2024-6-16 姜安富
 #include "unpack.h"
-#include "log_head.h"
+#include "log/log_head.h"
 #include <assert.h>
 
 Unpack::Unpack(std::function<void(std::shared_ptr<jaf::comm::IPack>pack)> fun_deal_pack)

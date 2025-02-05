@@ -20,12 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-20 姜安富
-#include "Communication/Impl/communication_include.h"
-#include "Interface/communication/i_udp.h"
+#include "Communication/communication.h"
 #include "global_thread_pool/global_thread_pool.h"
 #include "global_timer/co_sleep.h"
 #include "global_timer/global_timer.h"
-#include "log_head.h"
+#include "log/log_head.h"
 #include "util/co_coroutine.h"
 #include "util/co_coroutine_with_wait.h"
 #include "util/co_wait_notices.h"
@@ -40,8 +39,8 @@ namespace test_serial_port
 
 jaf::CoroutineWithWait<void> Test()
 {
-    jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-    jaf::Coroutine<jaf::comm::RunResult> communication_run = communication.Run();
+    std::shared_ptr<jaf::comm::ICommunication> communication = jaf::comm::CreateCommunication();
+    jaf::Coroutine<jaf::comm::RunResult> communication_run = communication->Run();
 
     std::string str = "hello world!";
 
@@ -70,7 +69,7 @@ jaf::CoroutineWithWait<void> Test()
         }
     };
 
-    std::shared_ptr<jaf::comm::ISerialPort> serial_port = communication.CreateSerialPort();
+    std::shared_ptr<jaf::comm::ISerialPort> serial_port = communication->CreateSerialPort();
 #ifdef _WIN32
     serial_port->SetAddr("\\\\.\\COM21", 9600, 8, 0, 0);
 #elif defined(__linux__)
@@ -86,7 +85,7 @@ jaf::CoroutineWithWait<void> Test()
     serial_port->Stop();
     co_await serial_port_run;
 
-    communication.Stop();
+    communication->Stop();
     co_await communication_run;
 }
 

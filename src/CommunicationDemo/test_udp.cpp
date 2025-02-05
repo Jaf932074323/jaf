@@ -20,8 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-20 姜安富
-#include "Communication/Impl/communication_include.h"
-#include "Interface/communication/i_udp.h"
+#include "Communication/communication.h"
 #include "global_thread_pool/global_thread_pool.h"
 #include "global_timer/co_sleep.h"
 #include "global_timer/global_timer.h"
@@ -39,8 +38,9 @@ namespace test_udp
 
 jaf::CoroutineWithWait<void> Test()
 {
-    jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
-    jaf::Coroutine<jaf::comm::RunResult> communication_run = communication.Run();
+    //jaf::comm::Communication communication(jaf::GlobalThreadPool::ThreadPool(), jaf::time::GlobalTimer::Timer());
+    std::shared_ptr<jaf::comm::ICommunication> communication = jaf::comm::CreateCommunication();
+    jaf::Coroutine<jaf::comm::RunResult> communication_run = communication->Run();
 
     std::string str = "hello world!";
 
@@ -72,7 +72,7 @@ jaf::CoroutineWithWait<void> Test()
     jaf::comm::Endpoint local_enpoint("127.0.0.1", 8182);
     jaf::comm::Endpoint remote_enpoint("127.0.0.1", 8181);
 
-    std::shared_ptr<jaf::comm::IUdp> udp = communication.CreateUdp();
+    std::shared_ptr<jaf::comm::IUdp> udp = communication->CreateUdp();
     udp->SetAddr(local_enpoint, remote_enpoint);
     udp->SetHandleChannel(fun_deal_client_channel);
 
@@ -84,7 +84,7 @@ jaf::CoroutineWithWait<void> Test()
 
     co_await udp_run;
 
-    communication.Stop();
+    communication->Stop();
     co_await communication_run;
 }
 

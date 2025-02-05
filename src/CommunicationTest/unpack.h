@@ -21,8 +21,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 // 2024-6-16 姜安富
-#include "Interface/communication/i_unpack.h"
-#include "Impl/recv_buffer.h"
+#include "Communication/communication.h"
 #include "util/co_coroutine.h"
 #include <functional>
 #include <memory>

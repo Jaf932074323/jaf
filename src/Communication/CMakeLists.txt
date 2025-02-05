@@ -9,6 +9,10 @@ set(
 
 source_group(TREE ${CMAKE_SOURCE_DIR}/src FILES ${ALL_FILES})
 
+if ("${STR_SYSTEM}" STREQUAL "windows")
+    add_definitions(-D_API_COMMUNICATION_EXPORT)
+endif()
+
 add_library(
     ${PROJECT_NAME} STATIC
     ${ALL_FILES}
@@ -19,9 +23,9 @@ target_link_libraries(${PROJECT_NAME}
     global_timer
 )
 
-INCLUDE_DIRECTORIES("./")
-INCLUDE_DIRECTORIES("../")
-INCLUDE_DIRECTORIES("../../include")
-INCLUDE_DIRECTORIES("../../3rdparty")
-INCLUDE_DIRECTORIES("../Log")
-INCLUDE_DIRECTORIES("../Time")
+INCLUDE_DIRECTORIES("${PROJECT_SOURCE_DIR}")
+INCLUDE_DIRECTORIES("${PROJECT_SOURCE_DIR}/include/Communication")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/util/include")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/Log/include")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/Time/include")
+INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/src/global_timer/include")
